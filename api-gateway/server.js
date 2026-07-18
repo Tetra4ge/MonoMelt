@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger.config');
 
 // Load environment variables
 dotenv.config();
@@ -15,8 +17,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logs HTTP requests to the console
 
+// Swagger API Documentation Route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // --- Routes ---
 // You can later move these to a separate routes.js file in this same directory
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: API Gateway Health Check
+ *     description: Returns the operational status of the gateway.
+ *     responses:
+ *       200:
+ *         description: Gateway is up and running.
+ */
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
