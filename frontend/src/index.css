@@ -1,11 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 body {
   font-family: 'Space Mono', monospace;
 }
 
 .font-logo {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'Silkscreen', cursive;
+  letter-spacing: 0.06em;
 }
 
 /* Custom Hacker Terminal Scrollbar */

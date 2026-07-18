@@ -49,13 +49,13 @@ const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         
         {/* Header */}
-        <header className="flex justify-between items-center mb-12 border-b border-[#222] pb-6">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12 border-b border-[#222] pb-6">
           <div className="flex items-center gap-3">
-            <Terminal className="w-6 h-6 text-white" />
-            <h1 className="text-3xl font-logo tracking-widest text-gray-200">monomelt</h1>
+            <Terminal className="w-6 h-6 text-white shrink-0" />
+            <h1 className="text-2xl sm:text-3xl font-logo tracking-widest text-gray-200">monomelt</h1>
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
             <div className="hidden md:flex items-center gap-3 text-sm text-gray-500">
               <span className="text-gray-400">user:</span>
               <span>{user?.user_metadata?.user_name || user?.email}</span>
