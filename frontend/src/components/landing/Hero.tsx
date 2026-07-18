@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   return (
@@ -15,9 +16,9 @@ const Hero = () => {
           The end-to-end intelligence platform that deeply analyzes your legacy codebase and generates a complete, risk-free microservices transformation blueprint.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)]">
-            Upload Codebase
-          </button>
+          <Link to="/login" className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] block">
+            Start Transformation
+          </Link>
           <button className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 transition-all">
             View Sample Blueprint
           </button>
