@@ -51,10 +51,10 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <header className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Cpu className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Cpu className="w-5 h-5 text-[#0a0a0a]" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">MonoMELT</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white">MonoMELT</h1>
           </div>
           
           <div className="flex items-center gap-6">

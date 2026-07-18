@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+body {
+  font-family: 'Space Mono', monospace;
+}
+
+.font-logo {
+  font-family: 'Share Tech Mono', monospace;
+}

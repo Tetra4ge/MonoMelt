@@ -1,4 +1,3 @@
-
 const steps = [
   { num: '01', title: 'Upload Repository', desc: 'Securely upload your monolith zip or link your GitHub repo.' },
   { num: '02', title: 'AI Generation', desc: 'Our FastAPI engine parses ASTs and uses LLMs to define bounded contexts.' },
@@ -8,15 +7,15 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="py-24">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl lg:text-4xl font-bold text-white text-center mb-16">How it Works</h2>
-        <div className="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto">
+    <section className="py-24 border-t border-[#222]">
+      <div className="container mx-auto px-4 max-w-5xl">
+        <h2 className="text-3xl lg:text-4xl font-bold text-white mb-16">How it Works</h2>
+        <div className="grid md:grid-cols-4 gap-6">
           {steps.map((step, idx) => (
-            <div key={idx} className="relative p-6">
-              <div className="text-6xl font-black text-slate-800/50 mb-4">{step.num}</div>
-              <h3 className="text-lg font-bold text-indigo-300 mb-2">{step.title}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
+            <div key={idx} className="p-6 bg-[#111] border border-[#222] rounded-sm">
+              <div className="text-3xl font-black text-gray-700 mb-6">{step.num}</div>
+              <h3 className="text-base font-bold text-white mb-2">{step.title}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
             </div>
           ))}
         </div>

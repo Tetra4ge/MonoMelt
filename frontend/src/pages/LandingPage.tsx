@@ -5,11 +5,7 @@ import CallToAction from '../components/landing/CallToAction';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-300 selection:bg-indigo-500/30">
-      {/* 
-        This acts as the main container for the landing page.
-        It assembles the 4 landing components cleanly.
-      */}
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-400 selection:bg-emerald-500/30 font-sans">
       <main>
         <Hero />
         <Features />
@@ -17,8 +13,8 @@ const LandingPage = () => {
         <CallToAction />
       </main>
 
-      <footer className="py-8 text-center text-slate-500 text-sm border-t border-slate-800/50">
-        <p>© 2026 Transformation Intelligence Platform. Built for OpenAI Build Week.</p>
+      <footer className="py-8 text-center text-gray-600 text-sm border-t border-gray-800">
+        <p>© 2026 MonoMELT Transformation Platform. Built for OpenAI Build Week.</p>
       </footer>
     </div>
   );
