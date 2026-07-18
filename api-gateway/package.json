@@ -16,6 +16,7 @@
     "nodemon": "^3.1.14"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.7",
     "archiver": "^8.0.0",
     "axios": "^1.18.1",
     "cors": "^2.8.6",
