@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
+const { requireAuth } = require('./middlewares/auth.middleware');
 
 // Load environment variables
 dotenv.config();
@@ -39,6 +40,26 @@ app.get('/health', (req, res) => {
     service: 'api-gateway',
     status: 'up',
     timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * @swagger
+ * /api/protected:
+ *   get:
+ *     summary: Dummy Protected Route
+ *     description: Returns a success message if the user provides a valid JWT.
+ *     responses:
+ *       200:
+ *         description: Successfully authenticated.
+ *       401:
+ *         description: Unauthorized.
+ */
+app.get('/api/protected', requireAuth, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Authentication successful! You have accessed a protected route.',
+    user: req.user
   });
 });
 
