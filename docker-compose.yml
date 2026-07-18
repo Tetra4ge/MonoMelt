@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://api-gateway:4000
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./api-gateway:/app
+      - /app/node_modules
+    environment:
+      - PORT=4000
+      - AI_SERVICE_URL=http://ai-service:8000
+      - DATABASE_URL=postgresql://user:password@postgres:5432/transformation_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - ai-service
+      - postgres
+      - redis
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://user:password@postgres:5432/transformation_db
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=transformation_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
