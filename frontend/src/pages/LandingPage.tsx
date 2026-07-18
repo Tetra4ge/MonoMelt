@@ -1,9 +1,24 @@
+import { useEffect } from 'react';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css'; // Recommended by lenis docs
 import Hero from '../components/landing/Hero';
 import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
 import CallToAction from '../components/landing/CallToAction';
 
 const LandingPage = () => {
+  useEffect(() => {
+    // Initialize Lenis specifically for the landing page
+    const lenis = new Lenis({
+      autoRaf: true, // Let lenis handle requestAnimationFrame internally if version supports it
+    });
+
+    // Cleanup lenis when leaving the landing page so it doesn't affect Dashboard/Login
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-400 selection:bg-emerald-500/30 font-sans">
       <main>

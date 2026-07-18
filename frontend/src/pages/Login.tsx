@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { GitBranch, Loader2 } from 'lucide-react';
+import { GitBranch, Loader2, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -23,7 +24,12 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col justify-center items-center p-4 relative">
+      <Link to="/" className="absolute top-8 left-8 text-gray-500 hover:text-white flex items-center gap-2 transition-colors text-sm font-bold">
+        <ArrowLeft className="w-4 h-4" />
+        BACK
+      </Link>
+      
       <div className="max-w-sm w-full bg-[#111] p-8 rounded-sm border border-[#222] text-center">
         
         <div className="text-4xl font-logo tracking-widest text-gray-200 mb-6">monomelt</div>
