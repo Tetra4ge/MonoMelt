@@ -1,48 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useAuthStore } from '../stores/authStore';
 import { LogOut, FolderGit2, Activity, Terminal } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/');
-      } else {
-        setUser(session.user);
-      }
-      setLoading(false);
-    };
-    
-    checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate('/');
-      } else {
-        setUser(session.user);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  const { user, signOut } = useAuthStore();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-gray-500">
-        [system] Initializing Workspace...
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-300 p-8">

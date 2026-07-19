@@ -12,7 +12,7 @@ const Login: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: 'http://localhost:5173/dashboard'
+          redirectTo: `${window.location.origin}/auth/callback`
         }
       });
       if (error) throw error;
