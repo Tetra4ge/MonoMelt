@@ -3,29 +3,79 @@ const { requireAuth } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
-// Get all projects for user
-router.get('/', requireAuth, (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: [] // TODO: DB integration
+const { createClient } = require('@supabase/supabase-js');
+
+// Create a helper to generate a Supabase client that acts as the user
+const getSupabaseClient = (req) => {
+  // We use the user's access token as the API key to satisfy the client, 
+  // and pass the Authorization header so PostgREST enforces RLS correctly.
+  const token = req.headers.authorization.split(' ')[1];
+  return createClient(process.env.SUPABASE_URL, token, {
+    global: {
+      headers: {
+        Authorization: req.headers.authorization
+      }
+    }
   });
+};
+
+// Get all projects for user
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req);
+    const { data, error } = await supabase.from('projects').select('*').eq('owner_id', req.user.sub);
+    
+    if (error) throw error;
+    
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Get project by ID
-router.get('/:projectId', requireAuth, (req, res) => {
-  const { projectId } = req.params;
-  res.status(200).json({
-    success: true,
-    data: { id: projectId, owner_id: req.user.sub }
-  });
+router.get('/:projectId', requireAuth, async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const supabase = getSupabaseClient(req);
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .eq('owner_id', req.user.sub)
+      .single();
+      
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: 'Project not found or unauthorized' });
+    }
+    
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Create project
-router.post('/', requireAuth, (req, res) => {
-  res.status(201).json({
-    success: true,
-    data: { id: 'temp-id', ...req.body, owner_id: req.user.sub }
-  });
+router.post('/', requireAuth, async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient(req);
+    const newProject = {
+      ...req.body,
+      owner_id: req.user.sub
+    };
+    
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(newProject)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    res.status(201).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

@@ -53,7 +53,7 @@ CREATE POLICY "Users can view audit events for own projects" ON public.audit_eve
   )
 );
 CREATE POLICY "Users can insert audit events for own projects" ON public.audit_events FOR INSERT WITH CHECK (
-  EXISTS (
+  user_id = auth.uid() AND EXISTS (
     SELECT 1 FROM public.projects WHERE projects.id = audit_events.project_id AND projects.owner_id = auth.uid()
   )
 );
