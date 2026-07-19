@@ -16,7 +16,7 @@ const upload = multer({
 // Helper for supabase client as the user
 const getSupabaseClient = (req) => {
   const token = req.headers.authorization.split(' ')[1];
-  return createClient(process.env.SUPABASE_URL, token, {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     global: {
       headers: { Authorization: req.headers.authorization }
     }
