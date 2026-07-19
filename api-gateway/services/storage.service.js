@@ -17,7 +17,7 @@ const uploadSourceZip = async (fileBuffer, projectId, jobId) => {
   const fileName = `${projectId}/${jobId}/source.zip`;
   
   const { data, error } = await supabase.storage
-    .from('project_sources') // bucket name
+    .from('openai') // bucket name
     .upload(fileName, fileBuffer, {
       contentType: 'application/zip',
       upsert: true
