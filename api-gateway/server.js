@@ -2,27 +2,61 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
+const { v4: uuidv4 } = require('uuid');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
-const { requireAuth } = require('./middlewares/auth.middleware');
 
 // Load environment variables
 dotenv.config();
 
+// Validate Required Environment Variables
+const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_JWT_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL'];
+const missingVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingVars.length > 0) {
+  console.error(`FATAL ERROR: Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Request IDs
+app.use((req, res, next) => {
+  req.id = uuidv4();
+  res.setHeader('X-Request-Id', req.id);
+  next();
+});
+
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev')); // Logs HTTP requests to the console
+const allowedOrigins = [process.env.FRONTEND_URL || 'http://localhost:5173', 'https://openai.onrender.com'];
+app.use(cors({ origin: allowedOrigins }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Morgan logging (redact authorization header)
+morgan.token('req-id', (req) => req.id);
+app.use(morgan((tokens, req, res) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    req.headers.authorization = 'Bearer [REDACTED]';
+  }
+  return [
+    tokens['req-id'](req, res),
+    tokens.method(req, res),
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, 'content-length'), '-',
+    tokens['response-time'](req, res), 'ms'
+  ].join(' ');
+}));
 
 // Swagger API Documentation Route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
-// You can later move these to a separate routes.js file in this same directory
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/projects', require('./routes/projects.routes'));
+
 
 /**
  * @swagger
@@ -43,25 +77,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-/**
- * @swagger
- * /api/protected:
- *   get:
- *     summary: Dummy Protected Route
- *     description: Returns a success message if the user provides a valid JWT.
- *     responses:
- *       200:
- *         description: Successfully authenticated.
- *       401:
- *         description: Unauthorized.
- */
-app.get('/api/protected', requireAuth, (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Authentication successful! You have accessed a protected route.',
-    user: req.user
-  });
-});
 
 // Global Error Handler
 app.use((err, req, res, next) => {
