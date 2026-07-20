@@ -23,9 +23,10 @@ Failure to follow these rules will break the deployment pipeline and system arch
 This service uses a **flat directory structure** at its root. **Do not create a `src/` folder.**
 
 *   **`server.js`**: Main entry point.
-*   **`routes/`**, **`controllers/`**, **`services/`**, **`middlewares/`**, **`config/`**, **`utils/`**.
+*   **`routes/`**, **`controllers/`**, **`services/`**, **`middlewares/`**, **`config/`**, **`utils/`**, **`docs/`**.
 *   **Naming Conventions:** Files must strictly use the **`feature.type.js`** convention.
-    *   *Examples:* `health.controller.js`, `analysis.routes.js`, `auth.middleware.js`, `ai.service.js`.
+    *   *Examples:* `health.controller.js`, `analysis.routes.js`, `auth.middleware.js`, `ai.service.js`, `auth.docs.js`.
+*   **Swagger Documentation:** All Swagger documentation for endpoints (using `swagger-jsdoc`) MUST be separated by feature and placed inside the `docs/` folder (e.g., `docs/auth.docs.js`, `docs/projects.docs.js`).
 
 ---
 
