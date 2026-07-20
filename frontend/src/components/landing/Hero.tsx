@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { Copy } from 'lucide-react';
+import { Copy, LogIn, LayoutDashboard } from 'lucide-react';
 
 const Hero = () => {
   const { session } = useAuthStore();
@@ -22,22 +22,22 @@ const Hero = () => {
         <div className="flex justify-between items-center mb-12 md:mb-24 pb-4 md:pb-8">
           <div className="text-2xl md:text-4xl font-logo tracking-widest text-gray-200">monomelt</div>
           <div className="hidden md:flex gap-8 text-sm text-gray-400">
-            <span className="hover:text-white cursor-pointer transition-colors">GitHub</span>
+            <a href="https://github.com/Tetra4ge/monomelt" target="_blank" rel="noopener noreferrer" className="hover:text-white cursor-pointer transition-colors">GitHub</a>
             <span className="hover:text-white cursor-pointer transition-colors">Docs</span>
             <span className="hover:text-white cursor-pointer transition-colors">Data</span>
             <span className="hover:text-white cursor-pointer transition-colors">Zen</span>
             <span onClick={handleDashboardClick} className="hover:text-white cursor-pointer transition-colors">Dashboard</span>
           </div>
-          <Link to="/login" className="px-4 py-2 bg-white text-black font-bold text-sm rounded-sm hover:bg-gray-200 transition-colors flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Try It
+          <Link to={session ? "/dashboard" : "/login"} className="px-4 py-2 bg-white text-black font-bold text-sm rounded-sm hover:bg-gray-200 transition-colors flex items-center gap-2">
+            {session ? <LayoutDashboard className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+            {session ? "Dashboard" : "Try It"}
           </Link>
         </div>
 
         {/* Badge */}
         <div className="inline-block border border-[#222] bg-[#0a0a0a] text-gray-400 text-[10px] sm:text-xs mb-8 p-1 leading-relaxed">
           <span className="bg-white text-black px-2 py-0.5 mr-2 font-bold inline-block">New</span>
-          <span>Introducing full AST parsing for legacy monoliths. <Link to="/login" className="text-gray-500 hover:text-white ml-1">Try it now</Link></span>
+          <span>Introducing full AST parsing for legacy monoliths. <Link to={session ? "/dashboard" : "/login"} className="text-gray-500 hover:text-white ml-1">Try it now</Link></span>
         </div>
 
         {/* Main Heading */}
@@ -59,8 +59,15 @@ const Hero = () => {
             <span className="text-gray-600 cursor-pointer hover:text-gray-400">brew</span>
             <span className="text-gray-600 cursor-pointer hover:text-gray-400">paru</span>
           </div>
-          <div className="px-4 md:px-6 py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs md:text-sm">
-            <span className="text-gray-500 break-all sm:break-normal">curl -fsSL <span className="text-white font-bold">https://monomelt.ai/install</span> | bash</span>
+          <div className="px-4 md:px-6 py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs md:text-sm font-mono">
+            <div className="flex items-center text-gray-400 break-all sm:break-normal">
+              <span className="text-emerald-500 font-bold mr-2">~</span>
+              <span className="text-blue-400 font-bold mr-3">$</span>
+              <span className="text-white font-bold">
+                git clone https://github.com/Tetra4ge/monomelt.git
+              </span>
+              <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse ml-2 align-middle"></span>
+            </div>
             <Copy className="w-4 h-4 text-gray-600 hover:text-white cursor-pointer transition-colors self-end sm:self-auto shrink-0" />
           </div>
         </div>
