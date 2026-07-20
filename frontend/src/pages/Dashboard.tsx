@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
                    {recentProjects.map(project => (
                      <div 
                        key={project.id}
-                       onClick={() => navigate(`/app/projects/${project.id}`)}
+                       onClick={() => navigate(`/dashboard/projects/${project.id}/analysis`)}
                        className="border border-[#333] bg-[#0a0a0a] p-4 cursor-pointer hover:border-blue-500 hover:bg-[#151515] transition-all group relative overflow-hidden"
                      >
                        <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
