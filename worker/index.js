@@ -19,7 +19,7 @@ const processSourceZip = async (jobData) => {
   await supabase.from('analysis_jobs').update({ status: 'ingesting' }).eq('id', jobId);
 
   // 2. Download zip from storage
-  const { data, error } = await supabase.storage.from('project_sources').download(storagePath);
+  const { data, error } = await supabase.storage.from('openai').download(storagePath);
   if (error) throw new Error(`Failed to download zip: ${error.message}`);
 
   const buffer = Buffer.from(await data.arrayBuffer());

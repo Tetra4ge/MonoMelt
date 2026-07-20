@@ -1,6 +1,12 @@
-const jwt = require('jsonwebtoken');
+const { createClient } = require('@supabase/supabase-js');
 
-const requireAuth = (req, res, next) => {
+// Create a singleton client for auth verification
+const supabase = createClient(
+  process.env.SUPABASE_URL, 
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+const requireAuth = async (req, res, next) => {
   try {
     // 1. Get the token from the Authorization header
     const authHeader = req.headers.authorization;
@@ -13,12 +19,17 @@ const requireAuth = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // 2. Verify the token using the Supabase JWT Secret
-    // Supabase signs their JWTs using the secret provided in your dashboard
-    const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+    // 2. Verify the token using Supabase's built-in getUser
+    // This handles any algorithm (HS256, RS256, ES256) used by the Supabase project
+    const { data: { user }, error } = await supabase.auth.getUser(token);
     
-    // 3. Attach the decoded user payload to the request object
-    req.user = decoded;
+    if (error || !user) {
+      throw error || new Error("User not found");
+    }
+    
+    // 3. Attach the user payload to the request object
+    // Map 'id' to 'sub' to keep compatibility with existing routes
+    req.user = { ...user, sub: user.id };
     
     // 4. Move to the next middleware or route handler
     next();

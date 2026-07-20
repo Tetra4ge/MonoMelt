@@ -10,7 +10,7 @@ const getSupabaseClient = (req) => {
   // We use the user's access token as the API key to satisfy the client, 
   // and pass the Authorization header so PostgREST enforces RLS correctly.
   const token = req.headers.authorization.split(' ')[1];
-  return createClient(process.env.SUPABASE_URL, token, {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     global: {
       headers: {
         Authorization: req.headers.authorization
@@ -79,3 +79,11 @@ router.post('/', requireAuth, async (req, res, next) => {
 });
 
 module.exports = router;
+
+// Mount sub-routers for sources and jobs
+const sourcesRouter = require('./sources.routes');
+const jobsRouter = require('./jobs.routes');
+
+// Use mergeParams in the sub-routers so they can access :projectId
+router.use('/:projectId/sources', sourcesRouter);
+router.use('/:projectId/jobs', jobsRouter);
