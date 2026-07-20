@@ -178,7 +178,10 @@ async def _run_analysis_pipeline(
             from supabase import create_client
             settings = get_settings()
             supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
-            supabase.table("analysis_jobs").update({"status": "failed"}).eq("source_version_id", source_version_id).execute()
+            supabase.table("analysis_jobs").update({
+                "status": "failed",
+                "error_code": str(exc)
+            }).eq("source_version_id", source_version_id).execute()
         except:
             pass
 

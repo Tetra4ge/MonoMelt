@@ -40,10 +40,9 @@ export default function AnalysisPage() {
           { global: { headers: { Authorization: `Bearer ${token}` } } }
         );
 
-        // Fetch latest completed analysis job
         const { data: jobs, error: jobError } = await authSupabase
           .from('analysis_jobs')
-          .select('id, source_version_id, status')
+          .select('id, source_version_id, status, error_code')
           .eq('project_id', projectId)
           .order('created_at', { ascending: false })
           .limit(1);
@@ -76,7 +75,7 @@ export default function AnalysisPage() {
         }
 
         if (latestJob.status === 'failed') {
-          setError("Analysis job failed during processing.");
+          setError(`Analysis job failed: ${latestJob.error_code || 'Unknown error'}`);
           setLoading(false);
           return;
         }
