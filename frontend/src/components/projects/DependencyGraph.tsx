@@ -19,12 +19,33 @@ interface Edge {
   confidence: number;
 }
 
+interface ProposedService {
+  id: string;
+  name: string;
+  assigned_nodes: string[];
+}
+
 interface DependencyGraphProps {
   nodes: Node[];
   edges: Edge[];
+  proposedServices?: ProposedService[];
 }
 
-export default function DependencyGraph({ nodes, edges }: DependencyGraphProps) {
+// Generate distinct colors for services
+const SERVICE_COLORS = [
+  '#ef4444', // red
+  '#3b82f6', // blue
+  '#22c55e', // green
+  '#a855f7', // purple
+  '#f59e0b', // amber
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#8b5cf6', // violet
+  '#14b8a6', // teal
+];
+
+export default function DependencyGraph({ nodes, edges, proposedServices }: DependencyGraphProps) {
   const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,20 +72,40 @@ export default function DependencyGraph({ nodes, edges }: DependencyGraphProps) 
   }, []);
 
   const graphData = useMemo(() => {
-    // Map edges to use standard object references required by ForceGraph
     return {
-      nodes: nodes.map(n => ({ ...n, id: n.id })), // Ensure distinct instances
+      nodes: nodes.map(n => ({ ...n, id: n.id })),
       links: edges.map(e => ({ source: e.source_id, target: e.target_id, label: e.relationship }))
     };
   }, [nodes, edges]);
 
-  // Node Color Mapper based on User's explicit instructions (Files = blue, Classes = green, Functions = red)
+  // Pre-compute node to service mapping for fast lookup O(1)
+  const nodeServiceMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (proposedServices) {
+      proposedServices.forEach((service, index) => {
+        const color = SERVICE_COLORS[index % SERVICE_COLORS.length];
+        service.assigned_nodes.forEach(nodeId => {
+          map.set(nodeId, color);
+        });
+      });
+    }
+    return map;
+  }, [proposedServices]);
+
   const getNodeColor = (node: any) => {
+    // If we have proposed services, color by service boundary
+    if (proposedServices && proposedServices.length > 0) {
+      const serviceColor = nodeServiceMap.get(node.id);
+      if (serviceColor) return serviceColor;
+      return '#333333'; // Unassigned or orphaned nodes
+    }
+
+    // Default syntax coloring
     if (node.label === 'File') return '#3b82f6';
     if (node.label === 'Class') return '#22c55e';
     if (node.label === 'Symbol' && node.properties?.symbol_type === 'function') return '#ef4444';
-    if (node.label === 'Symbol') return '#eab308'; // Other symbols yellow
-    return '#888888'; // Default grey for Externals
+    if (node.label === 'Symbol') return '#eab308';
+    return '#888888';
   };
 
   const getNodeSize = (node: any) => {
@@ -78,9 +119,24 @@ export default function DependencyGraph({ nodes, edges }: DependencyGraphProps) 
       className="w-full h-full min-h-[500px] bg-[#0a0a0a] border border-[#222] rounded-none overflow-hidden relative group"
     >
       <div className="absolute top-4 left-4 z-10 p-2 bg-[#111] border border-[#222] text-xs text-gray-400 font-mono">
-        <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#3b82f6]"></div> Files</div>
-        <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#22c55e]"></div> Classes</div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#ef4444]"></div> Functions</div>
+        {proposedServices && proposedServices.length > 0 ? (
+          <>
+            <div className="font-bold text-white mb-2 border-b border-[#333] pb-1">Microservices</div>
+            {proposedServices.slice(0, 10).map((service, idx) => (
+              <div key={service.id} className="flex items-center gap-2 mb-1">
+                <div className="w-3 h-3" style={{ backgroundColor: SERVICE_COLORS[idx % SERVICE_COLORS.length] }}></div>
+                {service.name}
+              </div>
+            ))}
+            {proposedServices.length > 10 && <div className="text-gray-600 italic mt-1">+ {proposedServices.length - 10} more</div>}
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#3b82f6]"></div> Files</div>
+            <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#22c55e]"></div> Classes</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#ef4444]"></div> Functions</div>
+          </>
+        )}
       </div>
       
       <ForceGraph2D
@@ -95,7 +151,7 @@ export default function DependencyGraph({ nodes, edges }: DependencyGraphProps) 
         linkColor={() => '#333333'}
         linkWidth={1}
         backgroundColor="#0a0a0a"
-        d3VelocityDecay={0.3} // Make the graph settle faster
+        d3VelocityDecay={0.3} 
       />
     </div>
   );
