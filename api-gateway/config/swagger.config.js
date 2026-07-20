@@ -16,7 +16,7 @@ const options = {
     ],
   },
   // Pointing to where your endpoints will be defined for Swagger to read the comments
-  apis: ['./routes/*.js', './controllers/*.js', './server.js'],
+  apis: ['./routes/*.js', './controllers/*.js', './server.js', './docs/*.docs.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import AnalysisPage from './pages/AnalysisPage';
 import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
@@ -25,6 +26,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/analysis" 
+          element={
+            <ProtectedRoute>
+              <AnalysisPage />
             </ProtectedRoute>
           } 
         />

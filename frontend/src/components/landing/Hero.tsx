@@ -1,7 +1,19 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 import { Copy } from 'lucide-react';
 
 const Hero = () => {
+  const { session } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleDashboardClick = () => {
+    if (session) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <section className="relative pt-12 pb-20 lg:pb-32">
       <div className="container mx-auto px-4 max-w-5xl">
@@ -14,7 +26,7 @@ const Hero = () => {
             <span className="hover:text-white cursor-pointer transition-colors">Docs</span>
             <span className="hover:text-white cursor-pointer transition-colors">Data</span>
             <span className="hover:text-white cursor-pointer transition-colors">Zen</span>
-            <span className="hover:text-white cursor-pointer transition-colors">Enterprise</span>
+            <span onClick={handleDashboardClick} className="hover:text-white cursor-pointer transition-colors">Dashboard</span>
           </div>
           <Link to="/login" className="px-4 py-2 bg-white text-black font-bold text-sm rounded-sm hover:bg-gray-200 transition-colors flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>

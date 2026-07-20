@@ -1,12 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { LogOut, FolderGit2, Activity, Terminal } from 'lucide-react';
+import { UploadSource } from '../components/projects/UploadSource';
+import { useNavigate } from 'react-router-dom';
+import api from '../lib/api';
 
 const Dashboard: React.FC = () => {
   const { user, signOut } = useAuthStore();
+  const navigate = useNavigate();
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSignOut = async () => {
+    navigate('/');
     await signOut();
+  };
+
+  const handleInitializeProject = async () => {
+    try {
+      setLoading(true);
+      const res = await api.post('/api/projects', { 
+        name: 'Monomelt Auto Project', 
+        description: 'Generated from dashboard',
+        source_type: 'github' // Required by Supabase schema
+      });
+      setProjectId(res.data.data.id);
+    } catch (e) {
+      console.error('Failed to create project', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJobStarted = (jobId: string) => {
+    navigate(`/dashboard/projects/${projectId}/analysis`);
   };
 
   return (
@@ -45,11 +72,18 @@ const Dashboard: React.FC = () => {
               <h2 className="text-xl font-bold text-white mb-2">&gt; ingest_repository</h2>
               <p className="text-gray-500 mb-6 text-sm">Target a GitHub repository for AST parsing and modular extraction.</p>
               
-              <div className="border border-dashed border-[#444] rounded-sm p-12 text-center hover:bg-[#1a1a1a] hover:border-gray-500 transition-colors cursor-pointer">
-                <FolderGit2 className="w-10 h-10 text-gray-600 mx-auto mb-4" />
-                <h3 className="text-base font-bold text-gray-300">Paste GitHub URL</h3>
-                <p className="text-xs text-gray-600 mt-2">[ STATUS: WAITING_FOR_PHASE_2 ]</p>
-              </div>
+              {!projectId ? (
+                <div 
+                  onClick={handleInitializeProject}
+                  className="border border-dashed border-[#444] rounded-sm p-12 text-center hover:bg-[#1a1a1a] hover:border-gray-500 transition-colors cursor-pointer"
+                >
+                  <FolderGit2 className="w-10 h-10 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-base font-bold text-gray-300">Initialize New Project Workspace</h3>
+                  <p className="text-xs text-gray-600 mt-2">{loading ? 'Creating...' : 'Click to begin ingestion flow'}</p>
+                </div>
+              ) : (
+                <UploadSource projectId={projectId} onJobStarted={handleJobStarted} />
+              )}
             </div>
           </div>
 
