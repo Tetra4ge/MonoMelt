@@ -29,3 +29,7 @@ redis==5.0.7
 
 # Utility
 requests==2.32.3
+
+# Graph & Clustering
+networkx==3.3
+python-louvain==0.16

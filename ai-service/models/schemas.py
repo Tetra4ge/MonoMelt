@@ -121,6 +121,23 @@ class DiagnosticsResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Decomposition
+# ---------------------------------------------------------------------------
+
+class TriggerDecompositionRequest(BaseModel):
+    scenario_id: UUID
+    project_id: UUID
+    source_version_id: UUID
+    strategy_type: str  # conservative | aggressive | domain | team
+    owner_id: UUID
+
+class TriggerDecompositionResponse(BaseModel):
+    success: bool
+    scenario_id: UUID
+    status: str
+    message: str
+
+# ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
 
