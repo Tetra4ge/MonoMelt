@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 
 const CallToAction = () => {
+  const { session } = useAuthStore();
+  
   return (
     <section className="py-24 border-t border-[#222] bg-[#0a0a0a]">
       <div className="container mx-auto px-4 max-w-5xl">
@@ -9,8 +12,8 @@ const CallToAction = () => {
           <p className="text-base text-gray-400 mb-10 max-w-2xl mx-auto">
             Stop debating architecture in endless meetings. Let AI give you the data-driven blueprint you need today.
           </p>
-          <Link to="/login" className="inline-block px-8 py-3 bg-white text-black hover:bg-gray-200 font-bold rounded-sm transition-colors text-sm">
-            Start Your Transformation Free
+          <Link to={session ? "/dashboard" : "/login"} className="inline-block px-8 py-3 bg-white text-black hover:bg-gray-200 font-bold rounded-sm transition-colors text-sm">
+            {session ? "Start Your Transformation Free" : "Start Your Transformation Free"}
           </Link>
         </div>
       </div>

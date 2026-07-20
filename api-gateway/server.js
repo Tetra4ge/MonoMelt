@@ -58,6 +58,7 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/projects', require('./routes/projects.routes'));
 app.use('/api/projects/:projectId/analysis', require('./routes/analysis.routes'));
 app.use('/api/projects/:projectId/intelligence', require('./routes/intelligence.routes'));
+app.use('/api/projects/:projectId/scenarios', require('./routes/decomposition.routes'));
 
 /**
  * @swagger
