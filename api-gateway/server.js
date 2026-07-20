@@ -80,7 +80,7 @@ app.get('/health', (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Global Error Handler caught:', err);
   res.status(500).json({
     success: false,
     message: 'Internal Server Error',

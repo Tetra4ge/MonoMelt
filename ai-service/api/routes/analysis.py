@@ -76,8 +76,11 @@ async def _run_analysis_pipeline(
         settings = get_settings()
         supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
 
+        # Update Supabase status to analyzing so frontend knows we started
+        supabase.table("analysis_jobs").update({"status": "analyzing"}).eq("source_version_id", source_version_id).execute()
+
         # 1. Get file manifest
-        response = supabase.from_("source_files") \
+        response = supabase.table("source_files") \
             .select("file_path, language, content_hash") \
             .eq("source_version_id", source_version_id) \
             .eq("status", "included") \
@@ -89,7 +92,7 @@ async def _run_analysis_pipeline(
         # 2. Download file content from storage and attach to manifest
         # Storage path pattern: {projectId}/{jobId}/{file_path}
         # We'll fetch the source version metadata to find the storage path
-        sv_resp = supabase.from_("source_versions") \
+        sv_resp = supabase.table("source_versions") \
             .select("metadata") \
             .eq("id", source_version_id) \
             .single() \
@@ -159,6 +162,9 @@ async def _run_analysis_pipeline(
             "diagnostics": all_diagnostics,
             "graph_summary": graph_summary,
         })
+        
+        # Update Supabase status so frontend breaks out of polling loop
+        supabase.table("analysis_jobs").update({"status": "completed"}).eq("source_version_id", source_version_id).execute()
 
     except Exception as exc:
         logger.exception("Analysis run %s failed", analysis_run_id)
@@ -167,6 +173,14 @@ async def _run_analysis_pipeline(
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "error_message": str(exc),
         })
+        try:
+            from core.config import get_settings
+            from supabase import create_client
+            settings = get_settings()
+            supabase = create_client(settings.supabase_url, settings.supabase_service_role_key)
+            supabase.table("analysis_jobs").update({"status": "failed"}).eq("source_version_id", source_version_id).execute()
+        except:
+            pass
 
 
 # ---------------------------------------------------------------------------

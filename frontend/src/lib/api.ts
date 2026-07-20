@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
+const baseURL = import.meta.env.VITE_MODE === 'production'
+  ? import.meta.env.VITE_API_PRO_URL
+  : import.meta.env.VITE_API_DEV_URL;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_DEV_URL,
+  baseURL,
 });
 
 api.interceptors.request.use(async (config) => {

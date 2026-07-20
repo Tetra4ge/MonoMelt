@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AnalysisMetrics from '../components/projects/AnalysisMetrics';
 import DependencyGraph from '../components/projects/DependencyGraph';
 import { useAuthStore } from '../stores/authStore';
+import api from '../lib/api';
 
 export default function AnalysisPage() {
   const { projectId } = useParams();
@@ -24,15 +25,13 @@ export default function AnalysisPage() {
   
   // Actually, we can fetch all jobs for the project using Supabase client to find the latest source_version_id
   useEffect(() => {
+    let pollTimeout: ReturnType<typeof setTimeout>;
+
     const fetchLatestAnalysis = async () => {
       try {
-        setLoading(true);
+        if (!activeJob) setLoading(true);
         // 1. Fetch project details and latest jobs via API
         const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(
-          import.meta.env.VITE_SUPABASE_URL,
-          import.meta.env.VITE_SUPABASE_ANON_KEY
-        );
         
         // Use RLS with the user's token
         const authSupabase = createClient(
@@ -60,28 +59,44 @@ export default function AnalysisPage() {
         const latestJob = jobs[0];
         setActiveJob(latestJob);
 
-        if (latestJob.status !== 'completed') {
-          // It's still processing! We should poll.
-          // For simplicity, just show processing state.
+        if (latestJob.status !== 'completed' && latestJob.status !== 'failed') {
+          // If the worker finished downloading (ready), we automatically kick off the AI AST parser!
+          if (latestJob.status === 'ready') {
+            try {
+              await api.post(`/api/projects/${projectId}/analysis/trigger`, { source_version_id: latestJob.source_version_id });
+            } catch (e) {
+              console.error("Failed to trigger AI analysis", e);
+            }
+          }
+          
+          setLoading(false);
+          // Schedule the next poll in 3 seconds
+          pollTimeout = setTimeout(fetchLatestAnalysis, 3000);
+          return;
+        }
+
+        if (latestJob.status === 'failed') {
+          setError("Analysis job failed during processing.");
           setLoading(false);
           return;
         }
 
         // It is completed. Fetch the metrics and graph from the API Gateway
-        const headers = { Authorization: `Bearer ${token}` };
         
         // Fetch Metrics
-        const metricsRes = await fetch(`http://localhost:4000/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`, { headers });
-        if (metricsRes.ok) {
-          const metricsData = await metricsRes.json();
-          setMetrics(metricsData);
+        try {
+          const metricsRes = await api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`);
+          setMetrics(metricsRes.data);
+        } catch (e) {
+          console.error("Failed to fetch metrics", e);
         }
 
         // Fetch Graph
-        const graphRes = await fetch(`http://localhost:4000/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`, { headers });
-        if (graphRes.ok) {
-          const graphData = await graphRes.json();
-          setGraphData({ nodes: graphData.nodes || [], edges: graphData.edges || [] });
+        try {
+          const graphRes = await api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`);
+          setGraphData({ nodes: graphRes.data.nodes || [], edges: graphRes.data.edges || [] });
+        } catch (e) {
+          console.error("Failed to fetch graph", e);
         }
 
         setLoading(false);
@@ -95,6 +110,10 @@ export default function AnalysisPage() {
     if (projectId && token) {
       fetchLatestAnalysis();
     }
+
+    return () => {
+      if (pollTimeout) clearTimeout(pollTimeout);
+    };
   }, [projectId, token]);
 
 
