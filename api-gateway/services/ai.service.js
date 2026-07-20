@@ -7,7 +7,9 @@
 
 const axios = require('axios');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_URL = process.env.NODE_ENV === 'production'
+  ? process.env.AI_SERVICE_PRO_URL
+  : (process.env.AI_SERVICE_DEV_URL || 'http://localhost:8000');
 const TIMEOUT_MS = 30_000; // 30s — analysis can be slow
 
 const client = axios.create({
