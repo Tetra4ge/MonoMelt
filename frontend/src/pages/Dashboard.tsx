@@ -12,6 +12,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const handleSignOut = async () => {
+    navigate('/');
     await signOut();
   };
 
