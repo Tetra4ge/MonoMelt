@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AnalysisMetrics from '../components/projects/AnalysisMetrics';
 import DependencyGraph from '../components/projects/DependencyGraph';
+import FindingsPanel from '../components/projects/FindingsPanel';
 import { useAuthStore } from '../stores/authStore';
 import api from '../lib/api';
 
@@ -18,22 +19,43 @@ export default function AnalysisPage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [graphData, setGraphData] = useState<{ nodes: any[], edges: any[] }>({ nodes: [], edges: [] });
 
-  // On mount, we need to find the latest job or run for this project.
-  // The backend doesn't have an endpoint to "get latest run for project" easily, 
-  // but we can query the /projects/:id/sources or assume the user just triggered an upload
-  // For the hackathon, let's assume we can query Supabase directly or there's an API route.
-  
-  // Actually, we can fetch all jobs for the project using Supabase client to find the latest source_version_id
+  // Phase 4 Intelligence State
+  const [findings, setFindings] = useState<any[]>([]);
+  const [isEnriching, setIsEnriching] = useState(false);
+
   useEffect(() => {
     let pollTimeout: ReturnType<typeof setTimeout>;
+    let findingsPollTimeout: ReturnType<typeof setTimeout>;
+
+    const fetchFindings = async (sourceVersionId: string, isPolling = false) => {
+      try {
+        const res = await api.get(`/api/projects/${projectId}/intelligence/${sourceVersionId}/findings`);
+        if (res.data.success && res.data.data) {
+          const parsedFindings = res.data.data.map((f: any) => ({
+            ...f,
+            subject_ids: typeof f.subject_ids === 'string' ? JSON.parse(f.subject_ids) : f.subject_ids,
+            evidence_ids: typeof f.evidence_ids === 'string' ? JSON.parse(f.evidence_ids) : f.evidence_ids,
+          }));
+          
+          setFindings(parsedFindings);
+          
+          if (parsedFindings.length > 0) {
+            setIsEnriching(false); // Done
+          } else if (isPolling) {
+            findingsPollTimeout = setTimeout(() => fetchFindings(sourceVersionId, true), 3000);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch findings", err);
+        setIsEnriching(false);
+      }
+    };
 
     const fetchLatestAnalysis = async () => {
       try {
         if (!activeJob) setLoading(true);
-        // 1. Fetch project details and latest jobs via API
         const { createClient } = await import('@supabase/supabase-js');
         
-        // Use RLS with the user's token
         const authSupabase = createClient(
           import.meta.env.VITE_SUPABASE_URL,
           import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -59,7 +81,6 @@ export default function AnalysisPage() {
         setActiveJob(latestJob);
 
         if (latestJob.status !== 'completed' && latestJob.status !== 'failed') {
-          // If the worker finished downloading (ready), we automatically kick off the AI AST parser!
           if (latestJob.status === 'ready') {
             try {
               await api.post(`/api/projects/${projectId}/analysis/trigger`, { source_version_id: latestJob.source_version_id });
@@ -69,7 +90,6 @@ export default function AnalysisPage() {
           }
           
           setLoading(false);
-          // Schedule the next poll in 3 seconds
           pollTimeout = setTimeout(fetchLatestAnalysis, 3000);
           return;
         }
@@ -80,23 +100,20 @@ export default function AnalysisPage() {
           return;
         }
 
-        // It is completed. Fetch the metrics and graph from the API Gateway
-        
-        // Fetch Metrics
+        // Fetch Metrics & Graph
         try {
-          const metricsRes = await api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`);
+          const [metricsRes, graphRes] = await Promise.all([
+            api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`),
+            api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`)
+          ]);
           setMetrics(metricsRes.data);
-        } catch (e) {
-          console.error("Failed to fetch metrics", e);
-        }
-
-        // Fetch Graph
-        try {
-          const graphRes = await api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`);
           setGraphData({ nodes: graphRes.data.nodes || [], edges: graphRes.data.edges || [] });
         } catch (e) {
-          console.error("Failed to fetch graph", e);
+          console.error("Failed to fetch analysis data", e);
         }
+
+        // Check if we already have intelligence findings
+        await fetchFindings(latestJob.source_version_id, false);
 
         setLoading(false);
       } catch (err: any) {
@@ -112,9 +129,58 @@ export default function AnalysisPage() {
 
     return () => {
       if (pollTimeout) clearTimeout(pollTimeout);
+      if (findingsPollTimeout) clearTimeout(findingsPollTimeout);
     };
   }, [projectId, token]);
 
+  const handleRunIntelligence = async () => {
+    if (!activeJob) return;
+    setIsEnriching(true);
+    try {
+      await api.post(`/api/projects/${projectId}/intelligence/trigger`, {
+        source_version_id: activeJob.source_version_id
+      });
+      
+      // Start polling for results
+      const pollFindings = async () => {
+        try {
+          const res = await api.get(`/api/projects/${projectId}/intelligence/${activeJob.source_version_id}/findings`);
+          if (res.data.success && res.data.data && res.data.data.length > 0) {
+            const parsedFindings = res.data.data.map((f: any) => ({
+              ...f,
+              subject_ids: typeof f.subject_ids === 'string' ? JSON.parse(f.subject_ids) : f.subject_ids,
+              evidence_ids: typeof f.evidence_ids === 'string' ? JSON.parse(f.evidence_ids) : f.evidence_ids,
+            }));
+            setFindings(parsedFindings);
+            setIsEnriching(false);
+          } else {
+            setTimeout(pollFindings, 3000);
+          }
+        } catch(err) {
+          console.error("Poll failed", err);
+          setTimeout(pollFindings, 3000);
+        }
+      };
+      
+      pollFindings();
+      
+    } catch (e) {
+      console.error("Failed to start intelligence", e);
+      setIsEnriching(false);
+    }
+  };
+
+  const handleReviewFinding = async (findingId: string, status: string) => {
+    try {
+      await api.post(`/api/projects/${projectId}/intelligence/findings/${findingId}/review`, {
+        review_status: status
+      });
+      // Update local state immediately
+      setFindings(prev => prev.map(f => f.id === findingId ? { ...f, review_status: status, needs_review: false } : f));
+    } catch (e) {
+      console.error("Failed to review finding", e);
+    }
+  };
 
   if (loading) {
     return (
@@ -165,15 +231,38 @@ export default function AnalysisPage() {
           <h1 className="text-2xl font-bold">Dependency Graph</h1>
           <p className="text-gray-500 text-sm mt-1">Interactive AST visualization from Neo4j</p>
         </div>
-        <button 
-          onClick={() => navigate(`/app/projects/${projectId}`)}
-          className="px-4 py-2 border border-[#222] text-gray-400 font-bold text-xs uppercase hover:text-white hover:bg-[#111]"
-        >
-          Back to Project
-        </button>
+        <div className="flex gap-4 items-center">
+          {findings.length === 0 && (
+            <button 
+              onClick={handleRunIntelligence}
+              disabled={isEnriching}
+              className="px-4 py-2 bg-purple-900/30 text-purple-400 border border-purple-900 font-bold text-xs uppercase hover:bg-purple-900 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {isEnriching ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                  Enriching...
+                </>
+              ) : (
+                '✨ Run AI Intelligence'
+              )}
+            </button>
+          )}
+          
+          <button 
+            onClick={() => navigate(`/app/projects/${projectId}`)}
+            className="px-4 py-2 border border-[#222] text-gray-400 font-bold text-xs uppercase hover:text-white hover:bg-[#111]"
+          >
+            Back to Project
+          </button>
+        </div>
       </div>
 
       <AnalysisMetrics metrics={metrics} />
+      
+      {findings.length > 0 && (
+        <FindingsPanel findings={findings} onReview={handleReviewFinding} />
+      )}
 
       <div className="w-full flex-1 bg-[#111] p-1 border border-[#222]">
         <DependencyGraph nodes={graphData.nodes} edges={graphData.edges} />
