@@ -10,12 +10,14 @@ router.use(requireAuth);
 router.get('/', planningController.getPlans);
 
 // Create a new migration plan from a scenario
+router.post('/', planningController.createPlan);
 router.post('/scenarios/:scenarioId/plans', planningController.createPlan);
 
 // Get specific plan details and all its revisions
 router.get('/:planId', planningController.getPlanDetails);
 
 // Recalculate plan with updated assumptions (creates new revision)
+router.post('/:planId/recalculate', planningController.recalculatePlan);
 router.post('/:planId/assumptions', planningController.recalculatePlan);
 
 module.exports = router;

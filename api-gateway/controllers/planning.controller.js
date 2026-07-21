@@ -9,7 +9,8 @@ const getSupabaseClient = (req) => {
 };
 
 const createPlan = async (req, res) => {
-  const { projectId, scenarioId } = req.params;
+  const { projectId } = req.params;
+  const scenarioId = req.params.scenarioId || req.body.scenarioId || req.body.scenarioRevisionId;
   const { title, assumptions } = req.body;
   const supabase = getSupabaseClient(req);
 
