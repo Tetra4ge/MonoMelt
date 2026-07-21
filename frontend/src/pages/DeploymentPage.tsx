@@ -93,13 +93,13 @@ export default function DeploymentPage() {
           <div className="flex flex-col items-center justify-center py-20 border border-[#222] bg-[#111] rounded-md">
             <h2 className="text-xl font-bold text-white mb-2">No Blueprint Selected</h2>
             <p className="text-gray-400 mb-6 max-w-lg text-center text-sm">
-              Please go back to the Infrastructure Export phase and trigger a deployment from there.
+              Please go back to Infrastructure Export and trigger a deployment from there.
             </p>
             <button
               onClick={() => navigate(`/dashboard/projects/${projectId}/export`)}
               className="bg-[#222] hover:bg-[#333] text-white px-8 py-3 font-bold uppercase tracking-widest text-sm transition-colors"
             >
-              Go to Phase 7
+              Back to Export
             </button>
           </div>
         )}

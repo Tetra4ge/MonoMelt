@@ -58,7 +58,7 @@ export default function ExportPage() {
 
   const handleGenerate = async () => {
     if (!projectId || !planId) {
-      setError('Missing Project ID or Plan ID. Please return to the planning phase.');
+      setError('Missing Project ID or Plan ID. Please return to planning.');
       return;
     }
 

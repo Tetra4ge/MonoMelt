@@ -28,8 +28,8 @@ export default function PlanSetup({ assumptions, disabled, submitLabel, onChange
   return (
     <form onSubmit={handleSubmit} className="border border-[#222] bg-[#111] p-5 sm:p-6">
       <div className="mb-5 border-b border-[#222] pb-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-gray-500">phase_06 / configuration</p>
-        <h2 className="mt-2 text-lg font-bold text-white">&gt; define_migration_assumptions</h2>
+        <p className="text-xs uppercase tracking-[0.2em] text-gray-500">planning / configuration</p>
+        <h2 className="mt-2 text-lg font-bold text-white">Execution Parameters</h2>
         <p className="mt-2 text-xs leading-5 text-gray-500">Every generated estimate is calculated from these visible assumptions.</p>
       </div>
 

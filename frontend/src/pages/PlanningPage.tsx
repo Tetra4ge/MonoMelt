@@ -87,13 +87,13 @@ export default function PlanningPage() {
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><CostPerformancePanel data={report.cost_performance} /><TeamOwnershipPanel mapping={report.team_mapping} /></div>
               <ConsistencyMatrix matrix={report.consistency_security} />
               
-              {/* Phase 7 CTA */}
+              {/* CTA */}
               <div className="mt-12 flex justify-end">
                 <button
                   onClick={() => navigate(`/dashboard/projects/${projectId}/export?planId=${activePlan.id}`)}
                   className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 font-bold uppercase tracking-widest text-sm transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)]"
                 >
-                  Proceed to Generation (Phase 7) &rarr;
+                  Proceed to Generation &rarr;
                 </button>
               </div>
             </div>

@@ -379,10 +379,20 @@ export default function AnalysisPage() {
       )}
 
       {activeScenario && (
-        <ScenarioScorecard
-          scenario={activeScenario}
-          proposedServices={activeScenario.proposed_services}
-        />
+        <div className="flex flex-col gap-4">
+          <ScenarioScorecard
+            scenario={activeScenario}
+            proposedServices={activeScenario.proposed_services}
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={() => navigate(`/dashboard/projects/${projectId}/planning?scenarioRevisionId=${activeScenario.id}`)}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 font-bold uppercase tracking-widest text-sm transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)]"
+            >
+              Proceed to Planning&rarr;
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="w-full flex-1 bg-[#111] p-1 border border-[#222] mt-4 relative">
