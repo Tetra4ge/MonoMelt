@@ -11,7 +11,9 @@ load_dotenv()
 from api.routes.analysis import router as analysis_router
 from api.routes.intelligence import router as intelligence_router
 from api.routes.decomposition import router as decomposition_router
+from api.routes.planning import router as planning_router
 from db.neo4j_client import get_driver, close_driver, verify_connectivity
+
 
 
 @asynccontextmanager
@@ -44,6 +46,7 @@ app.add_middleware(
 app.include_router(analysis_router)
 app.include_router(intelligence_router)
 app.include_router(decomposition_router, prefix="/decomposition", tags=["Decomposition"])
+app.include_router(planning_router)
 
 
 @app.get("/health", tags=["Health"])
