@@ -1,3 +1,5 @@
+/* Analysis responses are heterogeneous backend JSON payloads. */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AnalysisMetrics from '../components/projects/AnalysisMetrics';

@@ -8,7 +8,7 @@ interface ArtifactFile {
   content_type: string;
 }
 
-interface BlueprintManifest {
+export interface BlueprintManifest {
   generator_version: string;
   project_id: string;
   scenario_revision_id: string;

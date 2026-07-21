@@ -16,6 +16,8 @@ import {
 interface AppLayoutProps {
   children: React.ReactNode;
   onNewProjectClick?: () => void;
+  /** @deprecated The route parameter is the source of truth for the active project. */
+  activeProjectId?: string;
 }
 
 export default function AppLayout({ children, onNewProjectClick }: AppLayoutProps) {

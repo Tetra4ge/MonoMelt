@@ -16,8 +16,9 @@ const Login: React.FC = () => {
         }
       });
       if (error) throw error;
-    } catch (error: any) {
-      console.error('Error logging in:', error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown authentication error';
+      console.error('Error logging in:', message);
     } finally {
       setLoading(false);
     }

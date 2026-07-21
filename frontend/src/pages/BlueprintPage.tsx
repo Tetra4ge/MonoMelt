@@ -1,3 +1,5 @@
+/* Initial API hydration intentionally updates local loading state from this effect. */
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
@@ -12,12 +14,6 @@ export const BlueprintPage: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [selectedBlueprint, setSelectedBlueprint] = useState<BlueprintRecord | null>(null);
 
-  useEffect(() => {
-    if (projectId) {
-      fetchBlueprints();
-    }
-  }, [projectId]);
-
   const fetchBlueprints = async () => {
     try {
       setLoading(true);
@@ -31,6 +27,10 @@ export const BlueprintPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (projectId) void fetchBlueprints();
+  }, [projectId]);
 
   const handleGenerateBlueprint = async () => {
     if (!projectId) return;
@@ -62,9 +62,12 @@ export const BlueprintPage: React.FC = () => {
       if (res.data.success) {
         await fetchBlueprints();
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Generate Blueprint Error:', e);
-      alert(e.response?.data?.message || 'Failed to generate blueprint package');
+      const response = typeof e === 'object' && e !== null ? Reflect.get(e, 'response') : undefined;
+      const data = typeof response === 'object' && response !== null ? Reflect.get(response, 'data') : undefined;
+      const message = typeof data === 'object' && data !== null ? Reflect.get(data, 'message') : undefined;
+      alert(typeof message === 'string' ? message : 'Failed to generate blueprint package');
     } finally {
       setGenerating(false);
     }

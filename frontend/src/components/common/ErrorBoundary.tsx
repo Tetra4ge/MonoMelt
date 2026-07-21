@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -54,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
             Retry
           </button>
           
-          {process.env.NODE_ENV === 'development' && this.state.error && (
+          {import.meta.env.DEV && this.state.error && (
             <div className="mt-8 p-4 bg-gray-900 rounded-md text-left w-full max-w-2xl overflow-auto border border-gray-800">
               <p className="text-red-400 font-mono text-sm whitespace-pre-wrap">
                 {this.state.error.toString()}

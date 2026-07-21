@@ -1,3 +1,5 @@
+/* Planning responses are versioned backend JSON; hydration updates local loading state. */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import RoadmapTimeline from '../components/planning/RoadmapTimeline';
@@ -27,10 +29,6 @@ export default function PlanningPage() {
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  useEffect(() => {
-    fetchPlansAndScenarios();
-  }, [projectId]);
 
   const fetchPlansAndScenarios = async () => {
     try {
@@ -80,6 +78,10 @@ export default function PlanningPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void fetchPlansAndScenarios();
+  }, [projectId]);
 
   const handleCreatePlan = async () => {
     try {

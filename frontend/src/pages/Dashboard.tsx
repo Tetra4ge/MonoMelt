@@ -1,3 +1,5 @@
+/* Project-list hydration intentionally updates local loading state from this effect. */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { Activity, ChevronRight, Sparkles } from 'lucide-react';
 import { UploadSource } from '../components/projects/UploadSource';
@@ -11,10 +13,6 @@ const Dashboard: React.FC = () => {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
-
-  useEffect(() => {
-    fetchRecentProjects();
-  }, []);
 
   const fetchRecentProjects = async () => {
     try {
@@ -64,6 +62,10 @@ const Dashboard: React.FC = () => {
       setLoadingProjects(false);
     }
   };
+
+  useEffect(() => {
+    void fetchRecentProjects();
+  }, []);
 
   const handleInitializeProject = async () => {
     try {

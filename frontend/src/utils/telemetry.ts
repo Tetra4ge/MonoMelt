@@ -23,14 +23,14 @@ interface TelemetryConfig {
 }
 
 const config: TelemetryConfig = {
-  enabled: process.env.NODE_ENV !== 'test',
+  enabled: import.meta.env.MODE !== 'test',
   environment: (import.meta.env.MODE as 'development' | 'staging' | 'production') || 'development',
 };
 
 /**
  * Tracks a product metric or user action.
  */
-export const trackEvent = (eventName: TelemetryEvent, properties?: Record<string, any>) => {
+export const trackEvent = (eventName: TelemetryEvent, properties?: Record<string, unknown>) => {
   if (!config.enabled) return;
 
   // Placeholder for real telemetry provider (e.g. PostHog)
@@ -40,7 +40,7 @@ export const trackEvent = (eventName: TelemetryEvent, properties?: Record<string
 /**
  * Logs a client-side error to a monitoring service.
  */
-export const logError = (error: Error, context?: Record<string, any>) => {
+export const logError = (error: Error, context?: Record<string, unknown>) => {
   if (!config.enabled) return;
 
   // Placeholder for real error monitoring provider (e.g. Sentry)
