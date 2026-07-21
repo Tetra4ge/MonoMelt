@@ -3,7 +3,6 @@ PostgreSQL client using asyncpg via SQLAlchemy 2.0 async engine.
 Provides a session factory for interacting with Supabase's Postgres.
 """
 
-import os
 import logging
 import asyncpg
 from core.config import get_settings
@@ -17,13 +16,20 @@ async def get_pg_connection() -> asyncpg.Connection:
     Always close it after use with await conn.close()
     """
     settings = get_settings()
-    db_url = settings.database_url
+    db_url = settings.database_url.strip()
+    if not db_url:
+        raise RuntimeError("DATABASE_URL is empty; configure the Supabase PostgreSQL URL")
     try:
         return await asyncpg.connect(db_url, timeout=5)
     except Exception as exc:
         logger.warning(f"Primary DB connection failed ({exc}) — connecting to local postgres fallback")
-        fallback_url = os.getenv("FALLBACK_DATABASE_URL", "postgresql://user:password@postgres:5432/transformation_db")
-        return await asyncpg.connect(fallback_url, timeout=5)
+        # Never fall back to the Docker-only `postgres` hostname. It hides
+        # the real Supabase connection error when running on Windows.
+        logger.exception("Configured PostgreSQL connection failed")
+        raise RuntimeError(
+            "Unable to connect to DATABASE_URL. Verify the Supabase pooler "
+            "hostname, password, network access, and SSL settings."
+        ) from exc
 
 
 async def execute(query: str, *args) -> str:
