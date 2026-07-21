@@ -1,108 +1,99 @@
-<div class="center"> <h1>Legacy Monolith to Microservices Transformation Intelligence Platform</h1> </div>
+<div align="center">
+  <img src="https://img.icons8.com/color/96/000000/melting-ice-cream.png" alt="MonoMELT Logo" width="80" />
+  <h1>MonoMELT</h1>
+  <p><b>Legacy Monolith to Microservices Transformation Intelligence Platform</b></p>
+</div>
 
-> **An end-to-end transformation strategy platform that analyzes monolithic codebases and generates a complete transformation blueprint.**
+> **An AI-powered, end-to-end transformation strategy platform that ingests monolithic codebases and generates a complete, production-ready microservice blueprint.**
 
-Modern teams don't just need service decomposition—they need an end-to-end transformation strategy. Blindly splitting code leads to cascading failures, data inconsistency, and performance cliffs. Our platform solves this by taking a monolith, deeply analyzing it, and generating a complete transformation blueprint with risk assessments, migration phases, cost projections, team structure mapping, and deployment strategies.
+Modern engineering teams don't just need to "split" code—they need a cohesive, data-driven transformation strategy. Blindly decomposing a monolith leads to cascading failures, data inconsistency, and performance cliffs. **MonoMELT** solves this by taking a monolith, deeply analyzing its Abstract Syntax Tree (AST), and generating a complete transformation blueprint with risk assessments, phase-by-phase migration plans, cost projections, team structure mapping, and generated Infrastructure-as-Code.
+
+---
+
+## 🛠️ Technology Stack
+
+MonoMELT is built on a modern, decoupled microservice architecture:
+
+| Component | Tech Stack & Tools | Description |
+| :--- | :--- | :--- |
+| **Frontend UI** | <img src="https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB" /> <img src="https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white" /> <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white" /> | A highly interactive, dark-mode composer featuring dynamic dependency graphs and multi-scenario blueprint builders. |
+| **API Gateway** | <img src="https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white" /> <img src="https://img.shields.io/badge/Express.js-404D59?style=flat" /> | Handles secure routing, JWT validation via Supabase, and orchestration across internal microservices. |
+| **AI Engine** | <img src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white" /> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white" /> <img src="https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai&logoColor=white" /> | The brain of the platform. Uses LLMs to decompose code, project costs, and generate Terraform templates. |
+| **Async Worker** | <img src="https://img.shields.io/badge/BullMQ-FF4B4B?style=flat" /> <img src="https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white" /> | Background job processor for heavy tasks like AST extraction, ZIP processing, and file generation. |
+| **Databases** | <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white" /> <img src="https://img.shields.io/badge/Neo4j-018bff?style=flat&logo=neo4j&logoColor=white" /> <img src="https://img.shields.io/badge/Pinecone-000000?style=flat&logo=pinecone&logoColor=white" /> | Relational data is stored in Postgres (Supabase). Code dependencies and service boundaries are mapped in Neo4j. Vector embeddings are stored in Pinecone. |
+
+---
+
+## 🏗️ Architecture Diagram
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef client fill:#1E293B,stroke:#3B82F6,stroke-width:2px,color:#fff
+    classDef gateway fill:#0F172A,stroke:#10B981,stroke-width:2px,color:#fff
+    classDef service fill:#111,stroke:#8B5CF6,stroke-width:2px,color:#fff
+    classDef data fill:#0a0a0a,stroke:#F59E0B,stroke-width:2px,color:#fff
+    
+    %% Nodes
+    Client[("💻 React Frontend<br/>(SPA)")]:::client
+    
+    Gateway["🚪 API Gateway<br/>(Node/Express)"]:::gateway
+    
+    Auth["🔐 Auth Service<br/>(Supabase)"]:::data
+    Worker["⚙️ Background Worker<br/>(BullMQ/Node)"]:::service
+    AI["🧠 AI Service<br/>(FastAPI/Python)"]:::service
+    
+    Redis[("🔴 Redis Cache")]:::data
+    Postgres[("🐘 Supabase<br/>(PostgreSQL)")]:::data
+    Neo4j[("🕸️ Neo4j<br/>(Graph DB)")]:::data
+    
+    %% Connections
+    Client <-->|REST API| Gateway
+    Client -.->|JWT Login| Auth
+    
+    Gateway -->|Auth Check| Auth
+    Gateway -->|Queue Job| Redis
+    Gateway <-->|Read/Write| Postgres
+    Gateway <-->|Decomposition| AI
+    
+    Redis -->|Process Job| Worker
+    Worker -->|Ingest/Extract| Postgres
+    Worker -->|Parse AST| Neo4j
+    
+    AI <-->|Graph Analysis| Neo4j
+    AI <-->|Prompt LLMs| External[("OpenAI API")]
+```
 
 ---
 
 ## 🌟 Core Features
 
-### 1. Advanced Code Analysis Engine
-- **Data flow analysis:** Track how data moves through functions to identify bounded contexts.
-- **Transactional boundary detection:** Discover which operations MUST stay together.
-- **Hotspot identification:** Pinpoint services that will require auto-scaling.
-- **Latency clustering:** Identify modules that interact frequently to minimize network costs.
-- **Database schema analysis:** Detect tightly coupled tables.
+### 1. Zero-Touch Repository Ingestion
+Upload a legacy ZIP file or point to a GitHub repository. MonoMELT's async background workers will seamlessly parse the repository structure, compute file hashes, and extract language metadata.
 
-### 2. Multi-Scenario Service Decomposition
-Generate tailored decomposition strategies for the user to choose from:
-- **Aggressive Split:** Max services, max parallelism, high complexity.
-- **Conservative Split:** Fewer services, easier migration, slower scaling.
-- **Domain-Driven:** Aligned strictly with business domains.
-- **Team-Driven:** Aligned with current team structures to minimize organizational friction.
+### 2. AI-Driven Service Decomposition
+Leveraging Large Language Models and Neo4j graph algorithms, MonoMELT generates multiple tailored decomposition scenarios for the user:
+- **Aggressive Split:** Maximum service distribution and scaling.
+- **Conservative Split:** Fewer services to minimize initial migration friction.
+- **Domain-Driven:** Strictly aligned with bounded business domains.
 
-### 3. Cost Projection Module
-Critical for enterprise buy-in, providing a clear ROI calculation:
-- Current monolith costs vs. projected microservices cost per service.
-- Network overhead, database multiplication costs, and operational overhead estimates.
+### 3. Visual Dependency Mapping
+A fully interactive Neo4j-powered dependency graph that visually clusters source files into their newly proposed microservice boundaries, allowing users to visually inspect circular dependencies and hotspots.
 
-### 4. Data Consistency Strategy Generator
-Recommends patterns for distributed data consistency:
-- Saga pattern, Event Sourcing, and CQRS.
-- Generates boilerplate for chosen patterns and flags high-risk operations spanning multiple services.
+### 4. Interactive Strategic Planning
+Before touching any code, MonoMELT generates a comprehensive transformation roadmap, complete with:
+- **Cost vs. Performance Panels:** Projected monthly infrastructure costs.
+- **Team Ownership Matrix:** AI-suggested team assignments to minimize cross-team friction (Conway's Law).
+- **Migration Timeline:** A phased, step-by-step Gantt chart to safely roll out the new architecture.
 
-### 5. API Gateway Blueprint
-- Auto-designs the API gateway layer with route mappings.
-- Recommends rate-limiting, authentication/authorization boundaries, and response aggregation logic.
-- Generates OpenAPI specs for each service.
+### 5. Instant Infrastructure-as-Code Export
+Once a plan is finalized, MonoMELT dynamically generates a ZIP bundle containing:
+- Boilerplate Python/FastAPI code for the new microservices.
+- `docker-compose.yml` for local testing.
+- `main.tf` (Terraform) files for AWS infrastructure provisioning.
 
-### 6. Team & Ownership Mapping
-- Maps current organizational structure to recommended team assignments for new services.
-- Flags single points of failure and services requiring heavy cross-team communication.
-
-### 7. Migration Roadmap Generator
-Provides a phased rollout plan with:
-- Safest wins (low dependency extractions) to hardest parts (tightly coupled extractions).
-- Rollback strategies, testing strategies, and estimated timelines.
-
-### 8. Performance Impact Simulator
-- Simulates end-to-end latency for common user workflows in the new architecture.
-- Identifies bottlenecks and suggests caching, async patterns, and load balancing.
-
-### 9. Security Boundary Analysis
-- Identifies data sensitivity levels and recommends isolation strategies (e.g., private networks).
-- Generates a security matrix mapping data flows and access permissions.
-
-### 10. Technology Stack Recommender
-- Recommends specific languages/frameworks per service (e.g., Go for CPU-heavy, Node for latency-sensitive).
-- Suggests appropriate databases (Redis, Cassandra, PostgreSQL, Neo4j, Elasticsearch) and message queues (RabbitMQ, Kafka).
-
-### 11. Deployment Topology Generator
-- Generates Docker and Kubernetes manifests for each service.
-- Provides recommendations for Service Mesh (Istio, Linkerd), health checks, circuit breakers, and auto-scaling.
-
-### 12. Dependency Graph Visualization & Risk Scoring
-- Interactive Neo4j graph mapping services (nodes) and dependencies (edges).
-- Color-coded risk scoring and call frequency visualization.
-- Flags circular dependencies and critical points of failure.
-
-### 13. Before/After Metrics Dashboard
-- Compares the monolith vs. proposed microservices across Development Velocity, Deployment Frequency, MTTR, Scalability, and Testability.
-
-### 14. Fallback Recommendations
-- Suggests stepping-stone approaches like a Modular Monolith or Strangler Fig Pattern if a full decomposition is deemed too risky.
-
-### 15. Compliance & Audit Trail
-- Documents all architectural decisions made during decomposition for auditing.
-- Generates compliance reports detailing data flow and service boundary changes.
-
----
-
-## 🛠️ Technology Stack (Microservice Architecture)
-
-We utilize a modern, microservice-based architecture to power the platform itself, ensuring high performance, AI integration, and robust data management.
-
-| Component | Tech | Purpose |
-| --- | --- | --- |
-| **Frontend** | React | Drag-drop composer, graph visualization, multi-scenario builder. |
-| **Gateway/Orchestrator** | Node.js / Express | API Gateway routing, user session management, and orchestration. |
-| **AI Analysis Service** | FastAPI (Python) | Core engine powered by LLM (Gemini/OpenRouter), cost calculator, and recommendation logic. |
-| **Graph Database** | Neo4j | Dependency graphs, organizational structure, and risk scoring. |
-| **Relational Database**| PostgreSQL | Storing analysis results, projects, and decision history. |
-| **Vector Search** | Pinecone | Learning from patterns in open-source microservice repositories. |
-| **Cache & Queues** | Redis / RabbitMQ | Caching complex calculations and handling async processing tasks. |
-
----
-
-## 🚀 User Journey Flow
-
-1. **Upload:** User uploads the monolith codebase (GitHub link or ZIP).
-2. **Analysis:** The AI service parses the code structure, dependencies, databases, current team structure, and costs.
-3. **Selection:** User selects a strategy (e.g., domain-driven or conservative).
-4. **Generation:** The platform generates decomposition scenarios, cost projections, migration roadmaps, and simulations.
-5. **Customization:** User interacts with the visual drag-and-drop UI to merge/split services or reassign teams.
-6. **Export:** System outputs the complete blueprint, including OpenAPI specs, Kubernetes manifests, and migration templates.
+### 6. Live Deployment Simulation
+Provides a stunning, highly-interactive "Live Terminal" UI to simulate a complete CI/CD pipeline (Building Images, Provisioning Infrastructure, Starting Services, Health Checks), ending in a live Services Dashboard metric view.
 
 ---
 *Built for the OpenAI Build Week Challenge.*
