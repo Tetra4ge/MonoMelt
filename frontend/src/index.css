@@ -1,69 +1,124 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-heading: 'Syne', 'Space Grotesk', sans-serif;
-  --font-display: 'Space Grotesk', sans-serif;
+@layer base {
+  :root {
+    --bg: #0B0B0B;
+    --surface: #1E1E1E;
+    --surface-elevated: #262626;
+    --nav-btn: #181818;
+    --nav-btn-hover: #252525;
+
+    --text-primary: #FFFFFF;
+    --text-secondary: #BEBEBE;
+    --text-muted: #808080;
+    --text-disabled: #5C5C5C;
+
+    --accent-lime: #B8FF45;
+    --accent-orange: #FFA62B;
+    --accent-blue: #3B82F6;
+    --accent-pink: #FF5BB5;
+    --accent-danger: #FF5A5F;
+    --accent-yellow: #FFD54F;
+
+    --radius-btn: 18px;
+    --radius-card: 22px;
+    --radius-pill: 9999px;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+    overflow-x: hidden;
+  }
 }
 
-body {
+.font-bebas {
+  font-family: 'Bebas Neue', 'Space Grotesk', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.font-inter {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #08080a;
-  color: #f4f4f5;
-  overflow-x: hidden;
 }
 
-.font-display {
-  font-family: 'Space Grotesk', sans-serif;
+/* Neo-Minimal Card styling */
+.neo-card {
+  background-color: #1E1E1E;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.font-syne {
-  font-family: 'Syne', sans-serif;
-  letter-spacing: -0.02em;
+.neo-card-elevated {
+  background-color: #262626;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Glassmorphic card styling inspired by reference design */
-.app-card {
-  background-color: #141417;
-  border: 1px solid #232328;
-  border-radius: 1.5rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-}
-
-.app-card-pill {
-  background-color: #1a1a1e;
-  border: 1px solid #2a2a30;
+.neo-btn {
+  background-color: #181818;
+  color: #FFFFFF;
   border-radius: 9999px;
+  padding: 12px 20px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-/* Neon accents */
-.badge-lime {
-  background-color: #bef264;
+.neo-btn:hover {
+  background-color: #252525;
+}
+
+.neo-btn-primary {
+  background-color: #B8FF45;
   color: #000000;
+  border-radius: 9999px;
+  padding: 12px 24px;
   font-weight: 700;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.badge-orange {
-  background-color: #f97316;
-  color: #ffffff;
-  font-weight: 700;
+.neo-btn-primary:hover {
+  opacity: 0.9;
 }
 
-/* Sleek Dark Scrollbar */
+/* Sidebar 56x56 round button */
+.sidebar-round-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background-color: #181818;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #BEBEBE;
+  transition: all 0.2s ease;
+}
+
+.sidebar-round-btn:hover, .sidebar-round-btn.active {
+  background-color: #252525;
+  color: #B8FF45;
+  box-shadow: 0 0 0 2px #B8FF45;
+}
+
+/* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #08080a;
+  background: #0B0B0B;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #262626;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #383838;
 }

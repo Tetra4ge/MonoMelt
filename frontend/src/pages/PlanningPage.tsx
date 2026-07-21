@@ -58,28 +58,24 @@ export default function PlanningPage() {
       }
     } catch (err: any) {
       console.error("Failed to load plans", err);
-      setError(err.response?.data?.error || "Failed to load migration plans");
+      setError(err.response?.data?.message || err.message || "Failed to load migration plan");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreatePlan = async () => {
-    if (!scenarios || scenarios.length === 0) {
-      alert("No decomposition scenario found. Please create a scenario first!");
-      return;
-    }
-
-    const scenarioToUse = scenarios.find(s => s.status === 'completed') || scenarios[0];
-    if (!scenarioToUse) {
-      alert("No valid scenario available.");
-      return;
-    }
-
     try {
       setIsGenerating(true);
-      const res = await api.post(`/api/projects/${projectId}/scenarios/${scenarioToUse.id}/plans`, {
-        title: `Migration Strategy Report - ${new Date().toLocaleDateString()}`
+      setError(null);
+
+      const completedScenario = scenarios.find(s => s.status === 'completed') || scenarios[0];
+      if (!completedScenario) {
+        throw new Error("No scenario available to generate migration plan. Run a decomposition strategy first.");
+      }
+
+      const res = await api.post(`/api/projects/${projectId}/plans`, {
+        scenarioRevisionId: completedScenario.id
       });
 
       if (res.data.success) {
@@ -87,42 +83,42 @@ export default function PlanningPage() {
       }
     } catch (err: any) {
       console.error("Failed to generate plan", err);
-      alert(err.response?.data?.error || "Failed to create migration plan");
+      setError(err.response?.data?.message || err.message);
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleRecalculate = async (newAssumptions: any) => {
-    if (!activePlan) return;
-
+    if (!activePlan?.id) return;
     try {
-      const res = await api.post(`/api/projects/${projectId}/plans/${activePlan.id}/assumptions`, {
+      setIsGenerating(true);
+      const res = await api.post(`/api/projects/${projectId}/plans/${activePlan.id}/recalculate`, {
         assumptions: newAssumptions
       });
 
-      if (res.data.success) {
-        const newRev = res.data.data;
-        setActiveRevision(newRev);
-        await fetchPlansAndScenarios();
+      if (res.data.success && res.data.data) {
+        setActiveRevision(res.data.data);
       }
     } catch (err: any) {
       console.error("Failed to recalculate plan", err);
-      alert(err.response?.data?.error || "Failed to recalculate plan");
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   return (
-    <AppLayout title="Migration Roadmap">
+    <AppLayout>
       {/* Top Banner Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black font-syne uppercase tracking-tight text-white flex items-center gap-3">
-            <Calendar className="w-8 h-8 text-lime-400" />
-            MIGRATION ROADMAP ENGINE
+          <h1 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide flex items-center gap-3">
+            <Calendar className="w-8 h-8 text-[#B8FF45]" />
+            MIGRATION ROADMAP & PLANNING
           </h1>
-          <p className="text-xs font-mono text-zinc-400 mt-1">
-            Actionable rollout timeline, zero-trust consistency rules, cost simulation, and team mapping
+          <p className="text-xs text-[#BEBEBE] font-medium mt-0.5">
+            5-Stage Rollout Engine, Saga/Outbox Data Consistency, Cost & Latency Simulator
           </p>
         </div>
 
@@ -130,9 +126,9 @@ export default function PlanningPage() {
           {activeRevision && (
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="px-4 py-2.5 rounded-full text-xs font-extrabold bg-[#1a1a20] hover:bg-zinc-800 text-zinc-200 border border-[#2a2a34] flex items-center gap-2 transition-all"
+              className="neo-btn flex items-center gap-2 text-xs"
             >
-              <SlidersHorizontal className="w-4 h-4 text-lime-400" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#B8FF45]" />
               Adjust Assumptions
             </button>
           )}
@@ -140,12 +136,12 @@ export default function PlanningPage() {
           <button
             onClick={handleCreatePlan}
             disabled={isGenerating}
-            className="px-5 py-2.5 rounded-full text-xs font-extrabold bg-lime-400 hover:bg-lime-300 text-black shadow-lg flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50"
+            className="neo-btn-primary flex items-center gap-2 hover:scale-105 disabled:opacity-50"
           >
             {isGenerating ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Generating...
+                Calculating...
               </>
             ) : (
               <>
@@ -158,15 +154,15 @@ export default function PlanningPage() {
       </div>
 
       {loading && (
-        <div className="bg-[#141417] border border-[#232328] rounded-3xl p-12 text-center text-zinc-400 font-mono text-sm">
-          <RefreshCw className="w-8 h-8 animate-spin text-lime-400 mx-auto mb-3" />
+        <div className="neo-card p-12 text-center text-[#BEBEBE] text-sm font-medium">
+          <RefreshCw className="w-8 h-8 animate-spin text-[#B8FF45] mx-auto mb-3" />
           Loading Migration Strategy & Risk Models...
         </div>
       )}
 
       {error && (
-        <div className="bg-rose-950/40 border border-rose-900/60 p-5 rounded-2xl text-rose-300 text-sm flex items-center gap-3 font-mono">
-          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+        <div className="bg-[#FF5A5F]/10 border border-[#FF5A5F]/20 p-5 rounded-[18px] text-[#FF5A5F] text-sm flex items-center gap-3 font-medium">
+          <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -174,20 +170,20 @@ export default function PlanningPage() {
       {!loading && !error && (
         <div className="space-y-6">
           {!activeRevision ? (
-            <div className="bg-[#141417] border border-[#232328] rounded-3xl p-12 text-center max-w-xl mx-auto space-y-4 shadow-2xl">
-              <div className="w-16 h-16 bg-[#1b1b22] border border-[#2b2b36] text-lime-400 rounded-2xl flex items-center justify-center mx-auto">
+            <div className="neo-card p-12 text-center max-w-xl mx-auto space-y-4">
+              <div className="w-16 h-16 bg-[#181818] text-[#B8FF45] rounded-full flex items-center justify-center mx-auto">
                 <Sparkles className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-extrabold font-syne text-white uppercase tracking-wide">
+              <h3 className="font-bebas text-2xl text-white tracking-wide">
                 No Migration Plan Generated Yet
               </h3>
-              <p className="text-xs font-mono text-zinc-400">
+              <p className="text-xs text-[#BEBEBE] font-medium">
                 Generate an actionable migration strategy from your completed microservice decomposition scenario.
               </p>
               <button
                 onClick={handleCreatePlan}
                 disabled={isGenerating}
-                className="px-6 py-3 rounded-full text-xs font-extrabold bg-lime-400 hover:bg-lime-300 text-black shadow-lg inline-flex items-center gap-2 transition-all hover:scale-105"
+                className="neo-btn-primary inline-flex items-center gap-2 hover:scale-105"
               >
                 <Plus className="w-4 h-4" />
                 Generate Migration Plan
@@ -197,16 +193,16 @@ export default function PlanningPage() {
             <div className="space-y-6">
               {/* Revision Selector Bar */}
               {activePlan?.plan_revisions && activePlan.plan_revisions.length > 1 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 font-mono text-xs">
-                  <span className="text-zinc-500 font-bold uppercase">Revisions:</span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-semibold">
+                  <span className="text-[#808080] uppercase">Revisions:</span>
                   {activePlan.plan_revisions.map((rev: any) => (
                     <button
                       key={rev.id}
                       onClick={() => setActiveRevision(rev)}
-                      className={`px-4 py-1.5 rounded-full border font-bold uppercase transition-all ${
+                      className={`px-4 py-2 rounded-full uppercase transition-all ${
                         activeRevision?.id === rev.id
-                          ? 'bg-white text-black border-white shadow-md'
-                          : 'bg-[#141417] text-zinc-400 border-[#232328] hover:text-zinc-200'
+                          ? 'bg-[#B8FF45] text-black font-bold shadow'
+                          : 'bg-[#181818] text-[#BEBEBE] hover:bg-[#252525]'
                       }`}
                     >
                       Rev #{rev.revision_number} ({new Date(rev.created_at).toLocaleTimeString()})

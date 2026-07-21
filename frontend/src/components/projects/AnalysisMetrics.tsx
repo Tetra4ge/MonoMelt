@@ -12,21 +12,21 @@ export default function AnalysisMetrics({ metrics }: AnalysisMetricsProps) {
   if (!metrics) return null;
 
   const cards = [
-    { label: "Total Source Files", value: metrics.total_files, accent: "border-lime-500/30 text-lime-300" },
-    { label: "Lines of Code", value: metrics.total_loc.toLocaleString(), accent: "border-indigo-500/30 text-indigo-300" },
-    { label: "Total Classes", value: metrics.total_classes, accent: "border-orange-500/30 text-orange-300" },
-    { label: "Total Functions", value: metrics.total_functions, accent: "border-purple-500/30 text-purple-300" },
+    { label: "Total Source Files", value: metrics.total_files, accent: "text-[#B8FF45]" },
+    { label: "Lines of Code", value: metrics.total_loc.toLocaleString(), accent: "text-[#3B82F6]" },
+    { label: "Total Classes", value: metrics.total_classes, accent: "text-[#FFA62B]" },
+    { label: "Total Functions", value: metrics.total_functions, accent: "text-[#FF5BB5]" },
   ];
 
   return (
     <div className="space-y-4 mb-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
         {cards.map((card, i) => (
-          <div key={i} className="bg-[#141417] border border-[#232328] rounded-3xl p-5 flex flex-col justify-between shadow-xl">
-            <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 font-mono">
+          <div key={i} className="neo-card p-6 flex flex-col justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#808080]">
               {card.label}
             </span>
-            <span className="text-3xl font-black font-syne text-white mt-2 tracking-tight">
+            <span className={`text-3xl font-extrabold mt-2 font-inter ${card.accent}`}>
               {card.value}
             </span>
           </div>
@@ -34,20 +34,20 @@ export default function AnalysisMetrics({ metrics }: AnalysisMetricsProps) {
       </div>
 
       {/* Language Breakdown Bar */}
-      <div className="bg-[#141417] border border-[#232328] rounded-3xl p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <span className="text-xs font-black font-syne uppercase tracking-wider text-zinc-400">
+      <div className="neo-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <span className="font-bebas text-lg text-[#BEBEBE] tracking-wide">
           PARSED LANGUAGES:
         </span>
         <div className="flex flex-wrap gap-2">
           {Object.entries(metrics.languages || {}).map(([lang, count]) => (
-            <div key={lang} className="px-3.5 py-1.5 bg-[#0b0b0e] border border-[#232328] rounded-full text-xs font-mono flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-lime-400"></span>
-              <span className="font-bold text-zinc-200">{lang}</span>
-              <span className="text-zinc-500">({count} files)</span>
+            <div key={lang} className="px-4 py-2 bg-[#181818] rounded-full text-xs font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#B8FF45]"></span>
+              <span className="font-bold text-white">{lang}</span>
+              <span className="text-[#808080]">({count} files)</span>
             </div>
           ))}
           {Object.keys(metrics.languages || {}).length === 0 && (
-            <span className="text-zinc-500 text-xs italic font-mono">No languages detected</span>
+            <span className="text-[#808080] text-xs italic">No languages detected</span>
           )}
         </div>
       </div>
