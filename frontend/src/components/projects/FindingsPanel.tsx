@@ -50,18 +50,11 @@ export default function FindingsPanel({ findings, onReview }: FindingsPanelProps
                 <div className="mb-4">
                   <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Impacted Nodes</p>
                   <div className="flex flex-wrap gap-1">
-                    {finding.subject_ids.map((id, idx) => {
-                        let parsedIds = [];
-                        try {
-                            parsedIds = typeof finding.subject_ids === 'string' ? JSON.parse(finding.subject_ids) : finding.subject_ids;
-                        } catch(e) { parsedIds = [id]; }
-                        // If it parsed successfully, just map that array instead.
-                        // Actually, wait, let's just assume subject_ids is properly an array of strings in the UI.
-                        return (
+                    {finding.subject_ids.map((id, idx) => (
                       <span key={idx} className="text-xs text-gray-400 bg-black px-1.5 py-0.5 border border-[#222]">
                         {id.substring(0, 8)}
                       </span>
-                    )})}
+                    ))}
                   </div>
                 </div>
               )}

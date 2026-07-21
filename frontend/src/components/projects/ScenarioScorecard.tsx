@@ -11,7 +11,7 @@ const Metric = ({ label, value }: MetricProps) => (
   </div>
 );
 
-export default function ScenarioScorecard({ scenario, revisions, proposedServices }: any) {
+export default function ScenarioScorecard({ scenario, proposedServices }: { scenario: { strategy_type: string; created_at: string; status: string }; proposedServices: Array<{ id: string; name: string; description?: string; assigned_nodes: string[]; metrics?: { node_count?: number; internal_edges?: number; external_edges_out?: number } }> }) {
   if (!scenario) return null;
   return (
     <div className="bg-[#111] border border-[#333] p-4 mb-6">
@@ -34,24 +34,24 @@ export default function ScenarioScorecard({ scenario, revisions, proposedService
             <Metric label="Microservices" value={proposedServices.length} />
             <Metric label="Avg Nodes/Service" value={
                 proposedServices.length 
-                ? (proposedServices.reduce((acc: number, s: any) => acc + (s.metrics?.node_count || 0), 0) / proposedServices.length).toFixed(1)
+                ? (proposedServices.reduce((acc, s) => acc + (s.metrics?.node_count || 0), 0) / proposedServices.length).toFixed(1)
                 : 0
             } />
             <Metric label="Avg Internal Cohesion" value={
                  proposedServices.length 
-                 ? (proposedServices.reduce((acc: number, s: any) => acc + (s.metrics?.internal_edges || 0), 0) / proposedServices.length).toFixed(1)
+                 ? (proposedServices.reduce((acc, s) => acc + (s.metrics?.internal_edges || 0), 0) / proposedServices.length).toFixed(1)
                  : 0
             } />
              <Metric label="Avg External Coupling" value={
                  proposedServices.length 
-                 ? (proposedServices.reduce((acc: number, s: any) => acc + (s.metrics?.external_edges_out || 0), 0) / proposedServices.length).toFixed(1)
+                 ? (proposedServices.reduce((acc, s) => acc + (s.metrics?.external_edges_out || 0), 0) / proposedServices.length).toFixed(1)
                  : 0
             } />
           </div>
           
           <h4 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wide">Proposed Boundaries</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {proposedServices.map((service: any) => (
+            {proposedServices.map((service) => (
               <div key={service.id} className="border border-[#222] bg-[#0a0a0a] p-3 hover:border-blue-900 transition-colors">
                 <div className="font-bold text-sm mb-1">{service.name}</div>
                 <div className="text-xs text-gray-500 mb-2">{service.description}</div>

@@ -87,7 +87,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleJobStarted = (jobId: string) => {
+  const handleJobStarted = () => {
     navigate(`/dashboard/projects/${projectId}/analysis`);
   };
 

@@ -230,7 +230,7 @@ export default function AnalysisPage() {
               setIsDecomposing(false);
             }
           }
-        } catch (err) {
+        } catch {
           setTimeout(pollScenarios, 3000);
         }
       };
@@ -381,7 +381,6 @@ export default function AnalysisPage() {
       {activeScenario && (
         <ScenarioScorecard
           scenario={activeScenario}
-          revisions={activeScenario.revisions}
           proposedServices={activeScenario.proposed_services}
         />
       )}
