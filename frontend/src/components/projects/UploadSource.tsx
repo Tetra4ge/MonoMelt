@@ -3,7 +3,7 @@ import api  from '../../lib/api';
 
 interface UploadSourceProps {
   projectId: string;
-  onJobStarted: (jobId: string) => void;
+  onJobStarted: () => void;
 }
 
 export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
@@ -24,13 +24,11 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
     formData.append('file', file);
 
     try {
-      const response = await api.post(`/api/projects/${projectId}/sources/zip`, formData, {
+      await api.post(`/api/projects/${projectId}/sources/zip`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      const data = response.data;
-      
-      onJobStarted(data.data.jobId);
+      onJobStarted();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -46,8 +44,8 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
     setError('');
 
     try {
-      const response = await api.post(`/api/projects/${projectId}/sources/github`, { repoUrl, branch });
-      onJobStarted(response.data.data.jobId);
+      await api.post(`/api/projects/${projectId}/sources/github`, { repoUrl, branch });
+      onJobStarted();
     } catch (err: any) {
       setError(err.response?.data?.message || err.message);
     } finally {

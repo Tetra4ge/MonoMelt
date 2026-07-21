@@ -5,6 +5,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AnalysisPage from './pages/AnalysisPage';
 import AuthCallback from './pages/AuthCallback';
+import PlanningPage from './pages/PlanningPage';
+import ExportPage from './pages/ExportPage';
+import DeploymentPage from './pages/DeploymentPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 
@@ -36,6 +39,30 @@ function App() {
               <AnalysisPage />
             </ProtectedRoute>
           } 
+        />
+        <Route
+          path="/dashboard/projects/:projectId/planning"
+          element={
+            <ProtectedRoute>
+              <PlanningPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/projects/:projectId/export"
+          element={
+            <ProtectedRoute>
+              <ExportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/projects/:projectId/deployment"
+          element={
+            <ProtectedRoute>
+              <DeploymentPage />
+            </ProtectedRoute>
+          }
         />
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" replace />} />
