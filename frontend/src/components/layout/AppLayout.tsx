@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   GitBranch,
   Calendar,
+  Layers,
   Settings,
   Plus,
   Search,
@@ -70,6 +71,18 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
               >
                 <Calendar className="w-3.5 h-3.5" />
                 Migration Roadmap
+              </button>
+
+              <button
+                onClick={() => navigate(`/dashboard/projects/${activeProjectId}/blueprints`)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
+                  location.pathname.includes('/blueprints')
+                    ? 'bg-white text-black shadow-md font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Architecture Blueprints
               </button>
             </nav>
           )}
@@ -154,6 +167,14 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
                   className={`sidebar-btn ${location.pathname.includes('/plans') ? 'active' : ''}`}
                 >
                   <Calendar className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/blueprints`)}
+                  title="Architecture Blueprints"
+                  className={`sidebar-btn ${location.pathname.includes('/blueprints') ? 'active' : ''}`}
+                >
+                  <Layers className="w-5 h-5" />
                 </button>
               </>
             )}

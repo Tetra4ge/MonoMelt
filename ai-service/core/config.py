@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     neo4j_uri: str
     neo4j_username: str
     neo4j_password: str
-    neo4j_database: str = "neo4j"
+    neo4j_database: str | None = None
 
     # Pinecone (future)
     pinecone_api_key: str = ""

@@ -1,21 +1,26 @@
 interface AnalysisMetricsProps {
   metrics: {
-    total_files: number;
-    total_loc: number;
-    total_classes: number;
-    total_functions: number;
-    languages: Record<string, number>;
+    total_files?: number;
+    total_loc?: number;
+    total_lines?: number;
+    total_classes?: number;
+    total_functions?: number;
+    languages?: Record<string, number>;
+    language_breakdown?: Record<string, number>;
   };
 }
 
 export default function AnalysisMetrics({ metrics }: AnalysisMetricsProps) {
   if (!metrics) return null;
 
+  const loc = metrics.total_loc ?? metrics.total_lines ?? 0;
+  const languages = metrics.languages ?? metrics.language_breakdown ?? {};
+
   const cards = [
-    { label: "Total Source Files", value: metrics.total_files, accent: "text-[#B8FF45]" },
-    { label: "Lines of Code", value: metrics.total_loc.toLocaleString(), accent: "text-[#3B82F6]" },
-    { label: "Total Classes", value: metrics.total_classes, accent: "text-[#FFA62B]" },
-    { label: "Total Functions", value: metrics.total_functions, accent: "text-[#FF5BB5]" },
+    { label: "Total Source Files", value: (metrics.total_files || 0).toLocaleString(), accent: "text-[#B8FF45]" },
+    { label: "Lines of Code", value: loc.toLocaleString(), accent: "text-[#3B82F6]" },
+    { label: "Total Classes", value: (metrics.total_classes || 0).toLocaleString(), accent: "text-[#FFA62B]" },
+    { label: "Total Functions", value: (metrics.total_functions || 0).toLocaleString(), accent: "text-[#FF5BB5]" },
   ];
 
   return (
@@ -39,14 +44,14 @@ export default function AnalysisMetrics({ metrics }: AnalysisMetricsProps) {
           PARSED LANGUAGES:
         </span>
         <div className="flex flex-wrap gap-2">
-          {Object.entries(metrics.languages || {}).map(([lang, count]) => (
+          {Object.entries(languages).map(([lang, count]) => (
             <div key={lang} className="px-4 py-2 bg-[#181818] rounded-full text-xs font-medium flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#B8FF45]"></span>
               <span className="font-bold text-white">{lang}</span>
               <span className="text-[#808080]">({count} files)</span>
             </div>
           ))}
-          {Object.keys(metrics.languages || {}).length === 0 && (
+          {Object.keys(languages).length === 0 && (
             <span className="text-[#808080] text-xs italic">No languages detected</span>
           )}
         </div>

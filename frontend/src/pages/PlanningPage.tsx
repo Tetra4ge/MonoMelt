@@ -37,6 +37,9 @@ export default function PlanningPage() {
       setLoading(true);
       setError(null);
 
+      const cachedRaw = localStorage.getItem(`plan_${projectId}`);
+      const cachedPlan = cachedRaw ? JSON.parse(cachedRaw) : null;
+
       const [scenariosRes, plansRes] = await Promise.all([
         api.get(`/api/projects/${projectId}/scenarios`),
         api.get(`/api/projects/${projectId}/plans`)
@@ -48,17 +51,31 @@ export default function PlanningPage() {
 
       if (plansRes.data.success && plansRes.data.data?.length > 0) {
         const fetchedPlans = plansRes.data.data;
-
         const latestPlan = fetchedPlans[0];
         setActivePlan(latestPlan);
 
-        const revs = latestPlan.plan_revisions || [];
-        const selectedRev = revs.find((r: any) => r.is_selected) || revs[0];
+        const revs = latestPlan.plan_revisions || latestPlan.revisions || [];
+        const selectedRev = latestPlan.latest_revision || revs.find((r: any) => r.is_selected) || revs[0];
+        setActiveRevision(selectedRev);
+        localStorage.setItem(`plan_${projectId}`, JSON.stringify(latestPlan));
+      } else if (cachedPlan) {
+        setActivePlan(cachedPlan);
+        const revs = cachedPlan.plan_revisions || cachedPlan.revisions || [];
+        const selectedRev = cachedPlan.latest_revision || revs.find((r: any) => r.is_selected) || revs[0];
         setActiveRevision(selectedRev);
       }
     } catch (err: any) {
       console.error("Failed to load plans", err);
-      setError(err.response?.data?.message || err.message || "Failed to load migration plan");
+      const cachedRaw = localStorage.getItem(`plan_${projectId}`);
+      if (cachedRaw) {
+        const cachedPlan = JSON.parse(cachedRaw);
+        setActivePlan(cachedPlan);
+        const revs = cachedPlan.plan_revisions || cachedPlan.revisions || [];
+        const selectedRev = cachedPlan.latest_revision || revs.find((r: any) => r.is_selected) || revs[0];
+        setActiveRevision(selectedRev);
+      } else {
+        setError(err.response?.data?.message || err.message || "Failed to load migration plan");
+      }
     } finally {
       setLoading(false);
     }
@@ -70,16 +87,19 @@ export default function PlanningPage() {
       setError(null);
 
       const completedScenario = scenarios.find(s => s.status === 'completed') || scenarios[0];
-      if (!completedScenario) {
-        throw new Error("No scenario available to generate migration plan. Run a decomposition strategy first.");
-      }
+      const scenarioRevisionId = completedScenario ? completedScenario.id : null;
 
       const res = await api.post(`/api/projects/${projectId}/plans`, {
-        scenarioRevisionId: completedScenario.id
+        scenarioRevisionId
       });
 
-      if (res.data.success) {
-        await fetchPlansAndScenarios();
+      if (res.data.success && res.data.data) {
+        const newPlan = res.data.data;
+        setActivePlan(newPlan);
+        const revs = newPlan.plan_revisions || newPlan.revisions || [];
+        const selectedRev = newPlan.latest_revision || revs.find((r: any) => r.is_selected) || revs[0];
+        setActiveRevision(selectedRev);
+        localStorage.setItem(`plan_${projectId}`, JSON.stringify(newPlan));
       }
     } catch (err: any) {
       console.error("Failed to generate plan", err);

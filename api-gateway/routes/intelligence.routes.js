@@ -7,5 +7,6 @@ const router = express.Router({ mergeParams: true });
 router.post('/trigger', requireAuth, intelligenceController.triggerIntelligence);
 router.get('/:sourceVersionId/findings', requireAuth, intelligenceController.getIntelligenceFindings);
 router.post('/findings/:findingId/review', requireAuth, intelligenceController.reviewFinding);
+router.patch('/findings/:findingId/review', requireAuth, intelligenceController.reviewFinding);
 
 module.exports = router;

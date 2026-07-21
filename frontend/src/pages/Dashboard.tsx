@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderGit2, Activity, ChevronRight, Sparkles } from 'lucide-react';
+import { Activity, ChevronRight, Sparkles } from 'lucide-react';
 import { UploadSource } from '../components/projects/UploadSource';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
@@ -9,7 +9,6 @@ import AppLayout from '../components/layout/AppLayout';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
@@ -68,7 +67,6 @@ const Dashboard: React.FC = () => {
 
   const handleInitializeProject = async () => {
     try {
-      setLoading(true);
       const res = await api.post('/api/projects', { 
         name: `Monolith_${Math.floor(Math.random() * 9000 + 1000)}`, 
         description: 'Microservice transformation workspace',
@@ -77,13 +75,7 @@ const Dashboard: React.FC = () => {
       setProjectId(res.data.data.id);
     } catch (e) {
       console.error('Failed to create project', e);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const handleJobStarted = () => {
-    navigate(`/dashboard/projects/${projectId}/analysis`);
   };
 
   return (
@@ -126,26 +118,14 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {!projectId ? (
-              <div 
-                onClick={handleInitializeProject}
-                className="bg-[#0b0b0e] border border-dashed border-[#27272e] hover:border-lime-400/80 rounded-2xl p-8 sm:p-10 text-center transition-all cursor-pointer group hover:bg-[#111115]"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[#16161b] border border-[#26262e] text-zinc-400 group-hover:text-lime-400 group-hover:border-lime-400/50 flex items-center justify-center mx-auto mb-3 transition-all group-hover:scale-105">
-                  <FolderGit2 className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-bold text-white group-hover:text-lime-400">
-                  {loading ? 'Initializing Workspace...' : 'Create New Transformation Workspace'}
-                </h3>
-                <p className="text-xs text-zinc-500 mt-1.5">
-                  Upload a ZIP archive or connect your GitHub repository to start AST parsing.
-                </p>
-              </div>
-            ) : (
-              <div className="bg-[#0b0b0e] border border-[#232328] rounded-2xl p-6">
-                <UploadSource projectId={projectId} onJobStarted={handleJobStarted} />
-              </div>
-            )}
+            <div className="bg-[#0b0b0e] border border-[#232328] rounded-2xl p-6">
+              <UploadSource 
+                projectId={projectId || undefined} 
+                onJobStarted={(_jobId, targetId) => {
+                  navigate(`/dashboard/projects/${targetId || projectId}/analysis`);
+                }} 
+              />
+            </div>
           </div>
 
           {/* Recent Workspaces Card */}

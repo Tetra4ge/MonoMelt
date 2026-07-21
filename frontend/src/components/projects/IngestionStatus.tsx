@@ -15,7 +15,7 @@ export function IngestionStatus({ projectId, jobId }: IngestionStatusProps) {
 
     const fetchJobStatus = async () => {
       try {
-        const response = await api.get(`/projects/${projectId}/jobs/${jobId}`);
+        const response = await api.get(`/api/projects/${projectId}/jobs/${jobId}`);
         const currentJob = response.data.data;
         setJob(currentJob);
         

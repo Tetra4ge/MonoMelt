@@ -60,6 +60,7 @@ app.use('/api/projects/:projectId/analysis', require('./routes/analysis.routes')
 app.use('/api/projects/:projectId/intelligence', require('./routes/intelligence.routes'));
 app.use('/api/projects/:projectId/scenarios', require('./routes/decomposition.routes'));
 app.use('/api/projects/:projectId/plans', require('./routes/planning.routes'));
+app.use('/api/projects/:projectId/blueprints', require('./routes/blueprints.routes'));
 app.use('/api/projects/:projectId', require('./routes/planning.routes'));
 
 /**
