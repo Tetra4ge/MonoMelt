@@ -1,36 +1,69 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Syne', 'Space Grotesk', sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
 }
 
 body {
-  font-family: 'Space Mono', monospace;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #08080a;
+  color: #f4f4f5;
+  overflow-x: hidden;
 }
 
-.font-logo {
-  font-family: 'Silkscreen', cursive;
-  letter-spacing: 0.06em;
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Custom Hacker Terminal Scrollbar */
+.font-syne {
+  font-family: 'Syne', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Glassmorphic card styling inspired by reference design */
+.app-card {
+  background-color: #141417;
+  border: 1px solid #232328;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.app-card-pill {
+  background-color: #1a1a1e;
+  border: 1px solid #2a2a30;
+  border-radius: 9999px;
+}
+
+/* Neon accents */
+.badge-lime {
+  background-color: #bef264;
+  color: #000000;
+  font-weight: 700;
+}
+
+.badge-orange {
+  background-color: #f97316;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Sleek Dark Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
-  border-left: 1px solid #222;
+  background: #08080a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border: 1px solid #222;
-  border-radius: 0px;
+  background: #27272a;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #3f3f46;
 }

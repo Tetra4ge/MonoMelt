@@ -1,0 +1,217 @@
+import React, { useState } from 'react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
+import {
+  LayoutGrid,
+  GitBranch,
+  Layers,
+  Calendar,
+  Settings,
+  Plus,
+  Search,
+  LogOut,
+  Sparkles,
+  SlidersHorizontal,
+  ChevronDown,
+  Activity
+} from 'lucide-react';
+
+interface AppLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  onNewProjectClick?: () => void;
+}
+
+export default function AppLayout({ children, title, onNewProjectClick }: AppLayoutProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { projectId } = useParams();
+  const { user, signOut } = useAuthStore();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const activeProjectId = projectId || '';
+
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Architect';
+  const userAvatar = user?.user_metadata?.avatar_url;
+
+  const isCurrentRoute = (path: string) => location.pathname === path;
+
+  return (
+    <div className="min-h-screen bg-[#08080a] text-zinc-100 flex flex-col font-sans antialiased selection:bg-lime-400 selection:text-black">
+      {/* Top Navigation Bar */}
+      <header className="h-20 px-6 flex items-center justify-between border-b border-[#1c1c20] bg-[#09090c]/90 backdrop-blur-md sticky top-0 z-40">
+        {/* Left: Logo Badge & App Title */}
+        <div className="flex items-center gap-4">
+          <div 
+            onClick={() => navigate('/dashboard')}
+            className="w-12 h-12 rounded-full bg-white text-black font-black flex items-center justify-center text-xl font-syne cursor-pointer shadow-lg hover:scale-105 transition-transform"
+          >
+            NI
+          </div>
+          
+          {/* Main Top Navigation Pills */}
+          <nav className="hidden md:flex items-center gap-2 bg-[#121215] p-1.5 rounded-full border border-[#222226]">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className={`px-5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${
+                isCurrentRoute('/dashboard')
+                  ? 'bg-zinc-100 text-black shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Dashboard
+            </button>
+
+            {activeProjectId && (
+              <>
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
+                  className={`px-5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${
+                    location.pathname.includes('/analysis')
+                      ? 'bg-zinc-100 text-black shadow-md font-extrabold'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                  }`}
+                >
+                  <GitBranch className="w-3.5 h-3.5" />
+                  Code Analysis
+                </button>
+
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
+                  className={`px-5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${
+                    location.pathname.includes('/plans')
+                      ? 'bg-zinc-100 text-black shadow-md font-extrabold'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Migration Roadmap
+                </button>
+              </>
+            )}
+          </nav>
+        </div>
+
+        {/* Right: Search & Profile Controls */}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2 bg-[#141417] border border-[#232328] px-3.5 py-2 rounded-full text-xs text-zinc-400 w-64 focus-within:border-zinc-500 transition-colors">
+            <Search className="w-4 h-4 text-zinc-500" />
+            <input
+              type="text"
+              placeholder="Search components or services..."
+              className="bg-transparent border-none outline-none text-zinc-200 placeholder-zinc-500 w-full"
+            />
+          </div>
+
+          {/* Profile Badge */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center gap-3 bg-[#141417] border border-[#232328] pl-3 pr-4 py-1.5 rounded-full hover:border-zinc-700 transition-all cursor-pointer"
+            >
+              {userAvatar ? (
+                <img src={userAvatar} alt="Avatar" className="w-7 h-7 rounded-full object-cover border border-zinc-700" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-lime-400 text-black font-bold flex items-center justify-center text-xs">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="text-left hidden sm:block">
+                <span className="text-xs font-bold text-white block leading-tight">{userName}</span>
+                <span className="text-[10px] text-zinc-400 block font-mono">@{user?.email?.split('@')[0]}</span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+            </button>
+
+            {/* Profile Dropdown */}
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-[#141417] border border-[#2a2a30] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
+                <div className="px-3 py-2 border-b border-zinc-800 mb-1">
+                  <span className="text-xs font-bold text-white block">{userName}</span>
+                  <span className="text-[10px] text-zinc-400 block truncate">{user?.email}</span>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-950/30 flex items-center gap-2 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Body Layout with Left Sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Icon Bar (Matching Reference Screenshot) */}
+        <aside className="w-20 bg-[#08080a] border-r border-[#18181c] py-6 flex flex-col items-center justify-between shrink-0">
+          <div className="flex flex-col items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              title="Dashboard"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                isCurrentRoute('/dashboard')
+                  ? 'bg-zinc-100 text-black shadow-lg scale-105'
+                  : 'bg-[#141417] border border-[#222226] text-zinc-400 hover:text-white hover:border-zinc-700'
+              }`}
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+
+            {activeProjectId && (
+              <>
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
+                  title="Code Analysis"
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                    location.pathname.includes('/analysis')
+                      ? 'bg-zinc-100 text-black shadow-lg scale-105'
+                      : 'bg-[#141417] border border-[#222226] text-zinc-400 hover:text-white hover:border-zinc-700'
+                  }`}
+                >
+                  <GitBranch className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
+                  title="Migration Roadmap"
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                    location.pathname.includes('/plans')
+                      ? 'bg-zinc-100 text-black shadow-lg scale-105'
+                      : 'bg-[#141417] border border-[#222226] text-zinc-400 hover:text-white hover:border-zinc-700'
+                  }`}
+                >
+                  <Calendar className="w-5 h-5" />
+                </button>
+              </>
+            )}
+
+            <button
+              title="Settings"
+              className="w-12 h-12 rounded-2xl bg-[#141417] border border-[#222226] text-zinc-400 hover:text-white hover:border-zinc-700 flex items-center justify-center transition-all"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Plus Add Project Button at Bottom */}
+          <button
+            onClick={onNewProjectClick || (() => navigate('/dashboard'))}
+            title="Create New Project"
+            className="w-12 h-12 rounded-2xl bg-[#141417] border border-[#28282e] hover:border-lime-400 text-zinc-300 hover:text-lime-400 flex items-center justify-center transition-all shadow-md group hover:scale-105"
+          >
+            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+          </button>
+        </aside>
+
+        {/* Content Container */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
