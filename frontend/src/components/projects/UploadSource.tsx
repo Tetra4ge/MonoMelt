@@ -3,8 +3,8 @@ import { UploadCloud, GitBranch, ArrowRight, CheckCircle2, FileArchive } from 'l
 import api from '../../lib/api';
 
 interface UploadSourceProps {
-  projectId: string;
-  onJobStarted: (jobId: string) => void;
+  projectId?: string;
+  onJobStarted: (jobId: string, projectId: string) => void;
 }
 
 export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
@@ -15,6 +15,24 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
+  const ensureProject = async (sourceType: 'zip' | 'github', nameHint?: string): Promise<string> => {
+    if (projectId) return projectId;
+
+    let projName = `Monolith_${Math.floor(Math.random() * 9000 + 1000)}`;
+    if (nameHint) {
+      const cleanName = nameHint.split('/').pop()?.replace('.zip', '').replace('.git', '');
+      if (cleanName) projName = cleanName;
+    }
+
+    const res = await api.post('/api/projects', {
+      name: projName,
+      description: 'Microservice transformation workspace',
+      source_type: sourceType
+    });
+
+    return res.data.data.id;
+  };
+
   const handleZipUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
@@ -22,17 +40,19 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
     setIsUploading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await api.post(`/api/projects/${projectId}/sources/zip`, formData, {
+      const targetProjectId = await ensureProject('zip', file.name);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(`/api/projects/${targetProjectId}/sources/zip`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       const data = response.data;
       if (data.success && data.data?.jobId) {
-        onJobStarted(data.data.jobId);
+        onJobStarted(data.data.jobId, targetProjectId);
       }
     } catch (err: any) {
       console.error('ZIP Upload Error:', err);
@@ -50,9 +70,11 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
     setError('');
 
     try {
-      const response = await api.post(`/api/projects/${projectId}/sources/github`, { repoUrl, branch });
+      const targetProjectId = await ensureProject('github', repoUrl);
+
+      const response = await api.post(`/api/projects/${targetProjectId}/sources/github`, { repoUrl, branch });
       if (response.data.success && response.data.data?.jobId) {
-        onJobStarted(response.data.data.jobId);
+        onJobStarted(response.data.data.jobId, targetProjectId);
       }
     } catch (err: any) {
       console.error('GitHub Import Error:', err);
@@ -116,7 +138,7 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
               </div>
             ) : (
               <div>
-                <span className="text-xs font-bold text-white block">Click to select ZIP file</span>
+                <span className="text-xs font-bold text-white block">Click or Drag & Drop ZIP Archive</span>
                 <span className="text-[11px] text-zinc-500 block mt-0.5">Supports Java, C#, Go, Python, and Node.js monolith repositories</span>
               </div>
             )}

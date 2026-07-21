@@ -103,11 +103,20 @@ export default function AnalysisPage() {
           setActiveJob(latestJob);
 
           if (latestJob.status === 'completed' && latestJob.source_version_id) {
-            const res = await api.get(`/api/projects/${projectId}/versions/${latestJob.source_version_id}/analysis`);
-            if (res.data.success && res.data.data) {
-              setMetrics(res.data.data.metrics);
-              setGraphData(res.data.data.graphData);
+            const [metricsRes, graphRes] = await Promise.allSettled([
+              api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`),
+              api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph`)
+            ]);
+
+            if (metricsRes.status === 'fulfilled' && metricsRes.value.data) {
+              const data = metricsRes.value.data.data?.data || metricsRes.value.data.data || metricsRes.value.data;
+              setMetrics(data);
             }
+            if (graphRes.status === 'fulfilled' && graphRes.value.data) {
+              const data = graphRes.value.data.data?.data || graphRes.value.data.data || graphRes.value.data;
+              setGraphData(data);
+            }
+
             fetchFindings(latestJob.source_version_id);
             fetchScenarios();
           } else if (latestJob.status === 'failed') {
@@ -146,7 +155,7 @@ export default function AnalysisPage() {
     if (!activeJob?.source_version_id) return;
     try {
       setIsEnriching(true);
-      await api.post(`/api/projects/${projectId}/intelligence/${activeJob.source_version_id}/enrich`);
+      await api.post(`/api/projects/${projectId}/intelligence/trigger`, { sourceVersionId: activeJob.source_version_id });
     } catch (err) {
       console.error("Failed to trigger LLM enrichment", err);
       setIsEnriching(false);
