@@ -217,7 +217,7 @@ export default function AnalysisPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/dashboard/projects/${projectId}/plans`)}
+            onClick={() => navigate(`/app/projects/${projectId}/plans`)}
             className="neo-btn-primary flex items-center gap-2 hover:scale-105"
           >
             VIEW MIGRATION ROADMAP <ArrowRight className="w-4 h-4" />

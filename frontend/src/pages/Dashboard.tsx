@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
               <UploadSource 
                 projectId={projectId || undefined} 
                 onJobStarted={(_jobId, targetId) => {
-                  navigate(`/dashboard/projects/${targetId || projectId}/analysis`);
+                  navigate(`/app/projects/${targetId || projectId}/analysis`);
                 }} 
               />
             </div>
@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
                 {recentProjects.map(project => (
                   <div 
                     key={project.id}
-                    onClick={() => navigate(`/dashboard/projects/${project.id}/analysis`)}
+                    onClick={() => navigate(`/app/projects/${project.id}/analysis`)}
                     className="bg-[#0b0b0e] border border-[#232328] hover:border-zinc-500 rounded-2xl p-5 cursor-pointer transition-all group relative overflow-hidden hover:scale-[1.01]"
                   >
                     <div className="flex items-center justify-between mb-2">
