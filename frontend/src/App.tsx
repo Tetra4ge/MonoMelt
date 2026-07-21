@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import AnalysisPage from './pages/AnalysisPage';
 import AuthCallback from './pages/AuthCallback';
 import PlanningPage from './pages/PlanningPage';
+import ExportPage from './pages/ExportPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 
@@ -43,6 +44,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PlanningPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/projects/:projectId/export"
+          element={
+            <ProtectedRoute>
+              <ExportPage />
             </ProtectedRoute>
           }
         />

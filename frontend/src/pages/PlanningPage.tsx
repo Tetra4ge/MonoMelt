@@ -77,7 +77,28 @@ export default function PlanningPage() {
 
         {!activePlan && <div className="mb-6"><div className="mb-4 border border-[#222] bg-[#111] p-4"><p className="mb-3 text-xs text-gray-500">existing plans: {plans.length}</p><label className="text-xs text-gray-400">Scenario revision ID<input value={scenarioId} onChange={event => setScenarioId(event.target.value)} placeholder="Paste completed scenario revision ID" className="mt-2 w-full border border-[#222] bg-[#0a0a0a] px-3 py-3 text-xs text-white outline-none focus:border-white" /></label></div><PlanSetup assumptions={assumptions} disabled={saving} submitLabel={saving ? 'Generating...' : 'Generate migration plan'} onChange={setAssumptions} onSubmit={handleGenerate} /></div>}
 
-        {activePlan && report && activeRevision && <div className="grid grid-cols-1 gap-6 xl:grid-cols-[240px_1fr]"><PlanRevisionHistory revisions={activePlan.revisions ?? [activeRevision]} activeRevisionId={activeRevision.id} onSelect={revision => { setActiveRevision(revision); setAssumptions(revision.assumptions); }} /><div className="space-y-6"><div className="border border-[#222] bg-[#111] p-5 sm:p-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-gray-500">plan_{activePlan.id.slice(0, 8)}</p><h2 className="mt-2 text-lg font-bold text-white">{activePlan.title}</h2><p className="mt-2 text-xs text-gray-500">revision {activeRevision.revision_number} / generated {new Date(activeRevision.created_at).toLocaleString()}</p></div><div className="text-xs text-gray-400">status: <span className="text-white">{activePlan.status}</span></div></div></div><PlanSetup assumptions={assumptions} disabled={saving} submitLabel={saving ? 'Recalculating...' : 'Recalculate report'} onChange={setAssumptions} onSubmit={handleRecalculate} /><RoadmapTimeline roadmap={report.roadmap} /><div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><CostPerformancePanel data={report.cost_performance} /><TeamOwnershipPanel mapping={report.team_mapping} /></div><ConsistencyMatrix matrix={report.consistency_security} /></div></div>}
+        {activePlan && report && activeRevision && (
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[240px_1fr]">
+            <PlanRevisionHistory revisions={activePlan.revisions ?? [activeRevision]} activeRevisionId={activeRevision.id} onSelect={revision => { setActiveRevision(revision); setAssumptions(revision.assumptions); }} />
+            <div className="space-y-6">
+              <div className="border border-[#222] bg-[#111] p-5 sm:p-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-gray-500">plan_{activePlan.id.slice(0, 8)}</p><h2 className="mt-2 text-lg font-bold text-white">{activePlan.title}</h2><p className="mt-2 text-xs text-gray-500">revision {activeRevision.revision_number} / generated {new Date(activeRevision.created_at).toLocaleString()}</p></div><div className="text-xs text-gray-400">status: <span className="text-white">{activePlan.status}</span></div></div></div>
+              <PlanSetup assumptions={assumptions} disabled={saving} submitLabel={saving ? 'Recalculating...' : 'Recalculate report'} onChange={setAssumptions} onSubmit={handleRecalculate} />
+              <RoadmapTimeline roadmap={report.roadmap} />
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><CostPerformancePanel data={report.cost_performance} /><TeamOwnershipPanel mapping={report.team_mapping} /></div>
+              <ConsistencyMatrix matrix={report.consistency_security} />
+              
+              {/* Phase 7 CTA */}
+              <div className="mt-12 flex justify-end">
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${projectId}/export?planId=${activePlan.id}`)}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 font-bold uppercase tracking-widest text-sm transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)]"
+                >
+                  Proceed to Generation (Phase 7) &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
