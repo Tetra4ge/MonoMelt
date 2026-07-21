@@ -74,13 +74,49 @@ const processGithubSource = async (jobData) => {
   
   await supabase.from('analysis_jobs').update({ status: 'ingesting' }).eq('id', jobId);
 
-  // Note: For a real implementation we would clone the repo, but for this hackathon
-  // we can just simulate it or throw a not-implemented if we didn't finish it.
   console.log(`Processing Github repo ${repoUrl} for branch ${branch}`);
   
-  // Fake success
-  await new Promise(r => setTimeout(r, 2000));
-  await supabase.from('analysis_jobs').update({ status: 'ready' }).eq('id', jobId);
+  // 1. Parse owner and repo from URL
+  let url = repoUrl.trim();
+  if (url.endsWith('/')) url = url.slice(0, -1);
+  if (url.endsWith('.git')) url = url.slice(0, -4);
+  
+  const parts = url.split('/');
+  const repo = parts.pop();
+  const owner = parts.pop();
+  
+  const targetBranch = branch || 'main';
+  const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${targetBranch}.zip`;
+  
+  console.log(`Downloading zipball from ${zipUrl}...`);
+  
+  // 2. Fetch the zipball using native fetch
+  const response = await fetch(zipUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch repo from GitHub: ${response.statusText} (Make sure the repo is public and branch exists)`);
+  }
+  
+  const arrayBuffer = await response.arrayBuffer();
+  
+  // 3. Upload to Supabase Storage for consistency and archiving
+  const storagePath = `projects/${projectId}/${sourceVersionId}_github.zip`;
+  console.log(`Uploading to Supabase storage at ${storagePath}...`);
+  
+  const { error: uploadError } = await supabase.storage
+    .from('openai')
+    .upload(storagePath, arrayBuffer, {
+      contentType: 'application/zip',
+      upsert: true
+    });
+    
+  if (uploadError) {
+    throw new Error(`Failed to upload GitHub zip to Supabase: ${uploadError.message}`);
+  }
+  
+  // 4. Delegate to processSourceZip to handle the extraction, hashing, and manifest inserts
+  console.log('Passing to processSourceZip...');
+  jobData.storagePath = storagePath;
+  await processSourceZip(jobData);
 };
 
 // Create Worker
