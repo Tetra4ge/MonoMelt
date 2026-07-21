@@ -8,7 +8,7 @@ import uuid
 import logging
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, AliasChoices
 
 from db.pg_client import fetch, execute
 from services.enrichment import run_intelligence_pipeline
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["Intelligence"])
 
 class TriggerIntelligenceRequest(BaseModel):
-    source_version_id: str
+    source_version_id: str = Field(validation_alias=AliasChoices('source_version_id', 'sourceVersionId'))
 
 class ReviewFindingRequest(BaseModel):
     review_status: str

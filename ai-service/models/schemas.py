@@ -5,7 +5,7 @@ Pydantic schemas for all API request/response validation.
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
 from uuid import UUID
 
 
@@ -14,7 +14,7 @@ from uuid import UUID
 # ---------------------------------------------------------------------------
 
 class TriggerAnalysisRequest(BaseModel):
-    source_version_id: UUID = Field(..., description="The source version to analyse")
+    source_version_id: UUID = Field(..., validation_alias=AliasChoices('source_version_id', 'sourceVersionId'), description="The source version to analyse")
 
 
 class TriggerAnalysisResponse(BaseModel):

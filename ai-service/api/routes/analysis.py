@@ -96,23 +96,54 @@ async def _run_analysis_pipeline(
             .execute()
 
         files_for_parsing = []
-        for file_info in manifest:
-            if file_info["language"] not in ("python", "javascript", "typescript"):
-                continue
-            storage_path = f"{project_id}/{file_info['file_path']}"
+        if manifest:
+            for file_info in manifest:
+                ext = os.path.splitext(file_info["file_path"])[1].lower()
+                if ext not in (".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php"):
+                    continue
+                storage_path = f"{project_id}/{file_info['file_path']}"
+                try:
+                    dl = supabase.storage.from_("openai").download(storage_path)
+                    source = dl.decode("utf-8", errors="replace") if dl else ""
+                    files_for_parsing.append({
+                        "file_path": file_info["file_path"],
+                        "source": source,
+                    })
+                except Exception as exc:
+                    logger.warning("Could not download %s: %s", storage_path, exc)
+        else:
+            # Manifest empty — search Supabase storage bucket for project ZIP archive
+            import io, zipfile, os
+            logger.info("Manifest empty, searching Supabase storage for project %s ZIP archives", project_id)
             try:
-                dl = supabase.storage.from_("openai").download(storage_path)
-                source = dl.decode("utf-8", errors="replace") if dl else ""
-                files_for_parsing.append({
-                    "file_path": file_info["file_path"],
-                    "source": source,
-                })
+                storage_items = supabase.storage.from_("openai").list(project_id)
+                zip_paths = []
+                for item in storage_items or []:
+                    item_name = item.get("name", "")
+                    if item_name.endswith(".zip"):
+                        zip_paths.append(f"{project_id}/{item_name}")
+                    elif "name" in item:
+                        sub_items = supabase.storage.from_("openai").list(f"{project_id}/{item_name}")
+                        for sub in sub_items or []:
+                            sub_name = sub.get("name", "")
+                            if sub_name.endswith(".zip"):
+                                zip_paths.append(f"{project_id}/{item_name}/{sub_name}")
+
+                for zip_path in zip_paths:
+                    logger.info("Downloading and extracting %s", zip_path)
+                    zip_bytes = supabase.storage.from_("openai").download(zip_path)
+                    if zip_bytes:
+                        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+                            for name in z.namelist():
+                                ext = os.path.splitext(name)[1].lower()
+                                if ext in (".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php"):
+                                    try:
+                                        content = z.read(name).decode("utf-8", errors="replace")
+                                        files_for_parsing.append({"file_path": name, "source": content})
+                                    except Exception as exc:
+                                        logger.warning("Failed reading zip item %s: %s", name, exc)
             except Exception as exc:
-                logger.warning("Could not download %s: %s", storage_path, exc)
-                files_for_parsing.append({
-                    "file_path": file_info["file_path"],
-                    "source": "",
-                })
+                logger.error("Failed to extract ZIP from storage for project %s: %s", project_id, exc)
 
         # 3. Parse
         parsed = parse_files(files_for_parsing)
@@ -123,11 +154,10 @@ async def _run_analysis_pipeline(
         graph_summary = await build_graph(
             parsed_files=parsed,
             analysis_run_id=analysis_run_id,
-            project_id=project_id,
             source_version_id=source_version_id,
+            project_id=project_id,
             owner_id=owner_id,
         )
-        logger.info("Graph written: %s", graph_summary)
 
         # 5. Compute metrics
         local_metrics = compute_local_metrics(parsed)
@@ -142,50 +172,38 @@ async def _run_analysis_pipeline(
         await execute(
             """
             INSERT INTO public.code_metrics (
-                analysis_run_id, source_version_id, total_files, total_lines, 
-                total_functions, total_classes, total_modules, unresolved_imports,
-                cycle_count, graph_components, language_breakdown, top_fan_in,
-                top_fan_out, centrality_candidates
+                analysis_run_id, source_version_id, total_files, total_lines,
+                total_functions, total_classes, total_modules,
+                unresolved_imports, cycle_count, graph_components,
+                language_breakdown, top_fan_in, top_fan_out, centrality_candidates
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             """,
             analysis_run_id, source_version_id, agg_metrics.total_files, agg_metrics.total_lines,
             agg_metrics.total_functions, agg_metrics.total_classes, agg_metrics.total_modules,
             agg_metrics.unresolved_imports, agg_metrics.cycle_count, agg_metrics.graph_components,
-            json.dumps(agg_metrics.language_breakdown), json.dumps(agg_metrics.top_fan_in),
-            json.dumps(agg_metrics.top_fan_out), json.dumps(agg_metrics.centrality_candidates)
+            json.dumps(agg_metrics.language_breakdown), json.dumps([m.model_dump() for m in agg_metrics.top_fan_in]),
+            json.dumps([m.model_dump() for m in agg_metrics.top_fan_out]), json.dumps(agg_metrics.centrality_candidates)
         )
 
-        # 6. Collect & insert diagnostics
-        for pf in parsed:
-            for d in pf.diagnostics:
-                await execute(
-                    """
-                    INSERT INTO public.parser_diagnostics (
-                        analysis_run_id, file_path, parser, severity, message, line_number, column_number
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    """,
-                    analysis_run_id, pf.file_path, d.get("parser", "unknown"), d.get("severity", "warning"),
-                    d.get("message", ""), d.get("line_number"), d.get("column_number")
-                )
-
-        # 7. Update run tracker to completed
+        # 6. Mark completed
         await execute(
             """
-            UPDATE public.analysis_runs 
+            UPDATE public.analysis_runs
             SET status = 'completed', completed_at = timezone('utc', now()), graph_summary = $1
             WHERE id = $2
             """,
             json.dumps(graph_summary), analysis_run_id
         )
-        
+
         # Update Supabase status so frontend breaks out of polling loop
         supabase.table("analysis_jobs").update({"status": "completed"}).eq("source_version_id", source_version_id).execute()
 
+        logger.info("Analysis run %s completed successfully", analysis_run_id)
+
     except Exception as exc:
-        logger.exception("Analysis run %s failed", analysis_run_id)
-        # Update run tracker to failed
+        logger.error("Analysis run %s failed: %s", analysis_run_id, exc, exc_info=True)
         await execute(
-            "UPDATE public.analysis_runs SET status = 'failed', completed_at = timezone('utc', now()), error_message = $1 WHERE id = $2",
+            "UPDATE public.analysis_runs SET status = 'failed', error_message = $1 WHERE id = $2",
             str(exc), analysis_run_id
         )
         try:
@@ -218,6 +236,20 @@ async def trigger_analysis(
     Returns immediately with a run ID; poll the status endpoint to track progress.
     """
     svid   = str(request.source_version_id)
+
+    # Ensure parent auth.users, project, and source_version records exist in local DB
+    await execute(
+        "INSERT INTO auth.users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
+        owner_id
+    )
+    await execute(
+        "INSERT INTO public.projects (id, name, owner_id, source_type) VALUES ($1, 'Project', $2, 'zip') ON CONFLICT (id) DO NOTHING",
+        project_id, owner_id
+    )
+    await execute(
+        "INSERT INTO public.source_versions (id, project_id, source_type) VALUES ($1, $2, 'zip') ON CONFLICT (id) DO NOTHING",
+        svid, project_id
+    )
 
     # Insert initial pending state into DB
     result = await fetchrow(
@@ -297,6 +329,7 @@ async def get_metrics(
         raise HTTPException(status_code=404, detail="Metrics not found")
         
     return AggregateMetrics(
+        source_version_id=uuid.UUID(source_version_id),
         total_files=row["total_files"],
         total_lines=row["total_lines"],
         total_functions=row["total_functions"],

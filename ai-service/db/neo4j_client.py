@@ -36,16 +36,13 @@ async def close_driver() -> None:
 
 @asynccontextmanager
 async def get_session(database: str | None = None):
-    """
-    Async context manager for a Neo4j session.
-    Usage::
-        async with get_session() as session:
-            result = await session.run("RETURN 1")
-    """
     settings = get_settings()
     db = database or settings.neo4j_database
     driver = get_driver()
-    async with driver.session(database=db) as session:
+    session_kwargs = {}
+    if db:
+        session_kwargs["database"] = db
+    async with driver.session(**session_kwargs) as session:
         yield session
 
 

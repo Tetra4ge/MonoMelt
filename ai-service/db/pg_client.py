@@ -3,8 +3,12 @@ PostgreSQL client using asyncpg via SQLAlchemy 2.0 async engine.
 Provides a session factory for interacting with Supabase's Postgres.
 """
 
+import os
+import logging
 import asyncpg
 from core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 async def get_pg_connection() -> asyncpg.Connection:
@@ -13,10 +17,13 @@ async def get_pg_connection() -> asyncpg.Connection:
     Always close it after use with await conn.close()
     """
     settings = get_settings()
-    # Replace the sync URL prefix with async one
-    db_url = settings.database_url.replace("postgresql://", "postgresql://")
-    conn = await asyncpg.connect(db_url)
-    return conn
+    db_url = settings.database_url
+    try:
+        return await asyncpg.connect(db_url, timeout=5)
+    except Exception as exc:
+        logger.warning(f"Primary DB connection failed ({exc}) — connecting to local postgres fallback")
+        fallback_url = os.getenv("FALLBACK_DATABASE_URL", "postgresql://user:password@postgres:5432/transformation_db")
+        return await asyncpg.connect(fallback_url, timeout=5)
 
 
 async def execute(query: str, *args) -> str:

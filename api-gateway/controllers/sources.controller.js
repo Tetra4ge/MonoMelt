@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { uploadSourceZip } = require('../services/storage.service');
 const { enqueueIngestionJob } = require('../services/queue.service');
+const { proxyToAiService } = require('../services/ai.service');
 
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -42,13 +43,13 @@ const uploadZipSource = async (req, res, next) => {
 
     if (svError) throw svError;
 
-    // Create analysis job with completed status for immediate analysis
+    // Create analysis job with analyzing status
     const { data: job, error: jobError } = await supabase
       .from('analysis_jobs')
       .insert({ 
         project_id: projectId, 
         source_version_id: sourceVersion.id, 
-        status: 'completed' 
+        status: 'analyzing' 
       })
       .select()
       .single();
@@ -69,9 +70,17 @@ const uploadZipSource = async (req, res, next) => {
       console.warn('Queue enqueue notice:', err.message);
     });
 
+    // Trigger AI service AST analysis pipeline in background
+    const ownerId = req.user?.sub || 'dc035a11-d7ca-47b5-a2ab-865714d71cd4';
+    proxyToAiService('POST', '/analysis/trigger', {
+      source_version_id: sourceVersion.id
+    }, { project_id: projectId, owner_id: ownerId }).catch(err => {
+      console.warn('Analysis trigger notice:', err.message);
+    });
+
     return res.status(202).json({ 
       success: true, 
-      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'completed' } 
+      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'analyzing' } 
     });
   } catch (error) { 
     next(error); 
@@ -113,13 +122,13 @@ const importGithubSource = async (req, res, next) => {
 
     if (svError) throw svError;
 
-    // Create analysis job with completed status for immediate analysis
+    // Create analysis job with analyzing status
     const { data: job, error: jobError } = await supabase
       .from('analysis_jobs')
       .insert({ 
         project_id: projectId, 
         source_version_id: sourceVersion.id, 
-        status: 'completed' 
+        status: 'analyzing' 
       })
       .select()
       .single();
@@ -137,9 +146,17 @@ const importGithubSource = async (req, res, next) => {
       console.warn('Queue enqueue notice:', err.message);
     });
 
+    // Trigger AI service AST analysis pipeline in background
+    const ownerId = req.user?.sub || 'dc035a11-d7ca-47b5-a2ab-865714d71cd4';
+    proxyToAiService('POST', '/analysis/trigger', {
+      source_version_id: sourceVersion.id
+    }, { project_id: projectId, owner_id: ownerId }).catch(err => {
+      console.warn('Analysis trigger notice:', err.message);
+    });
+
     return res.status(202).json({ 
       success: true, 
-      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'completed' } 
+      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'analyzing' } 
     });
   } catch (error) { 
     next(error); 

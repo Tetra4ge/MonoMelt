@@ -35,6 +35,7 @@ export default function AnalysisPage() {
     let findingsPollTimeout: ReturnType<typeof setTimeout>;
     let scenariosPollTimeout: ReturnType<typeof setTimeout>;
 
+    let pollCount = 0;
     const fetchFindings = async (sourceVersionId: string, isPolling = false) => {
       try {
         const res = await api.get(`/api/projects/${projectId}/intelligence/${sourceVersionId}/findings`);
@@ -49,9 +50,14 @@ export default function AnalysisPage() {
 
           if (parsedFindings.length > 0) {
             setIsEnriching(false);
-          } else if (isPolling) {
+          } else if (isPolling && pollCount < 10) {
+            pollCount++;
             findingsPollTimeout = setTimeout(() => fetchFindings(sourceVersionId, true), 3000);
+          } else {
+            setIsEnriching(false);
           }
+        } else {
+          setIsEnriching(false);
         }
       } catch (err) {
         console.error("Failed to fetch findings", err);
@@ -156,6 +162,9 @@ export default function AnalysisPage() {
     try {
       setIsEnriching(true);
       await api.post(`/api/projects/${projectId}/intelligence/trigger`, { sourceVersionId: activeJob.source_version_id });
+      setTimeout(() => {
+        setIsEnriching(false);
+      }, 5000);
     } catch (err) {
       console.error("Failed to trigger LLM enrichment", err);
       setIsEnriching(false);
