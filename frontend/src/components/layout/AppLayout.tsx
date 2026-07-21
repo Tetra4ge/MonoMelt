@@ -31,26 +31,27 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
   const isCurrentRoute = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-[#0B0B0B] text-white flex flex-col font-inter antialiased selection:bg-[#B8FF45] selection:text-black">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans antialiased selection:bg-lime-400 selection:text-black">
       {/* Top Header Navigation Bar */}
-      <header className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#0B0B0B]/95 backdrop-blur-md sticky top-0 z-40">
+      <header className="h-16 md:h-20 px-6 flex items-center justify-between border-b border-[#1f1f23] bg-[#09090b]/90 backdrop-blur-md sticky top-0 z-40">
         {/* Left: Logo & Nav Pills */}
         <div className="flex items-center gap-6">
           <div 
             onClick={() => navigate('/dashboard')}
-            className="w-12 h-12 rounded-full bg-[#B8FF45] text-black font-bebas text-2xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform shadow-md"
+            className="text-xl md:text-2xl font-bold tracking-wider text-white cursor-pointer font-display flex items-center gap-2"
           >
-            NI
+            <span className="w-8 h-8 rounded-lg bg-lime-400 text-black flex items-center justify-center font-extrabold text-sm">m</span>
+            <span>monomelt</span>
           </div>
           
           {/* Nav Pills */}
-          <nav className="hidden md:flex items-center gap-2 bg-[#181818] p-1.5 rounded-full">
+          <nav className="hidden md:flex items-center gap-1.5 bg-[#141417] p-1.5 rounded-full border border-[#232328]">
             <button
               onClick={() => navigate('/dashboard')}
-              className={`px-5 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
                 isCurrentRoute('/dashboard')
-                  ? 'bg-[#B8FF45] text-black font-bold shadow'
-                  : 'text-[#BEBEBE] hover:text-white hover:bg-[#252525]'
+                  ? 'bg-white text-black shadow-md font-bold'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -61,10 +62,10 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
               <>
                 <button
                   onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
-                  className={`px-5 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
                     location.pathname.includes('/analysis')
-                      ? 'bg-[#B8FF45] text-black font-bold shadow'
-                      : 'text-[#BEBEBE] hover:text-white hover:bg-[#252525]'
+                      ? 'bg-white text-black shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
                   }`}
                 >
                   <GitBranch className="w-3.5 h-3.5" />
@@ -73,10 +74,10 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
 
                 <button
                   onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
-                  className={`px-5 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
                     location.pathname.includes('/plans')
-                      ? 'bg-[#B8FF45] text-black font-bold shadow'
-                      : 'text-[#BEBEBE] hover:text-white hover:bg-[#252525]'
+                      ? 'bg-white text-black shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
@@ -87,14 +88,14 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
           </nav>
         </div>
 
-        {/* Right: Search Input & Profile */}
-        <div className="flex items-center gap-4">
-          <div className="hidden lg:flex items-center gap-2 bg-[#181818] px-4 py-2 rounded-full text-xs text-[#BEBEBE] w-64 focus-within:bg-[#252525] transition-colors">
-            <Search className="w-4 h-4 text-[#808080]" />
+        {/* Right: Search & Profile */}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2 bg-[#141417] border border-[#232328] px-3.5 py-1.5 rounded-full text-xs text-zinc-400 w-60 focus-within:border-zinc-500 transition-colors">
+            <Search className="w-3.5 h-3.5 text-zinc-500" />
             <input
               type="text"
-              placeholder="Search components or microservices..."
-              className="bg-transparent border-none outline-none text-white placeholder-[#808080] w-full text-xs font-medium"
+              placeholder="Search services..."
+              className="bg-transparent border-none outline-none text-zinc-200 placeholder-zinc-500 w-full text-xs"
             />
           </div>
 
@@ -102,32 +103,31 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center gap-3 bg-[#181818] pl-3 pr-4 py-1.5 rounded-full hover:bg-[#252525] transition-all cursor-pointer"
+              className="flex items-center gap-2.5 bg-[#141417] border border-[#232328] pl-2 pr-3 py-1 rounded-full hover:border-zinc-700 transition-all cursor-pointer"
             >
               {userAvatar ? (
-                <img src={userAvatar} alt="Avatar" className="w-7 h-7 rounded-full object-cover" />
+                <img src={userAvatar} alt="Avatar" className="w-7 h-7 rounded-full object-cover border border-zinc-700" />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-[#B8FF45] text-black font-bold flex items-center justify-center text-xs">
+                <div className="w-7 h-7 rounded-full bg-lime-400 text-black font-bold flex items-center justify-center text-xs">
                   {userName.charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="text-left hidden sm:block">
-                <span className="text-xs font-semibold text-white block leading-tight">{userName}</span>
-                <span className="text-[10px] text-[#808080] block font-mono">@{user?.email?.split('@')[0]}</span>
+                <span className="text-xs font-bold text-white block leading-tight">{userName}</span>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-[#808080]" />
+              <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Profile Dropdown */}
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-[#1E1E1E] border border-white/5 rounded-[18px] shadow-2xl p-2 z-50">
-                <div className="px-3 py-2 border-b border-white/5 mb-1">
-                  <span className="text-xs font-semibold text-white block">{userName}</span>
-                  <span className="text-[10px] text-[#808080] block truncate">{user?.email}</span>
+              <div className="absolute right-0 mt-2 w-48 bg-[#141417] border border-[#26262e] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
+                <div className="px-3 py-2 border-b border-zinc-800/80 mb-1">
+                  <span className="text-xs font-bold text-white block">{userName}</span>
+                  <span className="text-[10px] text-zinc-400 block truncate">{user?.email}</span>
                 </div>
                 <button
                   onClick={() => signOut()}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-medium text-[#FF5A5F] hover:bg-[#FF5A5F]/10 flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-950/30 flex items-center gap-2 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Sign Out
@@ -138,15 +138,15 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
         </div>
       </header>
 
-      {/* Main Container with 72px Floating Sidebar */}
+      {/* Main Body Layout with Fixed Left Sidebar */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Floating Sidebar (72px wide, 56x56 round buttons) */}
-        <aside className="w-[72px] bg-[#0B0B0B] border-r border-white/5 py-6 flex flex-col items-center justify-between shrink-0">
-          <div className="flex flex-col items-center gap-5">
+        {/* Left Sidebar (Perfectly Aligned 72px column) */}
+        <aside className="w-16 md:w-20 bg-[#09090b] border-r border-[#1f1f23] py-6 flex flex-col items-center justify-between shrink-0">
+          <div className="flex flex-col items-center gap-3">
             <button
               onClick={() => navigate('/dashboard')}
               title="Dashboard"
-              className={`sidebar-round-btn ${isCurrentRoute('/dashboard') ? 'active' : ''}`}
+              className={`sidebar-btn ${isCurrentRoute('/dashboard') ? 'active' : ''}`}
             >
               <LayoutGrid className="w-5 h-5" />
             </button>
@@ -156,7 +156,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
                 <button
                   onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
                   title="Code Analysis"
-                  className={`sidebar-round-btn ${location.pathname.includes('/analysis') ? 'active' : ''}`}
+                  className={`sidebar-btn ${location.pathname.includes('/analysis') ? 'active' : ''}`}
                 >
                   <GitBranch className="w-5 h-5" />
                 </button>
@@ -164,7 +164,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
                 <button
                   onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
                   title="Migration Roadmap"
-                  className={`sidebar-round-btn ${location.pathname.includes('/plans') ? 'active' : ''}`}
+                  className={`sidebar-btn ${location.pathname.includes('/plans') ? 'active' : ''}`}
                 >
                   <Calendar className="w-5 h-5" />
                 </button>
@@ -173,25 +173,27 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
 
             <button
               title="Settings"
-              className="sidebar-round-btn"
+              className="sidebar-btn"
             >
               <Settings className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Create Project Button */}
+          {/* Plus Add Project Button at Bottom */}
           <button
             onClick={onNewProjectClick || (() => navigate('/dashboard'))}
             title="Create New Project"
-            className="sidebar-round-btn hover:text-[#B8FF45] group"
+            className="sidebar-btn hover:border-lime-400 hover:text-lime-400 group"
           >
             <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
           </button>
         </aside>
 
-        {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto p-8 space-y-6">
-          {children}
+        {/* Content Container (Centered & Constrained to max-w-7xl) */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 min-w-0">
+          <div className="max-w-7xl mx-auto w-full space-y-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

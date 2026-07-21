@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderGit2, Activity, ChevronRight } from 'lucide-react';
+import { FolderGit2, Activity, ChevronRight, Sparkles } from 'lucide-react';
 import { UploadSource } from '../components/projects/UploadSource';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
@@ -33,23 +33,23 @@ const Dashboard: React.FC = () => {
             .limit(1);
             
           let statusText = 'Pending Ingestion';
-          let statusDot = 'bg-[#808080]';
-          let statusTextClass = 'text-[#BEBEBE]';
+          let statusDot = 'bg-zinc-500';
+          let statusTextClass = 'text-zinc-400';
           
           if (jobs && jobs.length > 0) {
             const jobStatus = jobs[0].status;
             if (jobStatus === 'completed') {
               statusText = 'Analysis Ready';
-              statusDot = 'bg-[#B8FF45]';
-              statusTextClass = 'text-[#B8FF45]';
+              statusDot = 'bg-lime-400';
+              statusTextClass = 'text-lime-400';
             } else if (jobStatus === 'failed') {
               statusText = 'Failed';
-              statusDot = 'bg-[#FF5A5F]';
-              statusTextClass = 'text-[#FF5A5F]';
+              statusDot = 'bg-rose-500';
+              statusTextClass = 'text-rose-400';
             } else {
               statusText = 'Processing...';
-              statusDot = 'bg-[#FFA62B]';
-              statusTextClass = 'text-[#FFA62B]';
+              statusDot = 'bg-amber-400';
+              statusTextClass = 'text-amber-400';
             }
           }
           
@@ -88,91 +88,88 @@ const Dashboard: React.FC = () => {
 
   return (
     <AppLayout onNewProjectClick={handleInitializeProject}>
-      {/* Page Title */}
+      {/* Top Banner Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide">
-            TRANSFORMATION DASHBOARD
+          <h1 className="text-2xl sm:text-3xl font-bold font-display text-white tracking-tight">
+            Transformation Dashboard
           </h1>
-          <p className="text-xs text-[#BEBEBE] font-medium mt-0.5">
-            Decomposing monolithic codebases into scalable microservices architectures
+          <p className="text-xs text-zinc-400 mt-1">
+            Analyze legacy codebases, parse AST dependency graphs, and decompose into microservices.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="bg-[#181818] border border-white/5 px-4 py-2 rounded-full flex items-center gap-2 text-xs">
-            <span className="w-2 h-2 rounded-full bg-[#B8FF45] animate-pulse"></span>
-            <span className="text-[#BEBEBE] font-semibold">System Status: Optimal</span>
+          <div className="bg-[#141417] border border-[#232328] px-3.5 py-1.5 rounded-full flex items-center gap-2 text-xs">
+            <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></span>
+            <span className="text-zinc-300 font-medium">System Status: Optimal</span>
           </div>
         </div>
       </div>
 
-      {/* Main 12-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column (8 cols): Ingestion & Active Workspaces */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* Left 2 Columns: Ingestion & Workspaces */}
+        <div className="lg:col-span-2 space-y-6">
 
-          {/* Target Monolith Ingestion Card */}
-          <div className="neo-card p-6 sm:p-8 relative overflow-hidden">
+          {/* Ingest Repository Card */}
+          <div className="app-card p-6 sm:p-8 relative overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#B8FF45] block mb-1">
-                  INGESTION ENGINE
+                <span className="text-xs font-bold uppercase tracking-wider text-lime-400 block mb-1">
+                  Ingestion Engine
                 </span>
-                <h2 className="font-bebas text-2xl text-white tracking-wide">
-                  TARGET MONOLITH CODEBASE
+                <h2 className="text-lg font-bold font-display text-white">
+                  Target Monolith Codebase
                 </h2>
               </div>
-              <span className="w-8 h-8 rounded-full bg-[#262626] flex items-center justify-center text-[#BEBEBE] text-xs font-bold">
-                01
-              </span>
             </div>
 
             {!projectId ? (
               <div 
                 onClick={handleInitializeProject}
-                className="bg-[#181818] border-2 border-dashed border-[#262626] hover:border-[#B8FF45] rounded-[18px] p-8 sm:p-12 text-center transition-all cursor-pointer group"
+                className="bg-[#0b0b0e] border border-dashed border-[#27272e] hover:border-lime-400/80 rounded-2xl p-8 sm:p-10 text-center transition-all cursor-pointer group hover:bg-[#111115]"
               >
-                <div className="w-14 h-14 rounded-[16px] bg-[#262626] text-[#BEBEBE] group-hover:text-[#B8FF45] flex items-center justify-center mx-auto mb-4 transition-all group-hover:scale-110">
-                  <FolderGit2 className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-xl bg-[#16161b] border border-[#26262e] text-zinc-400 group-hover:text-lime-400 group-hover:border-lime-400/50 flex items-center justify-center mx-auto mb-3 transition-all group-hover:scale-105">
+                  <FolderGit2 className="w-6 h-6" />
                 </div>
-                <h3 className="font-bebas text-xl text-white tracking-wide group-hover:text-[#B8FF45]">
-                  {loading ? 'INITIALIZING WORKSPACE...' : 'CREATE NEW TRANSFORMATION WORKSPACE'}
+                <h3 className="text-sm font-bold text-white group-hover:text-lime-400">
+                  {loading ? 'Initializing Workspace...' : 'Create New Transformation Workspace'}
                 </h3>
-                <p className="text-xs text-[#808080] mt-2 font-medium">
-                  Upload ZIP archive or connect GitHub repository to begin AST parsing.
+                <p className="text-xs text-zinc-500 mt-1.5">
+                  Upload a ZIP archive or connect your GitHub repository to start AST parsing.
                 </p>
               </div>
             ) : (
-              <div className="bg-[#181818] rounded-[18px] p-6">
+              <div className="bg-[#0b0b0e] border border-[#232328] rounded-2xl p-6">
                 <UploadSource projectId={projectId} onJobStarted={handleJobStarted} />
               </div>
             )}
           </div>
 
-          {/* Active Workspaces Card */}
-          <div className="neo-card p-6 sm:p-8">
+          {/* Recent Workspaces Card */}
+          <div className="app-card p-6 sm:p-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#FFA62B] block mb-1">
-                  RECENT ANALYSIS
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                  Workspaces
                 </span>
-                <h2 className="font-bebas text-2xl text-white tracking-wide">
-                  ACTIVE WORKSPACES
+                <h2 className="text-lg font-bold font-display text-white">
+                  Active Analysis Workspaces
                 </h2>
               </div>
-              <span className="text-xs font-semibold text-[#808080]">
+              <span className="text-xs text-zinc-400">
                 Total: {recentProjects.length}
               </span>
             </div>
 
             {loadingProjects ? (
-              <div className="text-center p-12 text-[#808080] text-xs font-medium animate-pulse">
-                Fetching projects...
+              <div className="text-center p-10 text-zinc-500 text-xs animate-pulse">
+                Loading projects...
               </div>
             ) : recentProjects.length === 0 ? (
-              <div className="text-center p-12 bg-[#181818] rounded-[18px] text-[#808080] text-xs font-medium">
+              <div className="text-center p-10 border border-dashed border-[#232328] rounded-2xl text-zinc-500 text-xs">
                 No active transformation workspaces found. Click above to create one.
               </div>
             ) : (
@@ -181,27 +178,27 @@ const Dashboard: React.FC = () => {
                   <div 
                     key={project.id}
                     onClick={() => navigate(`/dashboard/projects/${project.id}/analysis`)}
-                    className="bg-[#181818] hover:bg-[#252525] rounded-[18px] p-5 cursor-pointer transition-all group relative overflow-hidden"
+                    className="bg-[#0b0b0e] border border-[#232328] hover:border-zinc-500 rounded-2xl p-5 cursor-pointer transition-all group relative overflow-hidden hover:scale-[1.01]"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bebas text-xl text-white truncate pr-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-bold font-display text-white text-sm truncate pr-2">
                         {project.name}
                       </h3>
-                      <ChevronRight className="w-4 h-4 text-[#808080] group-hover:text-[#B8FF45] group-hover:translate-x-1 transition-all shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-white group-hover:translate-x-1 transition-all shrink-0" />
                     </div>
 
-                    <p className="text-xs text-[#BEBEBE] mb-4 font-medium truncate">
+                    <p className="text-xs text-zinc-400 mb-4 line-clamp-1">
                       {project.description || 'Monolith Transformation'}
                     </p>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                      <span className="text-[10px] text-[#808080] font-mono">
+                    <div className="flex items-center justify-between pt-3 border-t border-[#1a1a1f]">
+                      <span className="text-[11px] text-zinc-500 font-mono">
                         {new Date(project.created_at).toLocaleDateString()}
                       </span>
 
-                      <div className="inline-flex items-center gap-2 bg-[#262626] px-3 py-1 rounded-full">
-                        <span className={`w-2 h-2 rounded-full ${project.statusDot}`}></span>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${project.statusTextClass}`}>
+                      <div className="inline-flex items-center gap-1.5 bg-[#16161b] px-2.5 py-0.5 rounded-full border border-[#26262e]">
+                        <span className={`w-1.5 h-1.5 rounded-full ${project.statusDot}`}></span>
+                        <span className={`text-[10px] font-bold uppercase ${project.statusTextClass}`}>
                           {project.displayStatus}
                         </span>
                       </div>
@@ -213,65 +210,66 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column (4 cols): Infrastructure Status & Capabilities */}
-        <div className="lg:col-span-4 space-y-6">
+        {/* Right 1 Column: Infrastructure & Summary */}
+        <div className="space-y-6">
 
           {/* Infrastructure Health Card */}
-          <div className="neo-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bebas text-xl text-white tracking-wide flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#B8FF45]" />
-                INFRASTRUCTURE STATUS
+          <div className="app-card p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-sm font-bold font-display text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-lime-400" />
+                Infrastructure Health
               </h3>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#B8FF45]"></span>
+              <span className="w-2 h-2 rounded-full bg-lime-400"></span>
             </div>
 
-            <div className="space-y-3 text-xs font-medium">
-              <div className="bg-[#181818] p-3.5 rounded-[16px] flex items-center justify-between">
-                <span className="text-[#BEBEBE]">api-gateway</span>
-                <span className="text-[#B8FF45] font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#B8FF45]"></span> ONLINE
+            <div className="space-y-2.5 text-xs font-medium">
+              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
+                <span className="text-zinc-400">api-gateway</span>
+                <span className="text-lime-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
                 </span>
               </div>
 
-              <div className="bg-[#181818] p-3.5 rounded-[16px] flex items-center justify-between">
-                <span className="text-[#BEBEBE]">ai-analysis-engine</span>
-                <span className="text-[#B8FF45] font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#B8FF45]"></span> ONLINE
+              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
+                <span className="text-zinc-400">ai-analysis-engine</span>
+                <span className="text-lime-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
                 </span>
               </div>
 
-              <div className="bg-[#181818] p-3.5 rounded-[16px] flex items-center justify-between">
-                <span className="text-[#BEBEBE]">neo4j-graph-db</span>
-                <span className="text-[#B8FF45] font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#B8FF45]"></span> ONLINE
+              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
+                <span className="text-zinc-400">neo4j-graph-db</span>
+                <span className="text-lime-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
                 </span>
               </div>
 
-              <div className="bg-[#181818] p-3.5 rounded-[16px] flex items-center justify-between">
-                <span className="text-[#BEBEBE]">redis-task-queue</span>
-                <span className="text-[#B8FF45] font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#B8FF45]"></span> ONLINE
+              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
+                <span className="text-zinc-400">redis-task-queue</span>
+                <span className="text-lime-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Capability Summary Metrics Card */}
-          <div className="neo-card p-6">
-            <h3 className="font-bebas text-xl text-white tracking-wide mb-4">
-              CAPABILITY METRICS
+          {/* Quick Metrics Card */}
+          <div className="app-card p-6">
+            <h3 className="text-sm font-bold font-display text-white mb-4 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-lime-400" />
+              Engine Metrics
             </h3>
             
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#181818] p-4 rounded-[16px] text-center">
-                <span className="text-3xl font-extrabold text-[#B8FF45] block font-inter">100%</span>
-                <span className="text-[10px] text-[#808080] uppercase font-bold block mt-1">AST Parsing</span>
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="bg-[#0b0b0e] border border-[#1f1f26] p-4 rounded-xl">
+                <span className="text-2xl font-bold text-lime-400 block font-display">100%</span>
+                <span className="text-[10px] text-zinc-500 uppercase font-semibold block mt-1">AST Coverage</span>
               </div>
 
-              <div className="bg-[#181818] p-4 rounded-[16px] text-center">
-                <span className="text-3xl font-extrabold text-[#FFA62B] block font-inter">4</span>
-                <span className="text-[10px] text-[#808080] uppercase font-bold block mt-1">Scenarios</span>
+              <div className="bg-[#0b0b0e] border border-[#1f1f26] p-4 rounded-xl">
+                <span className="text-2xl font-bold text-amber-400 block font-display">4</span>
+                <span className="text-[10px] text-zinc-500 uppercase font-semibold block mt-1">Strategies</span>
               </div>
             </div>
           </div>
