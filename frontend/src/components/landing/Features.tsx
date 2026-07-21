@@ -20,22 +20,22 @@ const features = [
 
 const Features = () => {
   return (
-    <section className="py-24 border-t border-[#222] bg-[#0a0a0a]">
+    <section className="py-24 border-t border-[#1f1f23] bg-[#09090b]">
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Everything you need to transform</h2>
-          <p className="text-gray-400 max-w-2xl">No more guessing. Get a mathematically and logically sound migration strategy.</p>
+          <h2 className="text-3xl lg:text-4xl font-bold font-display text-white mb-3">Everything you need to transform</h2>
+          <p className="text-zinc-400 text-sm max-w-2xl">No more guessing. Get a mathematically and logically sound migration strategy.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           {features.map((feature, idx) => {
             const IconComponent = feature.icon;
             return (
-            <div key={idx} className="p-8 bg-[#111] border border-[#222] rounded-sm group hover:border-gray-500 transition-colors">
-              <div className="mb-6 text-white group-hover:scale-105 transition-transform origin-left">
+            <div key={idx} className="app-card p-8 group hover:border-zinc-600 transition-colors">
+              <div className="mb-6 text-lime-400 group-hover:scale-105 transition-transform origin-left">
                 <IconComponent className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
+              <h3 className="text-base font-bold font-display text-white mb-2">{feature.title}</h3>
+              <p className="text-zinc-400 text-xs leading-relaxed">{feature.description}</p>
             </div>
           )})}
         </div>

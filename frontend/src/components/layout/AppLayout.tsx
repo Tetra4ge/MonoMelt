@@ -37,55 +37,42 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
         {/* Left: Logo & Nav Pills */}
         <div className="flex items-center gap-6">
           <div 
-            onClick={() => navigate('/dashboard')}
-            className="text-xl md:text-2xl font-bold tracking-wider text-white cursor-pointer font-display flex items-center gap-2"
+            onClick={() => navigate('/')}
+            className="text-xl md:text-2xl font-bold tracking-wider text-white cursor-pointer font-display flex items-center gap-2 hover:opacity-90 transition-opacity"
+            title="Go to Home"
           >
             <span className="w-8 h-8 rounded-lg bg-lime-400 text-black flex items-center justify-center font-extrabold text-sm">m</span>
             <span>monomelt</span>
           </div>
           
-          {/* Nav Pills */}
-          <nav className="hidden md:flex items-center gap-1.5 bg-[#141417] p-1.5 rounded-full border border-[#232328]">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-                isCurrentRoute('/dashboard')
-                  ? 'bg-white text-black shadow-md font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              Dashboard
-            </button>
+          {/* Nav Pills for Project Scope */}
+          {activeProjectId && (
+            <nav className="hidden md:flex items-center gap-1.5 bg-[#141417] p-1 rounded-full border border-[#232328]">
+              <button
+                onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
+                  location.pathname.includes('/analysis')
+                    ? 'bg-white text-black shadow-md font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                }`}
+              >
+                <GitBranch className="w-3.5 h-3.5" />
+                Code Analysis
+              </button>
 
-            {activeProjectId && (
-              <>
-                <button
-                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-                    location.pathname.includes('/analysis')
-                      ? 'bg-white text-black shadow-md font-bold'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-                  }`}
-                >
-                  <GitBranch className="w-3.5 h-3.5" />
-                  Code Analysis
-                </button>
-
-                <button
-                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-                    location.pathname.includes('/plans')
-                      ? 'bg-white text-black shadow-md font-bold'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-                  }`}
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  Migration Roadmap
-                </button>
-              </>
-            )}
-          </nav>
+              <button
+                onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
+                  location.pathname.includes('/plans')
+                    ? 'bg-white text-black shadow-md font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Migration Roadmap
+              </button>
+            </nav>
+          )}
         </div>
 
         {/* Right: Search & Profile */}

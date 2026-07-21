@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Lenis from 'lenis';
-import 'lenis/dist/lenis.css'; // Recommended by lenis docs
+import 'lenis/dist/lenis.css';
 import Hero from '../components/landing/Hero';
 import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
@@ -8,19 +8,17 @@ import CallToAction from '../components/landing/CallToAction';
 
 const LandingPage = () => {
   useEffect(() => {
-    // Initialize Lenis specifically for the landing page
     const lenis = new Lenis({
-      autoRaf: true, // Let lenis handle requestAnimationFrame internally if version supports it
+      autoRaf: true,
     });
 
-    // Cleanup lenis when leaving the landing page so it doesn't affect Dashboard/Login
     return () => {
       lenis.destroy();
     };
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-400 selection:bg-emerald-500/30 font-sans">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-lime-400 selection:text-black">
       <main>
         <Hero />
         <Features />
@@ -28,7 +26,7 @@ const LandingPage = () => {
         <CallToAction />
       </main>
 
-      <footer className="py-8 text-center text-gray-600 text-sm border-t border-gray-800">
+      <footer className="py-8 text-center text-zinc-500 text-xs font-mono border-t border-[#1f1f23]">
         <p>© 2026 MonoMELT Transformation Platform. Built for OpenAI Build Week.</p>
       </footer>
     </div>
