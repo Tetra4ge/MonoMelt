@@ -357,6 +357,12 @@ export default function AnalysisPage() {
           >
             Generate Aggressive
           </button>
+          <button
+            onClick={() => navigate(`/dashboard/projects/${projectId}/plans`)}
+            className="px-4 py-2 bg-indigo-600 border border-indigo-500 text-white text-xs font-bold uppercase hover:bg-indigo-500 transition-colors shadow-lg"
+          >
+            View Migration Plan →
+          </button>
         </div>
       </div>
 

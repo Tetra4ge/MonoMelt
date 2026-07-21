@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AnalysisPage from './pages/AnalysisPage';
+import PlanningPage from './pages/PlanningPage';
 import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
@@ -34,6 +35,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AnalysisPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/plans" 
+          element={
+            <ProtectedRoute>
+              <PlanningPage />
             </ProtectedRoute>
           } 
         />
