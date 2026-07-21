@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Rocket } from 'lucide-react';
+import { Rocket, Download } from 'lucide-react';
 import { triggerDeployment, getDeploymentLogs, getServicesHealth } from '../features/deployment/deployment.api';
 import type { Deployment, ServiceHealth } from '../features/deployment/types';
+import api from '../lib/api';
 import PipelineVisualizer from '../components/deployment/PipelineVisualizer';
 import LiveTerminal from '../components/deployment/LiveTerminal';
 import ServicesDashboard from '../components/deployment/ServicesDashboard';
@@ -62,6 +63,25 @@ export default function DeploymentPage() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!projectId || !blueprintId) return;
+    try {
+      const response = await api.get(`/projects/${projectId}/blueprints/${blueprintId}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `blueprint-${blueprintId}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError('Failed to download blueprint.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#0a0a0a] p-4 font-mono text-gray-300 sm:p-8">
       <div className="mx-auto max-w-[1500px]">
@@ -118,9 +138,18 @@ export default function DeploymentPage() {
             <PipelineVisualizer status="deployed" />
             
             <div className="pt-4 border-t border-[#222]">
-              <div className="flex items-center gap-3 mb-6">
-                <Rocket className="w-5 h-5 text-emerald-500" />
-                <h2 className="text-xl font-bold text-white">Live Services Dashboard</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Rocket className="w-5 h-5 text-emerald-500" />
+                  <h2 className="text-xl font-bold text-white">Live Services Dashboard</h2>
+                </div>
+                <button
+                  onClick={handleDownload}
+                  className="bg-[#222] hover:bg-[#333] border border-[#333] text-white px-6 py-2 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download ZIP
+                </button>
               </div>
               <ServicesDashboard services={services} />
             </div>

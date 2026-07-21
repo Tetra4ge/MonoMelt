@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Download, Rocket } from 'lucide-react';
 import { createBlueprint, getBlueprints, getBlueprint } from '../features/export/export.api';
 import type { Blueprint } from '../features/export/types';
+import api from '../lib/api';
 import BlueprintPreview from '../components/export/BlueprintPreview';
 import GenerationStatus from '../components/export/GenerationStatus';
 
@@ -82,10 +83,23 @@ export default function ExportPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!projectId || !blueprint?.id) return;
-    // Construct the backend download URL directly to trigger browser file download
-    window.location.href = `/api/projects/${projectId}/blueprints/${blueprint.id}/download`;
+    try {
+      const response = await api.get(`/projects/${projectId}/blueprints/${blueprint.id}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `blueprint-${blueprint.id}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to download blueprint.');
+    }
   };
 
   if (loading) {
