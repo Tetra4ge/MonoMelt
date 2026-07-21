@@ -18,6 +18,8 @@ const PlanningPage = lazy(() => import('./pages/PlanningPage'));
 const BlueprintPage = lazy(() => import('./pages/BlueprintPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+
 // Fallback loader for Suspense
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-950 text-lime-400 font-mono text-sm">
@@ -35,8 +37,9 @@ function App() {
   }, [initialize]);
 
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -110,7 +113,8 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
