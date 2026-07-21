@@ -16,6 +16,8 @@ import {
 interface AppLayoutProps {
   children: React.ReactNode;
   onNewProjectClick?: () => void;
+  /** @deprecated The route parameter is the source of truth for the active project. */
+  activeProjectId?: string;
 }
 
 export default function AppLayout({ children, onNewProjectClick }: AppLayoutProps) {
@@ -50,7 +52,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
           {activeProjectId && (
             <nav className="hidden md:flex items-center gap-1.5 bg-[#141417] p-1 rounded-full border border-[#232328]">
               <button
-                onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
+                onClick={() => navigate(`/app/projects/${activeProjectId}/analysis`)}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
                   location.pathname.includes('/analysis')
                     ? 'bg-white text-black shadow-md font-bold'
@@ -62,7 +64,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
               </button>
 
               <button
-                onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
+                onClick={() => navigate(`/app/projects/${activeProjectId}/plans`)}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
                   location.pathname.includes('/plans')
                     ? 'bg-white text-black shadow-md font-bold'
@@ -74,7 +76,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
               </button>
 
               <button
-                onClick={() => navigate(`/dashboard/projects/${activeProjectId}/blueprints`)}
+                onClick={() => navigate(`/app/projects/${activeProjectId}/blueprints`)}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
                   location.pathname.includes('/blueprints')
                     ? 'bg-white text-black shadow-md font-bold'
@@ -144,9 +146,9 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
         <aside className="w-16 md:w-20 bg-[#09090b] border-r border-[#1f1f23] py-6 flex flex-col items-center justify-between shrink-0">
           <div className="flex flex-col items-center gap-3">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/app/projects')}
               title="Dashboard"
-              className={`sidebar-btn ${isCurrentRoute('/dashboard') ? 'active' : ''}`}
+              className={`sidebar-btn ${isCurrentRoute('/app/projects') ? 'active' : ''}`}
             >
               <LayoutGrid className="w-5 h-5" />
             </button>
@@ -154,7 +156,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
             {activeProjectId && (
               <>
                 <button
-                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/analysis`)}
+                  onClick={() => navigate(`/app/projects/${activeProjectId}/analysis`)}
                   title="Code Analysis"
                   className={`sidebar-btn ${location.pathname.includes('/analysis') ? 'active' : ''}`}
                 >
@@ -162,7 +164,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
                 </button>
 
                 <button
-                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/plans`)}
+                  onClick={() => navigate(`/app/projects/${activeProjectId}/plans`)}
                   title="Migration Roadmap"
                   className={`sidebar-btn ${location.pathname.includes('/plans') ? 'active' : ''}`}
                 >
@@ -170,7 +172,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
                 </button>
 
                 <button
-                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/blueprints`)}
+                  onClick={() => navigate(`/app/projects/${activeProjectId}/blueprints`)}
                   title="Architecture Blueprints"
                   className={`sidebar-btn ${location.pathname.includes('/blueprints') ? 'active' : ''}`}
                 >
@@ -189,7 +191,7 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
 
           {/* Plus Add Project Button at Bottom */}
           <button
-            onClick={onNewProjectClick || (() => navigate('/dashboard'))}
+            onClick={onNewProjectClick || (() => navigate('/app/projects'))}
             title="Create New Project"
             className="sidebar-btn hover:border-lime-400 hover:text-lime-400 group"
           >

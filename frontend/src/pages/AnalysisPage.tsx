@@ -1,3 +1,5 @@
+/* Analysis responses are heterogeneous backend JSON payloads. */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AnalysisMetrics from '../components/projects/AnalysisMetrics';
@@ -217,7 +219,7 @@ export default function AnalysisPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/dashboard/projects/${projectId}/plans`)}
+            onClick={() => navigate(`/app/projects/${projectId}/plans`)}
             className="neo-btn-primary flex items-center gap-2 hover:scale-105"
           >
             VIEW MIGRATION ROADMAP <ArrowRight className="w-4 h-4" />

@@ -1,3 +1,5 @@
+/* The force-graph package exposes callback nodes as an untyped third-party shape. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 

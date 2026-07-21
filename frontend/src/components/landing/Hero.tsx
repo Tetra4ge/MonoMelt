@@ -8,7 +8,7 @@ const Hero = () => {
 
   const handleDashboardClick = () => {
     if (session) {
-      navigate('/dashboard');
+      navigate('/app/projects');
     } else {
       navigate('/login');
     }
@@ -30,7 +30,7 @@ const Hero = () => {
             <span className="hover:text-white cursor-pointer transition-colors">Architecture</span>
             <span onClick={handleDashboardClick} className="hover:text-white cursor-pointer transition-colors">Dashboard</span>
           </div>
-          <Link to={session ? "/dashboard" : "/login"} className="btn-primary text-xs flex items-center gap-2">
+          <Link to={session ? "/app/projects" : "/login"} className="btn-primary text-xs flex items-center gap-2">
             {session ? <LayoutDashboard className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
             {session ? "Dashboard" : "Get Started"}
           </Link>
@@ -39,7 +39,7 @@ const Hero = () => {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 border border-[#232328] bg-[#141417] text-zinc-400 text-xs mb-8 px-3 py-1 rounded-full">
           <span className="bg-lime-400 text-black px-2 py-0.5 font-bold rounded-full text-[10px]">NEW</span>
-          <span>Full AST parsing for legacy monoliths. <Link to={session ? "/dashboard" : "/login"} className="text-lime-400 font-bold hover:underline ml-1">Try it now</Link></span>
+          <span>Full AST parsing for legacy monoliths. <Link to={session ? "/app/projects" : "/login"} className="text-lime-400 font-bold hover:underline ml-1">Try it now</Link></span>
         </div>
 
         {/* Main Heading */}

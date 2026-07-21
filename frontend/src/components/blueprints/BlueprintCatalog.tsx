@@ -1,5 +1,6 @@
 import React from 'react';
 import { Download, FileCheck, Calendar, ShieldAlert, Sparkles, Layers } from 'lucide-react';
+import type { BlueprintManifest } from './BlueprintManifestViewer';
 
 export interface BlueprintRecord {
   id: string;
@@ -8,7 +9,7 @@ export interface BlueprintRecord {
   plan_revision_id: string;
   version_number: number;
   status: string;
-  manifest: any;
+  manifest: BlueprintManifest;
   created_at: string;
 }
 

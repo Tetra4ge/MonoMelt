@@ -1,3 +1,5 @@
+/* Scenario payloads are backend-defined JSON and are normalized at the API boundary. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Server } from 'lucide-react';
 
 interface MetricProps {

@@ -12,7 +12,7 @@ const CallToAction = () => {
           <p className="text-sm text-zinc-400 mb-8 max-w-2xl mx-auto">
             Stop debating architecture in endless meetings. Let AI give you the data-driven blueprint you need today.
           </p>
-          <Link to={session ? "/dashboard" : "/login"} className="btn-primary inline-block text-xs">
+          <Link to={session ? "/app/projects" : "/login"} className="btn-primary inline-block text-xs">
             Start Your Transformation Free
           </Link>
         </div>

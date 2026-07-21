@@ -2,12 +2,23 @@ import React, { useState } from 'react';
 import { UploadCloud, GitBranch, ArrowRight, CheckCircle2, FileArchive } from 'lucide-react';
 import api from '../../lib/api';
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error !== null) {
+    const response = Reflect.get(error, 'response');
+    const data = typeof response === 'object' && response !== null ? Reflect.get(response, 'data') : undefined;
+    const message = typeof data === 'object' && data !== null ? Reflect.get(data, 'message') : Reflect.get(error, 'message');
+    if (typeof message === 'string') return message;
+  }
+  return fallback;
+};
+
 interface UploadSourceProps {
   projectId?: string;
-  onJobStarted: (jobId: string, projectId: string) => void;
+  onJobStarted?: (jobId: string, projectId: string) => void;
+  onSourceUploaded?: () => void;
 }
 
-export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
+export function UploadSource({ projectId, onJobStarted, onSourceUploaded }: UploadSourceProps) {
   const [activeTab, setActiveTab] = useState<'zip' | 'github'>('zip');
   const [file, setFile] = useState<File | null>(null);
   const [repoUrl, setRepoUrl] = useState('');
@@ -52,11 +63,12 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
 
       const data = response.data;
       if (data.success && data.data?.jobId) {
-        onJobStarted(data.data.jobId, targetProjectId);
+        onJobStarted?.(data.data.jobId, targetProjectId);
+        onSourceUploaded?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('ZIP Upload Error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to upload ZIP archive');
+      setError(getErrorMessage(err, 'Failed to upload ZIP archive'));
     } finally {
       setIsUploading(false);
     }
@@ -74,11 +86,12 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
 
       const response = await api.post(`/api/projects/${targetProjectId}/sources/github`, { repoUrl, branch });
       if (response.data.success && response.data.data?.jobId) {
-        onJobStarted(response.data.data.jobId, targetProjectId);
+        onJobStarted?.(response.data.data.jobId, targetProjectId);
+        onSourceUploaded?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('GitHub Import Error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to import GitHub repository');
+      setError(getErrorMessage(err, 'Failed to import GitHub repository'));
     } finally {
       setIsUploading(false);
     }
