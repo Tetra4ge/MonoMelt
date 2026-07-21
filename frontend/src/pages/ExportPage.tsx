@@ -148,13 +148,22 @@ export default function ExportPage() {
                 <h2 className="text-lg font-bold text-white">Generated Artifacts</h2>
                 <p className="text-gray-500 text-xs mt-1">Review your infrastructure code before downloading.</p>
               </div>
-              <button
-                onClick={handleDownload}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-              >
-                <Download className="w-4 h-4" />
-                Download ZIP Bundle
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={handleDownload}
+                  className="bg-[#222] hover:bg-[#333] border border-[#333] text-white px-6 py-3 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download ZIP
+                </button>
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${projectId}/deployment?blueprintId=${blueprint.id}`)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                >
+                  <Rocket className="w-4 h-4" />
+                  1-Click Deploy
+                </button>
+              </div>
             </div>
             
             <BlueprintPreview blueprint={blueprint} />
