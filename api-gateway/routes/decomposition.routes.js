@@ -11,6 +11,7 @@ router.get('/', decompositionController.getScenarios);
 
 // Trigger a new scenario generation
 router.post('/', decompositionController.triggerGeneration);
+router.post('/generate', decompositionController.triggerGeneration);
 
 // Get specific scenario with its revisions and services
 router.get('/:scenarioId', decompositionController.getScenarioDetails);

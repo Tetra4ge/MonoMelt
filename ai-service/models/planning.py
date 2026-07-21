@@ -71,7 +71,7 @@ class TeamMappingPlan(BaseModel):
 
 
 class GeneratePlanRequest(BaseModel):
-    scenario_revision_id: UUID
+    scenario_revision_id: Optional[UUID] = None
     proposed_services: list[dict[str, Any]] = Field(default_factory=list)
     assumptions: Optional[PlanAssumptions] = None
 
