@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../stores/authStore';
-import { FolderGit2, Activity, ChevronRight, Plus, Terminal, Sparkles, Server, CheckCircle2 } from 'lucide-react';
+import { FolderGit2, Activity, ChevronRight } from 'lucide-react';
 import { UploadSource } from '../components/projects/UploadSource';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
@@ -8,7 +7,6 @@ import { supabase } from '../lib/supabase';
 import AppLayout from '../components/layout/AppLayout';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [projectId, setProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -84,7 +82,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleJobStarted = (jobId: string) => {
+  const handleJobStarted = () => {
     navigate(`/dashboard/projects/${projectId}/analysis`);
   };
 

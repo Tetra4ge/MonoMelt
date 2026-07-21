@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, AlertTriangle, CheckCircle, Server } from 'lucide-react';
+import { Users, AlertTriangle, Server } from 'lucide-react';
 
 export interface TeamAssignment {
   team_name: string;
@@ -19,47 +19,47 @@ interface TeamMappingViewProps {
 
 export default function TeamMappingView({ teamMapping }: TeamMappingViewProps) {
   return (
-    <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+    <div className="bg-[#141417] border border-[#232328] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="border-b border-[#222228] pb-4">
+        <h2 className="text-xl font-black font-syne text-white flex items-center gap-2 uppercase tracking-tight">
           <Users className="w-5 h-5 text-purple-400" />
-          Team Ownership & Capacity Mapping
+          TEAM OWNERSHIP & WORKLOAD MAPPING
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Organizational service assignments, workload distribution, and Single Point of Failure (SPOF) warnings
+        <p className="text-xs font-mono text-zinc-400 mt-1">
+          Service assignments, capacity status, and Single Point of Failure (SPOF) warnings
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-mono">
         {teamMapping.team_assignments.map((team, idx) => {
           const isOverloaded = team.capacity_status === 'overloaded';
           return (
             <div 
               key={idx} 
-              className={`bg-slate-850/50 border rounded-xl p-5 flex flex-col justify-between transition-all ${
-                isOverloaded ? 'border-amber-500/40 bg-amber-950/10' : 'border-slate-800 hover:border-purple-500/30'
+              className={`bg-[#0b0b0e] border rounded-2xl p-5 flex flex-col justify-between transition-all ${
+                isOverloaded ? 'border-orange-500/40' : 'border-[#232328] hover:border-zinc-700'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-black font-syne text-white flex items-center gap-2">
                     <Users className="w-4 h-4 text-purple-400" />
                     {team.team_name}
                   </h3>
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize border ${
+                  <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase border ${
                     isOverloaded 
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' 
-                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' 
+                      : 'bg-lime-500/10 text-lime-300 border-lime-500/30'
                   }`}>
                     {team.capacity_status}
                   </span>
                 </div>
 
                 <div className="space-y-2 mb-4">
-                  <span className="text-xs font-semibold text-slate-400 block">Assigned Services:</span>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase block">Assigned Services:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {team.assigned_services.map((service, sIdx) => (
-                      <span key={sIdx} className="text-xs font-mono bg-slate-800 text-purple-200 px-2 py-0.5 rounded border border-slate-700 flex items-center gap-1">
+                      <span key={sIdx} className="text-xs bg-[#16161c] text-purple-200 px-2.5 py-1 rounded-full border border-[#282832] flex items-center gap-1.5">
                         <Server className="w-3 h-3 text-purple-400" />
                         {service}
                       </span>
@@ -69,7 +69,7 @@ export default function TeamMappingView({ teamMapping }: TeamMappingViewProps) {
               </div>
 
               {team.spof_warning && (
-                <div className="mt-2 bg-amber-950/30 border border-amber-900/40 p-2.5 rounded-lg text-xs text-amber-300 flex items-start gap-2">
+                <div className="mt-3 bg-amber-950/30 border border-amber-900/40 p-3 rounded-xl text-xs text-amber-300 flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <span>{team.spof_warning}</span>
                 </div>

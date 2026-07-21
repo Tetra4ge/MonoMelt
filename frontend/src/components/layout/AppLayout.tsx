@@ -4,16 +4,12 @@ import { useAuthStore } from '../../stores/authStore';
 import {
   LayoutGrid,
   GitBranch,
-  Layers,
   Calendar,
   Settings,
   Plus,
   Search,
   LogOut,
-  Sparkles,
-  SlidersHorizontal,
-  ChevronDown,
-  Activity
+  ChevronDown
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -22,7 +18,7 @@ interface AppLayoutProps {
   onNewProjectClick?: () => void;
 }
 
-export default function AppLayout({ children, title, onNewProjectClick }: AppLayoutProps) {
+export default function AppLayout({ children, onNewProjectClick }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams();

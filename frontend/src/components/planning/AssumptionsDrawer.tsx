@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, X, RefreshCw, Sliders } from 'lucide-react';
+import { X, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { PlanAssumptions } from './RoadmapTimeline';
 
 interface AssumptionsDrawerProps {
@@ -32,32 +32,32 @@ export default function AssumptionsDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/70 backdrop-blur-sm flex justify-end">
-      <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 overflow-y-auto flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md flex justify-end font-mono">
+      <div className="w-full max-w-md bg-[#141417] border-l border-[#232328] h-full p-6 sm:p-8 overflow-y-auto flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-300">
         <div>
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-indigo-400" />
-              Recalculate Plan Assumptions
+          <div className="flex items-center justify-between border-b border-[#222228] pb-4 mb-6">
+            <h3 className="text-lg font-black font-syne text-white flex items-center gap-2 uppercase tracking-wide">
+              <SlidersHorizontal className="w-5 h-5 text-lime-400" />
+              PLAN ASSUMPTIONS
             </h3>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              className="text-zinc-400 hover:text-white p-1.5 rounded-full bg-[#0b0b0e] border border-[#232328] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          <form id="assumptions-form" onSubmit={handleSubmit} className="space-y-5 text-sm">
+          <form id="assumptions-form" onSubmit={handleSubmit} className="space-y-5 text-xs">
             {/* Cloud Provider */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase">
-                Cloud Provider
+              <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase">
+                Cloud Provider Catalog
               </label>
               <select
                 value={formData.cloud_provider}
                 onChange={(e) => setFormData({ ...formData, cloud_provider: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full bg-[#0b0b0e] border border-[#232328] text-zinc-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-lime-400"
               >
                 <option value="aws">AWS (Amazon Web Services)</option>
                 <option value="azure">Microsoft Azure</option>
@@ -67,22 +67,22 @@ export default function AssumptionsDrawer({
 
             {/* Region */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase">
+              <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase">
                 Pricing Region
               </label>
               <input
                 type="text"
                 value={formData.pricing_region}
                 onChange={(e) => setFormData({ ...formData, pricing_region: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full bg-[#0b0b0e] border border-[#232328] text-zinc-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-lime-400"
               />
             </div>
 
             {/* Infrastructure Scaling Multiplier */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase justify-between flex">
-                <span>Scaling Multiplier</span>
-                <span className="text-indigo-400">{formData.cost_multiplier}x</span>
+              <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase justify-between flex">
+                <span>Infrastructure Scaling</span>
+                <span className="text-lime-400 font-bold">{formData.cost_multiplier}x</span>
               </label>
               <input
                 type="range"
@@ -91,13 +91,13 @@ export default function AssumptionsDrawer({
                 step="0.1"
                 value={formData.cost_multiplier}
                 onChange={(e) => setFormData({ ...formData, cost_multiplier: parseFloat(e.target.value) })}
-                className="w-full accent-indigo-500 cursor-pointer"
+                className="w-full accent-lime-400 cursor-pointer"
               />
             </div>
 
             {/* Team Count */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase">
+              <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase">
                 Available Engineering Teams
               </label>
               <input
@@ -106,19 +106,19 @@ export default function AssumptionsDrawer({
                 max="20"
                 value={formData.team_count}
                 onChange={(e) => setFormData({ ...formData, team_count: parseInt(e.target.value) || 1 })}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full bg-[#0b0b0e] border border-[#232328] text-zinc-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-lime-400"
               />
             </div>
 
             {/* Risk Tolerance */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase">
-                Risk Tolerance
+              <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase">
+                Organizational Risk Tolerance
               </label>
               <select
                 value={formData.risk_tolerance}
                 onChange={(e) => setFormData({ ...formData, risk_tolerance: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full bg-[#0b0b0e] border border-[#232328] text-zinc-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-lime-400"
               >
                 <option value="low">Low (Recommend Modular Monolith if complex)</option>
                 <option value="medium">Medium (Standard Strangler Fig)</option>
@@ -128,7 +128,7 @@ export default function AssumptionsDrawer({
 
             {/* Target Window */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase">
+              <label className="block text-[10px] font-bold text-zinc-400 mb-1.5 uppercase">
                 Target Migration Window (Months)
               </label>
               <input
@@ -137,17 +137,17 @@ export default function AssumptionsDrawer({
                 max="36"
                 value={formData.migration_window_months}
                 onChange={(e) => setFormData({ ...formData, migration_window_months: parseInt(e.target.value) || 6 })}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full bg-[#0b0b0e] border border-[#232328] text-zinc-100 rounded-xl px-3.5 py-2.5 outline-none focus:border-lime-400"
               />
             </div>
           </form>
         </div>
 
-        <div className="pt-6 border-t border-slate-800 flex items-center justify-end gap-3">
+        <div className="pt-6 border-t border-[#222228] flex items-center justify-end gap-3 font-mono">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="px-4 py-2 rounded-full text-xs text-zinc-400 hover:text-white hover:bg-[#1f1f26] transition-colors"
           >
             Cancel
           </button>
@@ -155,9 +155,9 @@ export default function AssumptionsDrawer({
             type="submit"
             form="assumptions-form"
             disabled={isSubmitting}
-            className="px-5 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full text-xs font-bold bg-lime-400 hover:bg-lime-300 text-black flex items-center gap-2 transition-all disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isSubmitting ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
             {isSubmitting ? 'Recalculating...' : 'Recalculate Plan'}
           </button>
         </div>

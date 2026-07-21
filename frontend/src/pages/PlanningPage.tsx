@@ -1,27 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react',
+import { useParams, useNavigate } from 'react-router-dom';
 import RoadmapTimeline from '../components/planning/RoadmapTimeline';
 import ConsistencySecurityMatrix from '../components/planning/ConsistencySecurityMatrix';
 import CostPerformanceSimulator from '../components/planning/CostPerformanceSimulator';
 import TeamMappingView from '../components/planning/TeamMappingView';
 import AssumptionsDrawer from '../components/planning/AssumptionsDrawer';
-import { useAuthStore } from '../stores/authStore';
+import AppLayout from '../components/layout/AppLayout';
 import api from '../lib/api';
 import { 
-  ArrowLeft, 
-  Layers, 
   Plus, 
-  Sliders, 
+  SlidersHorizontal, 
   RefreshCw, 
   AlertCircle, 
-  CheckCircle2, 
-  Sparkles 
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 
 export default function PlanningPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { session } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +39,6 @@ export default function PlanningPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch Scenarios & Plans
       const [scenariosRes, plansRes] = await Promise.all([
         api.get(`/api/projects/${projectId}/scenarios`),
         api.get(`/api/projects/${projectId}/plans`)
@@ -119,34 +115,17 @@ export default function PlanningPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="w-6 h-6 animate-spin text-indigo-400" />
-          <span className="text-slate-300 font-medium">Loading Migration Plans...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 space-y-8">
-      {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
+    <AppLayout title="Migration Roadmap">
+      {/* Top Banner Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <button
-            onClick={() => navigate(`/dashboard/projects/${projectId}/analysis`)}
-            className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 mb-2 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Code Analysis
-          </button>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <Layers className="w-8 h-8 text-indigo-400" />
-            Phase 6: Migration Planning Engine
+          <h1 className="text-3xl sm:text-4xl font-black font-syne uppercase tracking-tight text-white flex items-center gap-3">
+            <Calendar className="w-8 h-8 text-lime-400" />
+            MIGRATION ROADMAP ENGINE
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Actionable migration roadmap, data consistency matrix, cost simulation, and team ownership assignments.
+          <p className="text-xs font-mono text-zinc-400 mt-1">
+            Actionable rollout timeline, zero-trust consistency rules, cost simulation, and team mapping
           </p>
         </div>
 
@@ -154,9 +133,9 @@ export default function PlanningPage() {
           {activeRevision && (
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-2 transition-all"
+              className="px-4 py-2.5 rounded-full text-xs font-extrabold bg-[#1a1a20] hover:bg-zinc-800 text-zinc-200 border border-[#2a2a34] flex items-center gap-2 transition-all"
             >
-              <Sliders className="w-4 h-4 text-indigo-400" />
+              <SlidersHorizontal className="w-4 h-4 text-lime-400" />
               Adjust Assumptions
             </button>
           )}
@@ -164,97 +143,108 @@ export default function PlanningPage() {
           <button
             onClick={handleCreatePlan}
             disabled={isGenerating}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full text-xs font-extrabold bg-lime-400 hover:bg-lime-300 text-black shadow-lg flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50"
           >
             {isGenerating ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Generating Plan...
+                Generating...
               </>
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                Generate Migration Plan
+                Generate New Roadmap
               </>
             )}
           </button>
         </div>
       </div>
 
+      {loading && (
+        <div className="bg-[#141417] border border-[#232328] rounded-3xl p-12 text-center text-zinc-400 font-mono text-sm">
+          <RefreshCw className="w-8 h-8 animate-spin text-lime-400 mx-auto mb-3" />
+          Loading Migration Strategy & Risk Models...
+        </div>
+      )}
+
       {error && (
-        <div className="bg-rose-950/40 border border-rose-900/60 p-4 rounded-xl text-rose-300 text-sm flex items-center gap-3">
+        <div className="bg-rose-950/40 border border-rose-900/60 p-5 rounded-2xl text-rose-300 text-sm flex items-center gap-3 font-mono">
           <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Main Content */}
-      {!activeRevision ? (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-4">
-          <div className="w-16 h-16 bg-indigo-950/60 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto border border-indigo-500/30">
-            <Sparkles className="w-8 h-8" />
-          </div>
-          <h3 className="text-xl font-bold text-white">No Migration Plan Generated Yet</h3>
-          <p className="text-sm text-slate-400">
-            Generate an actionable migration strategy from your completed microservice decomposition scenario.
-          </p>
-          <button
-            onClick={handleCreatePlan}
-            disabled={isGenerating}
-            className="px-6 py-3 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 inline-flex items-center gap-2 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Generate Plan Now
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Plan Revisions Selector Bar */}
-          {activePlan?.plan_revisions && activePlan.plan_revisions.length > 1 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800">
-              <span className="text-xs font-semibold text-slate-400">Revisions:</span>
-              {activePlan.plan_revisions.map((rev: any) => (
-                <button
-                  key={rev.id}
-                  onClick={() => setActiveRevision(rev)}
-                  className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
-                    activeRevision?.id === rev.id
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-850'
-                  }`}
-                >
-                  Rev #{rev.revision_number} ({new Date(rev.created_at).toLocaleTimeString()})
-                </button>
-              ))}
+      {!loading && !error && (
+        <div className="space-y-6">
+          {!activeRevision ? (
+            <div className="bg-[#141417] border border-[#232328] rounded-3xl p-12 text-center max-w-xl mx-auto space-y-4 shadow-2xl">
+              <div className="w-16 h-16 bg-[#1b1b22] border border-[#2b2b36] text-lime-400 rounded-2xl flex items-center justify-center mx-auto">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-extrabold font-syne text-white uppercase tracking-wide">
+                No Migration Plan Generated Yet
+              </h3>
+              <p className="text-xs font-mono text-zinc-400">
+                Generate an actionable migration strategy from your completed microservice decomposition scenario.
+              </p>
+              <button
+                onClick={handleCreatePlan}
+                disabled={isGenerating}
+                className="px-6 py-3 rounded-full text-xs font-extrabold bg-lime-400 hover:bg-lime-300 text-black shadow-lg inline-flex items-center gap-2 transition-all hover:scale-105"
+              >
+                <Plus className="w-4 h-4" />
+                Generate Migration Plan
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Revision Selector Bar */}
+              {activePlan?.plan_revisions && activePlan.plan_revisions.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 font-mono text-xs">
+                  <span className="text-zinc-500 font-bold uppercase">Revisions:</span>
+                  {activePlan.plan_revisions.map((rev: any) => (
+                    <button
+                      key={rev.id}
+                      onClick={() => setActiveRevision(rev)}
+                      className={`px-4 py-1.5 rounded-full border font-bold uppercase transition-all ${
+                        activeRevision?.id === rev.id
+                          ? 'bg-white text-black border-white shadow-md'
+                          : 'bg-[#141417] text-zinc-400 border-[#232328] hover:text-zinc-200'
+                      }`}
+                    >
+                      Rev #{rev.revision_number} ({new Date(rev.created_at).toLocaleTimeString()})
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Components Breakdown */}
+              {activeRevision.roadmap && (
+                <RoadmapTimeline roadmap={activeRevision.roadmap} />
+              )}
+
+              {activeRevision.consistency_security && (
+                <ConsistencySecurityMatrix matrix={activeRevision.consistency_security} />
+              )}
+
+              {activeRevision.cost_performance && (
+                <CostPerformanceSimulator simulation={activeRevision.cost_performance} />
+              )}
+
+              {activeRevision.team_mapping && (
+                <TeamMappingView teamMapping={activeRevision.team_mapping} />
+              )}
+
+              <AssumptionsDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                currentAssumptions={activeRevision.assumptions || {}}
+                onRecalculate={handleRecalculate}
+              />
             </div>
           )}
-
-          {/* Component Grid */}
-          {activeRevision.roadmap && (
-            <RoadmapTimeline roadmap={activeRevision.roadmap} />
-          )}
-
-          {activeRevision.consistency_security && (
-            <ConsistencySecurityMatrix matrix={activeRevision.consistency_security} />
-          )}
-
-          {activeRevision.cost_performance && (
-            <CostPerformanceSimulator simulation={activeRevision.cost_performance} />
-          )}
-
-          {activeRevision.team_mapping && (
-            <TeamMappingView teamMapping={activeRevision.team_mapping} />
-          )}
-
-          {/* Assumptions Drawer */}
-          <AssumptionsDrawer
-            isOpen={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            currentAssumptions={activeRevision.assumptions || {}}
-            onRecalculate={handleRecalculate}
-          />
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }

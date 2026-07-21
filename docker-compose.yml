@@ -8,8 +8,10 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    env_file:
+      - ./frontend/.env
     environment:
-      - VITE_API_URL=http://api-gateway:4000
+      - VITE_API_URL=http://localhost:4000
     depends_on:
       - api-gateway
 
