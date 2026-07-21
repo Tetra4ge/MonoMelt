@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
-import { BlueprintCatalog, BlueprintRecord } from '../components/blueprints/BlueprintCatalog';
+import { BlueprintCatalog, type BlueprintRecord } from '../components/blueprints/BlueprintCatalog';
 import { BlueprintManifestViewer } from '../components/blueprints/BlueprintManifestViewer';
 import api from '../lib/api';
 

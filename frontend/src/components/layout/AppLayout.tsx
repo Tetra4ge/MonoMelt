@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   GitBranch,
   Calendar,
+  Layers,
   Settings,
   Plus,
   Search,
@@ -166,6 +167,14 @@ export default function AppLayout({ children, onNewProjectClick }: AppLayoutProp
                   className={`sidebar-btn ${location.pathname.includes('/plans') ? 'active' : ''}`}
                 >
                   <Calendar className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => navigate(`/dashboard/projects/${activeProjectId}/blueprints`)}
+                  title="Architecture Blueprints"
+                  className={`sidebar-btn ${location.pathname.includes('/blueprints') ? 'active' : ''}`}
+                >
+                  <Layers className="w-5 h-5" />
                 </button>
               </>
             )}

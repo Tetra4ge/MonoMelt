@@ -2,8 +2,8 @@ import React from 'react';
 import { X, FileText, AlertTriangle, ShieldCheck, HardDrive, CheckCircle2 } from 'lucide-react';
 
 interface ArtifactFile {
-  path: str;
-  sha256: str;
+  path: string;
+  sha256: string;
   size_bytes: number;
   content_type: string;
 }

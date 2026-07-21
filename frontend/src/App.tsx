@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AnalysisPage from './pages/AnalysisPage';
 import PlanningPage from './pages/PlanningPage';
+import BlueprintPage from './pages/BlueprintPage';
 import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
@@ -43,6 +44,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PlanningPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/projects/:projectId/blueprints" 
+          element={
+            <ProtectedRoute>
+              <BlueprintPage />
             </ProtectedRoute>
           } 
         />
