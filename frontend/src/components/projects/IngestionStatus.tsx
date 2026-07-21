@@ -1,50 +1,36 @@
-import { useEffect, useState } from 'react';
-import api from '../../lib/api';
+import React, { useEffect, useState } from 'react';
+import { api } from '../../lib/api';
 
 interface IngestionStatusProps {
   projectId: string;
   jobId: string;
 }
 
-interface JobStatus {
-  status: string;
-  error_code?: string;
-}
-
-const getErrorMessage = (error: unknown) => {
-  if (typeof error === 'object' && error !== null) {
-    const response = Reflect.get(error, 'response');
-    const data = typeof response === 'object' && response !== null ? Reflect.get(response, 'data') : undefined;
-    const message = typeof data === 'object' && data !== null ? Reflect.get(data, 'message') : Reflect.get(error, 'message');
-    if (typeof message === 'string') return message;
-  }
-  return 'Unable to retrieve job status.';
-};
-
 export function IngestionStatus({ projectId, jobId }: IngestionStatusProps) {
-  const [job, setJob] = useState<JobStatus | null>(null);
+  const [job, setJob] = useState<any>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let intervalId: any;
 
     const fetchJobStatus = async () => {
       try {
-        const response = await api.get(`/api/projects/${projectId}/jobs/${jobId}`);
-        const currentJob = response.data.data as JobStatus;
+        const response = await api.get(`/projects/${projectId}/jobs/${jobId}`);
+        const currentJob = response.data.data;
         setJob(currentJob);
         
         // Stop polling if job is completed, failed, cancelled, or ready
         if (['ready', 'completed', 'failed', 'cancelled'].includes(currentJob.status)) {
           clearInterval(intervalId);
         }
-      } catch (err: unknown) {
-        setError(getErrorMessage(err));
+      } catch (err: any) {
+        setError(err.response?.data?.message || err.message);
         clearInterval(intervalId);
       }
     };
 
-    const intervalId = setInterval(fetchJobStatus, 2000); // Poll every 2 seconds
     fetchJobStatus(); // Initial fetch
+    intervalId = setInterval(fetchJobStatus, 2000); // Poll every 2 seconds
 
     return () => clearInterval(intervalId);
   }, [projectId, jobId]);

@@ -1,15 +1,12 @@
-/* Analysis responses are heterogeneous backend JSON payloads. */
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AnalysisMetrics from '../components/projects/AnalysisMetrics';
 import DependencyGraph from '../components/projects/DependencyGraph';
 import FindingsPanel from '../components/projects/FindingsPanel';
 import ScenarioScorecard from '../components/projects/ScenarioScorecard';
-import AppLayout from '../components/layout/AppLayout';
 import { useAuthStore } from '../stores/authStore';
 import api from '../lib/api';
-import { AlertTriangle, Sparkles, ArrowRight, GitBranch, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function AnalysisPage() {
   const { projectId } = useParams();
@@ -34,10 +31,10 @@ export default function AnalysisPage() {
   const [isDecomposing, setIsDecomposing] = useState(false);
 
   useEffect(() => {
+    let pollTimeout: ReturnType<typeof setTimeout>;
     let findingsPollTimeout: ReturnType<typeof setTimeout>;
     let scenariosPollTimeout: ReturnType<typeof setTimeout>;
 
-    let pollCount = 0;
     const fetchFindings = async (sourceVersionId: string, isPolling = false) => {
       try {
         const res = await api.get(`/api/projects/${projectId}/intelligence/${sourceVersionId}/findings`);
@@ -51,15 +48,10 @@ export default function AnalysisPage() {
           setFindings(parsedFindings);
 
           if (parsedFindings.length > 0) {
-            setIsEnriching(false);
-          } else if (isPolling && pollCount < 10) {
-            pollCount++;
+            setIsEnriching(false); // Done
+          } else if (isPolling) {
             findingsPollTimeout = setTimeout(() => fetchFindings(sourceVersionId, true), 3000);
-          } else {
-            setIsEnriching(false);
           }
-        } else {
-          setIsEnriching(false);
         }
       } catch (err) {
         console.error("Failed to fetch findings", err);
@@ -106,47 +98,149 @@ export default function AnalysisPage() {
 
         if (jobError) throw jobError;
 
-        if (jobs && jobs.length > 0) {
-          const latestJob = jobs[0];
-          setActiveJob(latestJob);
-
-          if (latestJob.status === 'completed' && latestJob.source_version_id) {
-            const [metricsRes, graphRes] = await Promise.allSettled([
-              api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`),
-              api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph`)
-            ]);
-
-            if (metricsRes.status === 'fulfilled' && metricsRes.value.data) {
-              const data = metricsRes.value.data.data?.data || metricsRes.value.data.data || metricsRes.value.data;
-              setMetrics(data);
-            }
-            if (graphRes.status === 'fulfilled' && graphRes.value.data) {
-              const data = graphRes.value.data.data?.data || graphRes.value.data.data || graphRes.value.data;
-              setGraphData(data);
-            }
-
-            fetchFindings(latestJob.source_version_id);
-            fetchScenarios();
-          } else if (latestJob.status === 'failed') {
-            setError(`Analysis Job Failed: ${latestJob.error_code || 'Unknown error'}`);
-          }
-        } else {
-          setError('No analysis job found for this project.');
+        if (!jobs || jobs.length === 0) {
+          setError("No analysis found. Upload source code first.");
+          setLoading(false);
+          return;
         }
+
+        const latestJob = jobs[0];
+        setActiveJob(latestJob);
+
+        if (latestJob.status !== 'completed' && latestJob.status !== 'failed') {
+          if (latestJob.status === 'ready') {
+            try {
+              await api.post(`/api/projects/${projectId}/analysis/trigger`, { source_version_id: latestJob.source_version_id });
+            } catch (e) {
+              console.error("Failed to trigger AI analysis", e);
+            }
+          }
+
+          setLoading(false);
+          pollTimeout = setTimeout(fetchLatestAnalysis, 3000);
+          return;
+        }
+
+        if (latestJob.status === 'failed') {
+          setError(`Analysis job failed: ${latestJob.error_code || 'Unknown error'}`);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch Metrics & Graph
+        try {
+          const [metricsRes, graphRes] = await Promise.all([
+            api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`),
+            api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`)
+          ]);
+          setMetrics(metricsRes.data);
+          setGraphData({ nodes: graphRes.data.nodes || [], edges: graphRes.data.edges || [] });
+        } catch (e) {
+          console.error("Failed to fetch analysis data", e);
+        }
+
+        // Check if we already have intelligence findings and scenarios
+        await fetchFindings(latestJob.source_version_id, false);
+        await fetchScenarios(false);
+
+        setLoading(false);
       } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Failed to fetch analysis data');
-      } finally {
+        console.error("Error fetching analysis:", err);
+        setError(err.message || "Failed to load analysis results");
         setLoading(false);
       }
     };
 
-    fetchLatestAnalysis();
+    if (projectId && token) {
+      fetchLatestAnalysis();
+    }
 
     return () => {
-      clearTimeout(findingsPollTimeout);
-      clearTimeout(scenariosPollTimeout);
+      if (pollTimeout) clearTimeout(pollTimeout);
+      if (findingsPollTimeout) clearTimeout(findingsPollTimeout);
+      if (scenariosPollTimeout) clearTimeout(scenariosPollTimeout);
     };
   }, [projectId, token]);
+
+  const handleRunIntelligence = async () => {
+    if (!activeJob) return;
+    setIsEnriching(true);
+    try {
+      await api.post(`/api/projects/${projectId}/intelligence/trigger`, {
+        source_version_id: activeJob.source_version_id
+      });
+
+      const pollFindings = async () => {
+        try {
+          const res = await api.get(`/api/projects/${projectId}/intelligence/${activeJob.source_version_id}/findings`);
+          if (res.data.success && res.data.data && res.data.data.length > 0) {
+            const parsedFindings = res.data.data.map((f: any) => ({
+              ...f,
+              subject_ids: typeof f.subject_ids === 'string' ? JSON.parse(f.subject_ids) : f.subject_ids,
+              evidence_ids: typeof f.evidence_ids === 'string' ? JSON.parse(f.evidence_ids) : f.evidence_ids,
+            }));
+            setFindings(parsedFindings);
+            setIsEnriching(false);
+          } else {
+            setTimeout(pollFindings, 3000);
+          }
+        } catch (err) {
+          console.error("Poll failed", err);
+          setTimeout(pollFindings, 3000);
+        }
+      };
+
+      pollFindings();
+    } catch (e) {
+      console.error("Failed to start intelligence", e);
+      setIsEnriching(false);
+    }
+  };
+
+  const handleReviewFinding = async (findingId: string, status: string) => {
+    try {
+      await api.post(`/api/projects/${projectId}/intelligence/findings/${findingId}/review`, {
+        review_status: status
+      });
+      setFindings(prev => prev.map(f => f.id === findingId ? { ...f, review_status: status, needs_review: false } : f));
+    } catch (e) {
+      console.error("Failed to review finding", e);
+    }
+  };
+
+  const handleTriggerDecomposition = async (strategy: string) => {
+    if (!activeJob) return;
+    setIsDecomposing(true);
+    try {
+      await api.post(`/api/projects/${projectId}/scenarios`, {
+        source_version_id: activeJob.source_version_id,
+        strategy_type: strategy
+      });
+
+      // Start polling scenarios
+      const pollScenarios = async () => {
+        try {
+          const res = await api.get(`/api/projects/${projectId}/scenarios`);
+          if (res.data.success) {
+            setScenarios(res.data.data);
+            const generating = res.data.data.some((s: any) => s.status === 'generating');
+            if (generating) {
+              setTimeout(pollScenarios, 3000);
+            } else {
+              setIsDecomposing(false);
+            }
+          }
+        } catch (err) {
+          setTimeout(pollScenarios, 3000);
+        }
+      };
+
+      pollScenarios();
+    } catch (e) {
+      console.error("Failed to trigger decomposition", e);
+      setIsDecomposing(false);
+    }
+  };
 
   const loadScenarioDetails = async (scenarioId: string) => {
     try {
@@ -154,192 +248,156 @@ export default function AnalysisPage() {
       if (res.data.success) {
         setActiveScenario(res.data.data);
       }
-    } catch (err) {
-      console.error("Failed to fetch scenario details", err);
+    } catch (e) {
+      console.error("Failed to load scenario details", e);
     }
   };
 
-  const handleTriggerEnrichment = async () => {
-    if (!activeJob?.source_version_id) return;
-    try {
-      setIsEnriching(true);
-      await api.post(`/api/projects/${projectId}/intelligence/trigger`, { sourceVersionId: activeJob.source_version_id });
-      setTimeout(() => {
-        setIsEnriching(false);
-      }, 5000);
-    } catch (err) {
-      console.error("Failed to trigger LLM enrichment", err);
-      setIsEnriching(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="p-8 font-mono bg-[#0a0a0a] min-h-screen text-white flex flex-col items-center justify-center">
+        <div className="w-16 h-16 border-4 border-[#222] border-t-white rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-400">Loading analysis data...</p>
+      </div>
+    );
+  }
 
-  const handleTriggerDecomposition = async (strategy: string) => {
-    if (!activeJob?.source_version_id) return;
-    try {
-      setIsDecomposing(true);
-      const res = await api.post(`/api/projects/${projectId}/scenarios/generate`, {
-        sourceVersionId: activeJob.source_version_id,
-        strategyType: strategy
-      });
+  if (error) {
+    return (
+      <div className="p-4 font-mono bg-[#0a0a0a] min-h-screen text-white flex items-center justify-center">
+        <div className="bg-[#111] border border-red-900/50 rounded-md p-8 shadow-2xl max-w-md w-full text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4 opacity-80" />
+          <h2 className="text-xl text-red-500 font-bold mb-3 tracking-wide">Analysis Error</h2>
+          <p className="text-gray-400 text-sm mb-8 leading-relaxed">{error}</p>
+          <button
+            onClick={() => navigate(`/dashboard`)}
+            className="w-full px-4 py-3 bg-white text-black font-bold text-sm uppercase rounded-sm hover:bg-gray-200 transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-      if (res.data.success && res.data.data?.id) {
-        loadScenarioDetails(res.data.data.id);
-      }
-    } catch (err) {
-      console.error("Failed to trigger decomposition", err);
-      setIsDecomposing(false);
-    }
-  };
-
-  const handleReviewFinding = async (findingId: string, status: string) => {
-    try {
-      const res = await api.patch(`/api/projects/${projectId}/intelligence/findings/${findingId}/review`, { status });
-
-      if (res.data.success) {
-        setFindings(prev => prev.map(f => f.id === findingId ? { ...f, review_status: status } : f));
-      }
-    } catch (err) {
-      console.error("Failed to update finding status", err);
-    }
-  };
+  if (activeJob && activeJob.status !== 'completed') {
+    return (
+      <div className="p-8 font-mono bg-[#0a0a0a] min-h-screen text-white flex flex-col items-center justify-center">
+        <div className="w-16 h-16 border-4 border-[#222] border-t-yellow-500 rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-400 mb-2">Analysis in progress...</p>
+        <p className="text-xs text-gray-600">Status: {activeJob.status}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-6 px-4 py-2 border border-[#222] text-white font-bold text-sm uppercase hover:bg-[#111]"
+        >
+          Refresh Status
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <AppLayout>
-      {/* Top Page Title */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div className="p-4 sm:p-8 font-mono bg-[#0a0a0a] min-h-screen text-white">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-bebas text-4xl sm:text-5xl text-white tracking-wide flex items-center gap-3">
-            <GitBranch className="w-8 h-8 text-[#B8FF45]" />
-            AST DECOMPOSITION ENGINE
-          </h1>
-          <p className="text-xs text-[#BEBEBE] font-medium mt-0.5">
-            Parsing dependency graphs, bounded contexts, and microservices candidate boundaries
-          </p>
+          <h1 className="text-2xl font-bold">Dependency Graph</h1>
+          <p className="text-gray-500 text-sm mt-1">Interactive AST visualization from Neo4j</p>
         </div>
+        <div className="flex gap-4 items-center">
+          {findings.length === 0 && (
+            <button
+              onClick={handleRunIntelligence}
+              disabled={isEnriching}
+              className="px-4 py-2 bg-purple-900/30 text-purple-400 border border-purple-900 font-bold text-xs uppercase hover:bg-purple-900 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {isEnriching ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                  Enriching...
+                </>
+              ) : (
+                '✨ Run AI Intelligence'
+              )}
+            </button>
+          )}
 
-        <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/app/projects/${projectId}/plans`)}
-            className="neo-btn-primary flex items-center gap-2 hover:scale-105"
+            onClick={() => navigate(`/app/projects/${projectId}`)}
+            className="px-4 py-2 border border-[#222] text-gray-400 font-bold text-xs uppercase hover:text-white hover:bg-[#111]"
           >
-            VIEW MIGRATION ROADMAP <ArrowRight className="w-4 h-4" />
+            Back to Project
           </button>
         </div>
       </div>
 
-      {loading && (
-        <div className="neo-card p-12 text-center text-[#BEBEBE] text-sm font-medium">
-          <RefreshCw className="w-8 h-8 animate-spin text-[#B8FF45] mx-auto mb-3" />
-          Parsing AST Nodes and Dependency Graphs...
-        </div>
+      <AnalysisMetrics metrics={metrics} />
+
+      {findings.length > 0 && (
+        <FindingsPanel findings={findings} onReview={handleReviewFinding} />
       )}
 
-      {error && (
-        <div className="bg-[#FF5A5F]/10 border border-[#FF5A5F]/20 p-5 rounded-[18px] text-[#FF5A5F] text-sm flex items-center gap-3 font-medium">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
-          <span>{error}</span>
+      {/* Decomposition Engine Section */}
+      <div className="mt-8 mb-4 flex justify-between items-end">
+        <div>
+          <h2 className="text-xl font-bold text-blue-400">Microservice Decomposition</h2>
+          <p className="text-gray-500 text-xs mt-1">Generate proposed boundaries based on the AST using clustering.</p>
         </div>
-      )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleTriggerDecomposition('conservative')}
+            disabled={isDecomposing}
+            className="px-3 py-2 bg-[#111] border border-[#333] text-gray-300 text-xs font-bold uppercase hover:bg-[#222] hover:text-white disabled:opacity-50"
+          >
+            Generate Conservative
+          </button>
+          <button
+            onClick={() => handleTriggerDecomposition('aggressive')}
+            disabled={isDecomposing}
+            className="px-3 py-2 bg-[#111] border border-[#333] text-gray-300 text-xs font-bold uppercase hover:bg-[#222] hover:text-white disabled:opacity-50"
+          >
+            Generate Aggressive
+          </button>
+        </div>
+      </div>
 
-      {!loading && !error && (
-        <div className="space-y-6">
-          {/* Phase 3 Code Metrics */}
-          {metrics && <AnalysisMetrics metrics={metrics} />}
-
-          {/* Strategy Selector Pills */}
-          <div className="neo-card p-5 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bebas text-lg text-[#BEBEBE] mr-2">
-                DECOMPOSITION STRATEGY:
-              </span>
-              <button
-                onClick={() => handleTriggerDecomposition('domain')}
-                disabled={isDecomposing}
-                className="neo-btn hover:bg-[#B8FF45] hover:text-black transition-all text-xs disabled:opacity-50"
-              >
-                Domain-Driven
-              </button>
-              <button
-                onClick={() => handleTriggerDecomposition('team')}
-                disabled={isDecomposing}
-                className="neo-btn hover:bg-[#FF5BB5] hover:text-black transition-all text-xs disabled:opacity-50"
-              >
-                Team-Aligned
-              </button>
-              <button
-                onClick={() => handleTriggerDecomposition('conservative')}
-                disabled={isDecomposing}
-                className="neo-btn hover:bg-[#3B82F6] hover:text-white transition-all text-xs disabled:opacity-50"
-              >
-                Conservative
-              </button>
-              <button
-                onClick={() => handleTriggerDecomposition('aggressive')}
-                disabled={isDecomposing}
-                className="neo-btn hover:bg-[#FFA62B] hover:text-black transition-all text-xs disabled:opacity-50"
-              >
-                Aggressive
-              </button>
-            </div>
-
+      {scenarios.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          {scenarios.map(scen => (
             <button
-              onClick={handleTriggerEnrichment}
-              disabled={isEnriching}
-              className="neo-btn flex items-center gap-2 text-xs"
+              key={scen.id}
+              onClick={() => loadScenarioDetails(scen.id)}
+              className={`px-4 py-2 border text-xs font-bold uppercase whitespace-nowrap ${activeScenario?.id === scen.id
+                  ? 'border-blue-500 bg-blue-900/20 text-blue-400'
+                  : 'border-[#333] bg-[#111] text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                }`}
             >
-              <Sparkles className={`w-3.5 h-3.5 text-[#B8FF45] ${isEnriching ? 'animate-spin' : ''}`} />
-              {isEnriching ? 'Enriching...' : 'Run LLM Intelligence'}
+              {scen.strategy_type}
+              {scen.status === 'generating' && ' (Running...)'}
             </button>
-          </div>
-
-          {/* Scenarios Selector Tabs */}
-          {scenarios.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-semibold">
-              <span className="text-[#808080] uppercase">Scenarios:</span>
-              {scenarios.map(scen => (
-                <button
-                  key={scen.id}
-                  onClick={() => loadScenarioDetails(scen.id)}
-                  className={`px-4 py-2 rounded-full transition-all uppercase ${
-                    activeScenario?.id === scen.id
-                      ? 'bg-[#B8FF45] text-black font-bold shadow'
-                      : 'bg-[#181818] text-[#BEBEBE] hover:bg-[#252525]'
-                  }`}
-                >
-                  {scen.strategy_type} {scen.status === 'generating' && '(Running...)'}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Phase 5 Scenario Scorecard */}
-          {activeScenario && (
-            <ScenarioScorecard
-              scenario={activeScenario}
-              proposedServices={activeScenario.proposed_services}
-            />
-          )}
-
-          {/* Phase 4 AI Findings */}
-          {findings.length > 0 && (
-            <FindingsPanel findings={findings} onReview={handleReviewFinding} />
-          )}
-
-          {/* Dependency Graph Container */}
-          <div className="neo-card p-4 relative min-h-[600px] overflow-hidden">
-            {activeScenario && activeScenario.proposed_services && activeScenario.proposed_services.length > 0 && (
-              <div className="absolute top-6 right-6 z-10 px-4 py-2 bg-[#B8FF45] text-black font-bold font-bebas text-sm uppercase rounded-full shadow">
-                Active Boundaries: {activeScenario.strategy_type}
-              </div>
-            )}
-            <DependencyGraph
-              nodes={graphData.nodes}
-              edges={graphData.edges}
-              proposedServices={activeScenario?.proposed_services}
-            />
-          </div>
+          ))}
         </div>
       )}
-    </AppLayout>
+
+      {activeScenario && (
+        <ScenarioScorecard
+          scenario={activeScenario}
+          revisions={activeScenario.revisions}
+          proposedServices={activeScenario.proposed_services}
+        />
+      )}
+
+      <div className="w-full flex-1 bg-[#111] p-1 border border-[#222] mt-4 relative">
+        {activeScenario && activeScenario.proposed_services && activeScenario.proposed_services.length > 0 && (
+          <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-blue-500 text-black font-bold text-xs uppercase animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+            Showing {activeScenario.strategy_type} Boundaries
+          </div>
+        )}
+        <DependencyGraph
+          nodes={graphData.nodes}
+          edges={graphData.edges}
+          proposedServices={activeScenario?.proposed_services}
+        />
+      </div>
+    </div>
   );
 }

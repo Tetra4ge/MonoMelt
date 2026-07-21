@@ -1,265 +1,222 @@
-/* Project-list hydration intentionally updates local loading state from this effect. */
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
-import { Activity, ChevronRight, Sparkles } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
+import { LogOut, FolderGit2, Activity, Terminal, ChevronRight} from 'lucide-react';
 import { UploadSource } from '../components/projects/UploadSource';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { supabase } from '../lib/supabase';
-import AppLayout from '../components/layout/AppLayout';
 
 const Dashboard: React.FC = () => {
+  const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
-  const fetchRecentProjects = async () => {
-    try {
-      setLoadingProjects(true);
-      const res = await api.get('/api/projects');
-      if (res.data.success && res.data.data) {
-        const projects = res.data.data;
-        
-        const enrichedProjects = await Promise.all(projects.map(async (p: any) => {
-          const { data: jobs } = await supabase
-            .from('analysis_jobs')
-            .select('status')
-            .eq('project_id', p.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-            
-          let statusText = 'Pending Ingestion';
-          let statusDot = 'bg-zinc-500';
-          let statusTextClass = 'text-zinc-400';
-          
-          if (jobs && jobs.length > 0) {
-            const jobStatus = jobs[0].status;
-            if (jobStatus === 'completed') {
-              statusText = 'Analysis Ready';
-              statusDot = 'bg-lime-400';
-              statusTextClass = 'text-lime-400';
-            } else if (jobStatus === 'failed') {
-              statusText = 'Failed';
-              statusDot = 'bg-rose-500';
-              statusTextClass = 'text-rose-400';
-            } else {
-              statusText = 'Processing...';
-              statusDot = 'bg-amber-400';
-              statusTextClass = 'text-amber-400';
-            }
-          }
-          
-          return { ...p, displayStatus: statusText, statusDot, statusTextClass };
-        }));
-        
-        enrichedProjects.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setRecentProjects(enrichedProjects);
-      }
-    } catch (e) {
-      console.error('Failed to fetch recent projects', e);
-    } finally {
-      setLoadingProjects(false);
-    }
+  const handleSignOut = async () => {
+    navigate('/');
+    await signOut();
   };
 
   useEffect(() => {
-    void fetchRecentProjects();
+    const fetchRecentProjects = async () => {
+      try {
+        setLoadingProjects(true);
+        // 1. Fetch all projects
+        const res = await api.get('/api/projects');
+        if (res.data.success && res.data.data) {
+          const projects = res.data.data;
+          
+          // 2. Fetch latest analysis job for each project to determine status
+          const enrichedProjects = await Promise.all(projects.map(async (p: any) => {
+            const { data: jobs } = await supabase
+              .from('analysis_jobs')
+              .select('status')
+              .eq('project_id', p.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+              
+            let statusText = 'Pending Ingestion';
+            let statusColor = 'text-gray-500';
+            
+            if (jobs && jobs.length > 0) {
+              const jobStatus = jobs[0].status;
+              if (jobStatus === 'completed') {
+                statusText = 'AST Parsed / Analysis Ready';
+                statusColor = 'text-blue-400';
+              } else if (jobStatus === 'failed') {
+                statusText = 'Ingestion Failed';
+                statusColor = 'text-red-500';
+              } else {
+                statusText = 'Parsing in Progress...';
+                statusColor = 'text-yellow-500';
+              }
+            }
+            
+            return { ...p, displayStatus: statusText, statusColor };
+          }));
+          
+          // Sort newest first
+          enrichedProjects.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setRecentProjects(enrichedProjects);
+        }
+      } catch (e) {
+        console.error('Failed to fetch recent projects', e);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    
+    fetchRecentProjects();
   }, []);
 
   const handleInitializeProject = async () => {
     try {
+      setLoading(true);
       const res = await api.post('/api/projects', { 
-        name: `Monolith_${Math.floor(Math.random() * 9000 + 1000)}`, 
-        description: 'Microservice transformation workspace',
+        name: `Workspace_${Math.floor(Math.random() * 10000)}`, 
+        description: 'Generated from dashboard',
         source_type: 'github'
       });
       setProjectId(res.data.data.id);
     } catch (e) {
       console.error('Failed to create project', e);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleJobStarted = (jobId: string) => {
+    navigate(`/dashboard/projects/${projectId}/analysis`);
+  };
+
   return (
-    <AppLayout onNewProjectClick={handleInitializeProject}>
-      {/* Top Banner Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-white tracking-tight">
-            Transformation Dashboard
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Analyze legacy codebases, parse AST dependency graphs, and decompose into microservices.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="bg-[#141417] border border-[#232328] px-3.5 py-1.5 rounded-full flex items-center gap-2 text-xs">
-            <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></span>
-            <span className="text-zinc-300 font-medium">System Status: Optimal</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-300 p-8 font-mono">
+      <div className="max-w-7xl mx-auto">
         
-        {/* Left 2 Columns: Ingestion & Workspaces */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Ingest Repository Card */}
-          <div className="app-card p-6 sm:p-8 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-lime-400 block mb-1">
-                  Ingestion Engine
-                </span>
-                <h2 className="text-lg font-bold font-display text-white">
-                  Target Monolith Codebase
-                </h2>
-              </div>
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12 border-b border-[#222] pb-6">
+          <div className="flex items-center gap-3">
+            <Terminal className="w-6 h-6 text-white shrink-0" />
+            <Link to="/">
+              <h1 className="text-2xl sm:text-3xl font-logo tracking-widest text-gray-200 hover:text-white transition-colors cursor-pointer">monomelt</h1>
+            </Link>
+          </div>
+          
+          <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+            <Link 
+              to="/"
+              className="text-gray-400 hover:text-white transition-colors text-sm font-bold hidden sm:block"
+            >
+              HOME
+            </Link>
+            <div className="hidden md:flex items-center gap-3 text-sm text-gray-500">
+              <span className="text-gray-400">user:</span>
+              <span>{user?.user_metadata?.user_name || user?.email}</span>
+            </div>
+            <button 
+              onClick={handleSignOut}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors bg-[#111] hover:bg-[#222] px-4 py-2 rounded-sm border border-[#222] text-sm font-bold"
+            >
+              <LogOut className="w-4 h-4" />
+              EXIT
+            </button>
+          </div>
+        </header>
+        
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Main Action Area */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-[#111] border border-[#222] rounded-sm p-8 shadow-xl">
+              <h2 className="text-xl font-bold text-white mb-2">&gt; ingest_repository</h2>
+              <p className="text-gray-500 mb-6 text-xs">Target a GitHub repository for AST parsing and modular extraction.</p>
+              
+              {!projectId ? (
+                <div 
+                  onClick={handleInitializeProject}
+                  className="border border-dashed border-[#444] bg-[#0a0a0a] rounded-sm p-12 text-center hover:bg-[#151515] hover:border-blue-500 transition-colors cursor-pointer group"
+                >
+                  <FolderGit2 className="w-10 h-10 text-gray-500 group-hover:text-blue-400 mx-auto mb-4 transition-colors" />
+                  <h3 className="text-sm font-bold text-gray-300 group-hover:text-white uppercase tracking-wide">Initialize New Project Workspace</h3>
+                  <p className="text-xs text-gray-600 mt-2">{loading ? 'Creating...' : 'Click to begin ingestion flow'}</p>
+                </div>
+              ) : (
+                <UploadSource projectId={projectId} onJobStarted={handleJobStarted} />
+              )}
             </div>
 
-            <div className="bg-[#0b0b0e] border border-[#232328] rounded-2xl p-6">
-              <UploadSource 
-                projectId={projectId || undefined} 
-                onJobStarted={(_jobId, targetId) => {
-                  navigate(`/app/projects/${targetId || projectId}/analysis`);
-                }} 
-              />
+            {/* Recent Workspaces */}
+            <div className="bg-[#111] border border-[#222] rounded-sm p-8 shadow-xl">
+               <h2 className="text-xl font-bold text-white mb-2">&gt; recent_workspaces</h2>
+               <p className="text-gray-500 mb-6 text-xs">Resume analysis and microservice decomposition.</p>
+               
+               {loadingProjects ? (
+                 <div className="text-center p-8 text-gray-500 text-xs animate-pulse">Loading workspaces...</div>
+               ) : recentProjects.length === 0 ? (
+                 <div className="text-center p-8 border border-dashed border-[#333] text-gray-600 text-xs">No recent workspaces found.</div>
+               ) : (
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   {recentProjects.map(project => (
+                     <div 
+                       key={project.id}
+                       onClick={() => navigate(`/dashboard/projects/${project.id}/analysis`)}
+                       className="border border-[#333] bg-[#0a0a0a] p-4 cursor-pointer hover:border-blue-500 hover:bg-[#151515] transition-all group relative overflow-hidden"
+                     >
+                       <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <ChevronRight className="w-5 h-5 text-blue-500" />
+                       </div>
+                       <h3 className="font-bold text-white text-sm mb-1 truncate pr-6">{project.name}</h3>
+                       <p className="text-[10px] text-gray-500 mb-3">
+                         Created: {new Date(project.created_at).toLocaleDateString()}
+                       </p>
+                       <div className="inline-flex items-center gap-1.5 bg-[#111] border border-[#222] px-2 py-1 rounded">
+                         <div className={`w-1.5 h-1.5 rounded-full ${project.statusColor.replace('text-', 'bg-')}`}></div>
+                         <span className={`text-[9px] uppercase tracking-wider font-bold ${project.statusColor}`}>
+                           {project.displayStatus}
+                         </span>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
             </div>
           </div>
 
-          {/* Recent Workspaces Card */}
-          <div className="app-card p-6 sm:p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-1">
-                  Workspaces
-                </span>
-                <h2 className="text-lg font-bold font-display text-white">
-                  Active Analysis Workspaces
-                </h2>
+          {/* Sidebar / Stats */}
+          <div className="space-y-6">
+            <div className="bg-[#111] border border-[#222] rounded-sm p-6 shadow-xl">
+              <div className="flex items-center gap-3 mb-6 text-white">
+                <Activity className="w-4 h-4" />
+                <h3 className="font-bold text-sm tracking-wide">SYSTEM_STATUS</h3>
               </div>
-              <span className="text-xs text-zinc-400">
-                Total: {recentProjects.length}
-              </span>
-            </div>
-
-            {loadingProjects ? (
-              <div className="text-center p-10 text-zinc-500 text-xs animate-pulse">
-                Loading projects...
-              </div>
-            ) : recentProjects.length === 0 ? (
-              <div className="text-center p-10 border border-dashed border-[#232328] rounded-2xl text-zinc-500 text-xs">
-                No active transformation workspaces found. Click above to create one.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {recentProjects.map(project => (
-                  <div 
-                    key={project.id}
-                    onClick={() => navigate(`/app/projects/${project.id}/analysis`)}
-                    className="bg-[#0b0b0e] border border-[#232328] hover:border-zinc-500 rounded-2xl p-5 cursor-pointer transition-all group relative overflow-hidden hover:scale-[1.01]"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold font-display text-white text-sm truncate pr-2">
-                        {project.name}
-                      </h3>
-                      <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-white group-hover:translate-x-1 transition-all shrink-0" />
-                    </div>
-
-                    <p className="text-xs text-zinc-400 mb-4 line-clamp-1">
-                      {project.description || 'Monolith Transformation'}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-[#1a1a1f]">
-                      <span className="text-[11px] text-zinc-500 font-mono">
-                        {new Date(project.created_at).toLocaleDateString()}
-                      </span>
-
-                      <div className="inline-flex items-center gap-1.5 bg-[#16161b] px-2.5 py-0.5 rounded-full border border-[#26262e]">
-                        <span className={`w-1.5 h-1.5 rounded-full ${project.statusDot}`}></span>
-                        <span className={`text-[10px] font-bold uppercase ${project.statusTextClass}`}>
-                          {project.displayStatus}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right 1 Column: Infrastructure & Summary */}
-        <div className="space-y-6">
-
-          {/* Infrastructure Health Card */}
-          <div className="app-card p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-sm font-bold font-display text-white flex items-center gap-2">
-                <Activity className="w-4 h-4 text-lime-400" />
-                Infrastructure Health
-              </h3>
-              <span className="w-2 h-2 rounded-full bg-lime-400"></span>
-            </div>
-
-            <div className="space-y-2.5 text-xs font-medium">
-              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
-                <span className="text-zinc-400">api-gateway</span>
-                <span className="text-lime-400 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
-                </span>
-              </div>
-
-              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
-                <span className="text-zinc-400">ai-analysis-engine</span>
-                <span className="text-lime-400 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
-                </span>
-              </div>
-
-              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
-                <span className="text-zinc-400">neo4j-graph-db</span>
-                <span className="text-lime-400 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
-                </span>
-              </div>
-
-              <div className="bg-[#0b0b0e] border border-[#1e1e24] p-3 rounded-xl flex items-center justify-between">
-                <span className="text-zinc-400">redis-task-queue</span>
-                <span className="text-lime-400 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400"></span> ONLINE
-                </span>
+              <div className="space-y-4 font-mono text-xs">
+                <div className="flex justify-between items-center border-b border-[#222] pb-2">
+                  <span className="text-gray-500">api-gateway</span>
+                  <span className="text-emerald-500 font-bold">ONLINE</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-[#222] pb-2">
+                  <span className="text-gray-500">ai-service</span>
+                  <span className="text-emerald-500 font-bold">ONLINE</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-[#222] pb-2">
+                  <span className="text-gray-500">neo4j_graph</span>
+                  <span className="text-gray-600 font-bold">OFFLINE</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Quick Metrics Card */}
-          <div className="app-card p-6">
-            <h3 className="text-sm font-bold font-display text-white mb-4 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-lime-400" />
-              Engine Metrics
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="bg-[#0b0b0e] border border-[#1f1f26] p-4 rounded-xl">
-                <span className="text-2xl font-bold text-lime-400 block font-display">100%</span>
-                <span className="text-[10px] text-zinc-500 uppercase font-semibold block mt-1">AST Coverage</span>
-              </div>
-
-              <div className="bg-[#0b0b0e] border border-[#1f1f26] p-4 rounded-xl">
-                <span className="text-2xl font-bold text-amber-400 block font-display">4</span>
-                <span className="text-[10px] text-zinc-500 uppercase font-semibold block mt-1">Strategies</span>
-              </div>
+            <div className="bg-[#111] border border-[#222] rounded-sm p-6 shadow-xl">
+              <h3 className="font-bold text-white mb-4 text-sm tracking-wide">EXECUTION_LOG</h3>
+              <p className="text-xs text-gray-600 font-mono">No active jobs found in queue.</p>
             </div>
           </div>
 
         </div>
-
       </div>
-    </AppLayout>
+    </div>
   );
 };
 

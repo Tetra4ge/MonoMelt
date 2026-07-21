@@ -1,48 +1,17 @@
 import React, { useState } from 'react';
-import { UploadCloud, GitBranch, ArrowRight, CheckCircle2, FileArchive } from 'lucide-react';
-import api from '../../lib/api';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (typeof error === 'object' && error !== null) {
-    const response = Reflect.get(error, 'response');
-    const data = typeof response === 'object' && response !== null ? Reflect.get(response, 'data') : undefined;
-    const message = typeof data === 'object' && data !== null ? Reflect.get(data, 'message') : Reflect.get(error, 'message');
-    if (typeof message === 'string') return message;
-  }
-  return fallback;
-};
+import api  from '../../lib/api';
 
 interface UploadSourceProps {
-  projectId?: string;
-  onJobStarted?: (jobId: string, projectId: string) => void;
-  onSourceUploaded?: () => void;
+  projectId: string;
+  onJobStarted: (jobId: string) => void;
 }
 
-export function UploadSource({ projectId, onJobStarted, onSourceUploaded }: UploadSourceProps) {
-  const [activeTab, setActiveTab] = useState<'zip' | 'github'>('zip');
+export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
   const [file, setFile] = useState<File | null>(null);
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('main');
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
-
-  const ensureProject = async (sourceType: 'zip' | 'github', nameHint?: string): Promise<string> => {
-    if (projectId) return projectId;
-
-    let projName = `Monolith_${Math.floor(Math.random() * 9000 + 1000)}`;
-    if (nameHint) {
-      const cleanName = nameHint.split('/').pop()?.replace('.zip', '').replace('.git', '');
-      if (cleanName) projName = cleanName;
-    }
-
-    const res = await api.post('/api/projects', {
-      name: projName,
-      description: 'Microservice transformation workspace',
-      source_type: sourceType
-    });
-
-    return res.data.data.id;
-  };
 
   const handleZipUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,24 +20,19 @@ export function UploadSource({ projectId, onJobStarted, onSourceUploaded }: Uplo
     setIsUploading(true);
     setError('');
 
+    const formData = new FormData();
+    formData.append('file', file);
+
     try {
-      const targetProjectId = await ensureProject('zip', file.name);
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await api.post(`/api/projects/${targetProjectId}/sources/zip`, formData, {
+      const response = await api.post(`/api/projects/${projectId}/sources/zip`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       const data = response.data;
-      if (data.success && data.data?.jobId) {
-        onJobStarted?.(data.data.jobId, targetProjectId);
-        onSourceUploaded?.();
-      }
-    } catch (err: unknown) {
-      console.error('ZIP Upload Error:', err);
-      setError(getErrorMessage(err, 'Failed to upload ZIP archive'));
+      
+      onJobStarted(data.data.jobId);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsUploading(false);
     }
@@ -82,16 +46,10 @@ export function UploadSource({ projectId, onJobStarted, onSourceUploaded }: Uplo
     setError('');
 
     try {
-      const targetProjectId = await ensureProject('github', repoUrl);
-
-      const response = await api.post(`/api/projects/${targetProjectId}/sources/github`, { repoUrl, branch });
-      if (response.data.success && response.data.data?.jobId) {
-        onJobStarted?.(response.data.data.jobId, targetProjectId);
-        onSourceUploaded?.();
-      }
-    } catch (err: unknown) {
-      console.error('GitHub Import Error:', err);
-      setError(getErrorMessage(err, 'Failed to import GitHub repository'));
+      const response = await api.post(`/api/projects/${projectId}/sources/github`, { repoUrl, branch });
+      onJobStarted(response.data.data.jobId);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message);
     } finally {
       setIsUploading(false);
     }
@@ -99,116 +57,59 @@ export function UploadSource({ projectId, onJobStarted, onSourceUploaded }: Uplo
 
   return (
     <div className="space-y-6">
-      
-      {/* Mode Switcher Pills */}
-      <div className="flex items-center gap-2 bg-[#09090b] p-1.5 rounded-full border border-[#232328] w-fit">
-        <button
-          type="button"
-          onClick={() => { setActiveTab('zip'); setError(''); }}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-            activeTab === 'zip'
-              ? 'bg-white text-black shadow-md font-bold'
-              : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <FileArchive className="w-3.5 h-3.5" />
-          ZIP Archive Upload
-        </button>
-
-        <button
-          type="button"
-          onClick={() => { setActiveTab('github'); setError(''); }}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-            activeTab === 'github'
-              ? 'bg-white text-black shadow-md font-bold'
-              : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <GitBranch className="w-3.5 h-3.5" />
-          GitHub Repository
-        </button>
-      </div>
-
-      {/* ZIP Form */}
-      {activeTab === 'zip' ? (
+      <div className="bg-[#111] p-6 rounded-none border border-[#222]">
+        <h3 className="text-xl font-bold mb-4">Upload ZIP Archive</h3>
         <form onSubmit={handleZipUpload} className="space-y-4">
-          <div className="bg-[#09090b] border border-dashed border-[#27272e] hover:border-lime-400/80 rounded-2xl p-6 text-center transition-all cursor-pointer relative group">
-            <input 
-              type="file" 
-              accept=".zip" 
-              onChange={e => setFile(e.target.files?.[0] || null)}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            
-            <div className="w-10 h-10 rounded-xl bg-[#141417] border border-[#232328] text-zinc-400 group-hover:text-lime-400 flex items-center justify-center mx-auto mb-2 transition-colors">
-              <UploadCloud className="w-5 h-5" />
-            </div>
-
-            {file ? (
-              <div className="flex items-center justify-center gap-2 text-xs font-bold text-lime-400">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Selected: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)</span>
-              </div>
-            ) : (
-              <div>
-                <span className="text-xs font-bold text-white block">Click or Drag & Drop ZIP Archive</span>
-                <span className="text-[11px] text-zinc-500 block mt-0.5">Supports Java, C#, Go, Python, and Node.js monolith repositories</span>
-              </div>
-            )}
-          </div>
-
+          <input 
+            type="file" 
+            accept=".zip" 
+            onChange={e => setFile(e.target.files?.[0] || null)}
+            className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-bold file:bg-[#222] file:text-white hover:file:bg-[#333] cursor-pointer"
+          />
           <button 
             type="submit" 
             disabled={!file || isUploading}
-            className="btn-primary text-xs w-full flex items-center justify-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-white hover:bg-gray-200 text-black font-bold uppercase rounded-none disabled:opacity-50 text-sm"
           >
-            <span>{isUploading ? 'Uploading Archive & Parsing AST...' : 'Upload & Start AST Analysis'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            {isUploading ? 'Uploading...' : 'Upload ZIP'}
           </button>
         </form>
-      ) : (
-        /* GitHub Import Form */
+      </div>
+
+      <div className="bg-[#111] p-6 rounded-none border border-[#222]">
+        <h3 className="text-xl font-bold mb-4">Import from GitHub</h3>
         <form onSubmit={handleGithubImport} className="space-y-4">
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1">Repository URL</label>
-              <input 
-                type="text" 
-                value={repoUrl}
-                onChange={e => setRepoUrl(e.target.value)}
-                placeholder="https://github.com/owner/repository"
-                className="w-full bg-[#09090b] border border-[#232328] rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1">Branch Name</label>
-              <input 
-                type="text" 
-                value={branch}
-                onChange={e => setBranch(e.target.value)}
-                placeholder="main"
-                className="w-full bg-[#09090b] border border-[#232328] rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 font-mono"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">Repository URL</label>
+            <input 
+              type="text" 
+              value={repoUrl}
+              onChange={e => setRepoUrl(e.target.value)}
+              placeholder="https://github.com/owner/repo"
+              className="w-full bg-[#0a0a0a] border border-[#222] rounded-none px-4 py-2 focus:outline-none focus:border-white text-white font-mono text-sm"
+            />
           </div>
-
+          <div>
+            <label className="block text-sm font-bold text-gray-400 mb-1">Branch</label>
+            <input 
+              type="text" 
+              value={branch}
+              onChange={e => setBranch(e.target.value)}
+              placeholder="main"
+              className="w-full bg-[#0a0a0a] border border-[#222] rounded-none px-4 py-2 focus:outline-none focus:border-white text-white font-mono text-sm"
+            />
+          </div>
           <button 
             type="submit" 
             disabled={!repoUrl || isUploading}
-            className="btn-primary text-xs w-full flex items-center justify-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-white hover:bg-gray-200 text-black font-bold uppercase rounded-none disabled:opacity-50 text-sm"
           >
-            <span>{isUploading ? 'Connecting Repository...' : 'Connect & Import Repository'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            {isUploading ? 'Importing...' : 'Import Repository'}
           </button>
         </form>
-      )}
-
-      {error && (
-        <div className="bg-rose-950/40 border border-rose-500/30 text-rose-300 px-4 py-2.5 rounded-xl text-xs font-medium">
-          {error}
-        </div>
-      )}
+      </div>
+      
+      {error && <p className="text-red-400">{error}</p>}
     </div>
   );
 }

@@ -7,15 +7,15 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="py-24 border-t border-[#1f1f23]">
+    <section className="py-24 border-t border-[#222]">
       <div className="container mx-auto px-4 max-w-5xl">
-        <h2 className="text-3xl lg:text-4xl font-bold font-display text-white mb-16">How it Works</h2>
+        <h2 className="text-3xl lg:text-4xl font-bold text-white mb-16">How it Works</h2>
         <div className="grid md:grid-cols-4 gap-6">
           {steps.map((step, idx) => (
-            <div key={idx} className="app-card p-6">
-              <div className="text-2xl font-extrabold text-lime-400 font-mono mb-4">{step.num}</div>
-              <h3 className="text-sm font-bold font-display text-white mb-2">{step.title}</h3>
-              <p className="text-zinc-400 text-xs leading-relaxed">{step.desc}</p>
+            <div key={idx} className="p-6 bg-[#111] border border-[#222] rounded-sm">
+              <div className="text-3xl font-black text-gray-700 mb-6">{step.num}</div>
+              <h3 className="text-base font-bold text-white mb-2">{step.title}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
             </div>
           ))}
         </div>

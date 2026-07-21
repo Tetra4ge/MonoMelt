@@ -1,58 +1,43 @@
 interface AnalysisMetricsProps {
   metrics: {
-    total_files?: number;
-    total_loc?: number;
-    total_lines?: number;
-    total_classes?: number;
-    total_functions?: number;
-    languages?: Record<string, number>;
-    language_breakdown?: Record<string, number>;
+    total_files: number;
+    total_loc: number;
+    total_classes: number;
+    total_functions: number;
+    languages: Record<string, number>;
   };
 }
 
 export default function AnalysisMetrics({ metrics }: AnalysisMetricsProps) {
   if (!metrics) return null;
 
-  const loc = metrics.total_loc ?? metrics.total_lines ?? 0;
-  const languages = metrics.languages ?? metrics.language_breakdown ?? {};
-
   const cards = [
-    { label: "Total Source Files", value: (metrics.total_files || 0).toLocaleString(), accent: "text-[#B8FF45]" },
-    { label: "Lines of Code", value: loc.toLocaleString(), accent: "text-[#3B82F6]" },
-    { label: "Total Classes", value: (metrics.total_classes || 0).toLocaleString(), accent: "text-[#FFA62B]" },
-    { label: "Total Functions", value: (metrics.total_functions || 0).toLocaleString(), accent: "text-[#FF5BB5]" },
+    { label: "Total Files", value: metrics.total_files },
+    { label: "Lines of Code", value: metrics.total_loc.toLocaleString() },
+    { label: "Total Classes", value: metrics.total_classes },
+    { label: "Total Functions", value: metrics.total_functions },
   ];
 
   return (
-    <div className="space-y-4 mb-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-        {cards.map((card, i) => (
-          <div key={i} className="neo-card p-6 flex flex-col justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#808080]">
-              {card.label}
-            </span>
-            <span className={`text-3xl font-extrabold mt-2 font-inter ${card.accent}`}>
-              {card.value}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Language Breakdown Bar */}
-      <div className="neo-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <span className="font-bebas text-lg text-[#BEBEBE] tracking-wide">
-          PARSED LANGUAGES:
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(languages).map(([lang, count]) => (
-            <div key={lang} className="px-4 py-2 bg-[#181818] rounded-full text-xs font-medium flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#B8FF45]"></span>
-              <span className="font-bold text-white">{lang}</span>
-              <span className="text-[#808080]">({count} files)</span>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full mb-6">
+      {cards.map((card, i) => (
+        <div key={i} className="bg-[#111] border border-[#222] rounded-none p-4 flex flex-col justify-center">
+          <span className="text-gray-500 text-xs font-mono uppercase tracking-widest">{card.label}</span>
+          <span className="text-white text-3xl font-bold font-mono mt-1">{card.value}</span>
+        </div>
+      ))}
+      
+      <div className="bg-[#111] border border-[#222] rounded-none p-4 col-span-1 sm:col-span-2 lg:col-span-4 flex flex-col justify-center">
+        <span className="text-gray-500 text-xs font-mono uppercase tracking-widest mb-2">Detected Languages</span>
+        <div className="flex flex-wrap gap-3">
+          {Object.entries(metrics.languages || {}).map(([lang, count]) => (
+            <div key={lang} className="px-3 py-1 bg-black border border-[#333] text-gray-300 text-sm font-mono flex gap-2 items-center">
+              <span>{lang}</span>
+              <span className="text-gray-500">[{count}]</span>
             </div>
           ))}
-          {Object.keys(languages).length === 0 && (
-            <span className="text-[#808080] text-xs italic">No languages detected</span>
+          {Object.keys(metrics.languages || {}).length === 0 && (
+            <span className="text-gray-600 text-sm italic font-mono">No languages detected</span>
           )}
         </div>
       </div>

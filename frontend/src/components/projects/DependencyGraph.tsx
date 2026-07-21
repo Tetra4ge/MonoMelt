@@ -1,5 +1,3 @@
-/* The force-graph package exposes callback nodes as an untyped third-party shape. */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
@@ -102,18 +100,17 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
       return '#333333'; // Unassigned or orphaned nodes
     }
 
-    // Syntax & Entity type coloring matching the Legend
-    if (node.label === 'File') return '#3b82f6'; // Blue for Files
-    if (node.label === 'Class') return '#22c55e'; // Green for Classes
-    if (node.label === 'Symbol') return '#eab308'; // Yellow for Symbols/Functions
-    if (node.label === 'ExternalDependency') return '#64748b'; // Slate Grey for External Dependencies
-    return '#94a3b8';
+    // Default syntax coloring
+    if (node.label === 'File') return '#3b82f6';
+    if (node.label === 'Class') return '#22c55e';
+    if (node.label === 'Symbol' && node.properties?.symbol_type === 'function') return '#ef4444';
+    if (node.label === 'Symbol') return '#eab308';
+    return '#888888';
   };
 
   const getNodeSize = (node: any) => {
-    if (node.label === 'File') return Math.max(4, Math.min(10, (node.properties?.loc || 10) / 80));
-    if (node.label === 'ExternalDependency') return 3;
-    return 4;
+    if (node.label === 'File') return Math.max(3, Math.min(10, (node.properties?.loc || 10) / 100));
+    return 3;
   };
 
   return (
@@ -121,25 +118,23 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
       ref={containerRef}
       className="w-full h-full min-h-[500px] bg-[#0a0a0a] border border-[#222] rounded-none overflow-hidden relative group"
     >
-      <div className="absolute top-4 left-4 z-10 p-3 bg-[#111]/90 backdrop-blur-sm border border-[#222] text-xs text-gray-300 font-mono shadow-xl rounded-sm">
+      <div className="absolute top-4 left-4 z-10 p-2 bg-[#111] border border-[#222] text-xs text-gray-400 font-mono">
         {proposedServices && proposedServices.length > 0 ? (
           <>
-            <div className="font-bold text-white mb-2 border-b border-[#333] pb-1 text-[11px] uppercase tracking-wider">Microservice Clusters</div>
+            <div className="font-bold text-white mb-2 border-b border-[#333] pb-1">Microservices</div>
             {proposedServices.slice(0, 10).map((service, idx) => (
-              <div key={service.id} className="flex items-center gap-2 mb-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: SERVICE_COLORS[idx % SERVICE_COLORS.length] }}></div>
-                <span className="font-medium text-white">{service.name}</span>
+              <div key={service.id} className="flex items-center gap-2 mb-1">
+                <div className="w-3 h-3" style={{ backgroundColor: SERVICE_COLORS[idx % SERVICE_COLORS.length] }}></div>
+                {service.name}
               </div>
             ))}
-            {proposedServices.length > 10 && <div className="text-gray-500 italic mt-1 text-[10px]">+ {proposedServices.length - 10} more services</div>}
+            {proposedServices.length > 10 && <div className="text-gray-600 italic mt-1">+ {proposedServices.length - 10} more</div>}
           </>
         ) : (
           <>
-            <div className="font-bold text-white mb-2 border-b border-[#222] pb-1 text-[11px] uppercase tracking-wider">Graph Legend</div>
-            <div className="flex items-center gap-2 mb-1.5"><div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div> Files (Modules)</div>
-            <div className="flex items-center gap-2 mb-1.5"><div className="w-3 h-3 rounded-full bg-[#eab308]"></div> Functions & Symbols</div>
-            <div className="flex items-center gap-2 mb-1.5"><div className="w-3 h-3 rounded-full bg-[#64748b]"></div> External Dependencies</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#22c55e]"></div> Classes & Types</div>
+            <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#3b82f6]"></div> Files</div>
+            <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#22c55e]"></div> Classes</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#ef4444]"></div> Functions</div>
           </>
         )}
       </div>
@@ -149,15 +144,12 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
         width={dimensions.width}
         height={dimensions.height}
         graphData={graphData}
-        nodeLabel={(n: any) => `${n.label || 'Entity'}: ${n.name || n.file_path || n.id}`}
+        nodeLabel="name"
         nodeColor={getNodeColor}
-        nodeRelSize={2.5}
+        nodeRelSize={2}
         nodeVal={getNodeSize}
-        linkColor={() => '#334155'}
-        linkWidth={1.2}
-        linkDirectionalParticles={1}
-        linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleSpeed={0.006}
+        linkColor={() => '#333333'}
+        linkWidth={1}
         backgroundColor="#0a0a0a"
         d3VelocityDecay={0.3} 
       />
