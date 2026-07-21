@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, AlertTriangle, Server } from 'lucide-react';
 
 export interface TeamAssignment {

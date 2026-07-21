@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import RoadmapTimeline from '../components/planning/RoadmapTimeline';
 import ConsistencySecurityMatrix from '../components/planning/ConsistencySecurityMatrix';
 import CostPerformanceSimulator from '../components/planning/CostPerformanceSimulator';
@@ -18,11 +18,9 @@ import {
 
 export default function PlanningPage() {
   const { projectId } = useParams();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [plans, setPlans] = useState<any[]>([]);
   const [activePlan, setActivePlan] = useState<any>(null);
   const [activeRevision, setActiveRevision] = useState<any>(null);
   const [scenarios, setScenarios] = useState<any[]>([]);
@@ -50,7 +48,6 @@ export default function PlanningPage() {
 
       if (plansRes.data.success && plansRes.data.data?.length > 0) {
         const fetchedPlans = plansRes.data.data;
-        setPlans(fetchedPlans);
 
         const latestPlan = fetchedPlans[0];
         setActivePlan(latestPlan);

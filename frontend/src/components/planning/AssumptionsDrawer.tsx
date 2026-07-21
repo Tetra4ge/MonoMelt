@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, RefreshCw, SlidersHorizontal } from 'lucide-react';
-import { PlanAssumptions } from './RoadmapTimeline';
+
+export interface PlanAssumptions {
+  cloud_provider: string;
+  pricing_region: string;
+  cost_multiplier: number;
+  team_count: number;
+  risk_tolerance: string;
+  migration_window_months: number;
+}
 
 interface AssumptionsDrawerProps {
   isOpen: boolean;

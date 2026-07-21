@@ -1,5 +1,4 @@
-import React from 'react';
-import { Layers, CheckCircle2, Server, Activity } from 'lucide-react';
+import { Server } from 'lucide-react';
 
 interface MetricProps {
   label: string;
@@ -14,7 +13,7 @@ const Metric = ({ label, value, colorClass = "text-white" }: MetricProps) => (
   </div>
 );
 
-export default function ScenarioScorecard({ scenario, revisions, proposedServices }: any) {
+export default function ScenarioScorecard({ scenario, proposedServices }: any) {
   if (!scenario) return null;
   return (
     <div className="bg-[#141417] border border-[#232328] rounded-3xl p-6 mb-6 shadow-2xl space-y-6">

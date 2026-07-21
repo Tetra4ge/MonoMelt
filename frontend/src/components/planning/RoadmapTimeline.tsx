@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, CheckCircle2, ShieldAlert, Layers } from 'lucide-react';
 
 export interface MigrationStage {

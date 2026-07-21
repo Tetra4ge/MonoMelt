@@ -1,4 +1,3 @@
-import React from 'react';
 import { DollarSign, Zap, TrendingUp } from 'lucide-react';
 
 export interface CostPerformanceSimulation {

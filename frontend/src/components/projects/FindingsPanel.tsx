@@ -1,5 +1,4 @@
-import React from 'react';
-import { Sparkles, Check, X, ShieldAlert, Cpu } from 'lucide-react';
+import { Sparkles, Check, X } from 'lucide-react';
 
 interface Finding {
   id: string;

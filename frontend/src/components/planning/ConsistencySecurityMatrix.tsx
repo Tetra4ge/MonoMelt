@@ -1,4 +1,3 @@
-import React from 'react';
 import { Lock, ShieldCheck, ArrowRight, Activity } from 'lucide-react';
 
 export interface ConsistencySecurityItem {
