@@ -3,7 +3,8 @@ const { createClient } = require('@supabase/supabase-js');
 // Create a singleton client for auth verification
 const supabase = createClient(
   process.env.SUPABASE_URL, 
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
 const requireAuth = async (req, res, next) => {
