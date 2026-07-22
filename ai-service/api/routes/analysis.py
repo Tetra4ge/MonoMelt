@@ -17,6 +17,7 @@ import asyncio
 import logging
 import uuid
 import json
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -101,7 +102,7 @@ async def _run_analysis_pipeline(
                 ext = os.path.splitext(file_info["file_path"])[1].lower()
                 if ext not in (".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php"):
                     continue
-                storage_path = f"{project_id}/{file_info['file_path']}"
+                storage_path = f"projects/{project_id}/{source_version_id}/files/{file_info['file_path']}"
                 try:
                     dl = supabase.storage.from_("openai").download(storage_path)
                     source = dl.decode("utf-8", errors="replace") if dl else ""

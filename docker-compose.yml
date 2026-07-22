@@ -45,6 +45,21 @@ services:
       - PORT=8000
     depends_on:
       - postgres
+      - neo4j
+
+  worker:
+    build: ./worker
+    volumes:
+      - ./worker:/app
+      - /app/node_modules
+    env_file:
+      - ./worker/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      - redis
+      - ai-service
 
   postgres:
     image: postgres:15-alpine
@@ -61,6 +76,14 @@ services:
     image: redis:7-alpine
     ports:
       - "6380:6379"
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      - NEO4J_AUTH=neo4j/password
+    ports:
+      - "7474:7474"
+      - "7687:7687"
 
 volumes:
   postgres_data:

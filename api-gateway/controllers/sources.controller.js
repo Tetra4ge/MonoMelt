@@ -3,6 +3,8 @@ const { uploadSourceZip } = require('../services/storage.service');
 const { enqueueIngestionJob } = require('../services/queue.service');
 const { proxyToAiService } = require('../services/ai.service');
 
+const ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -16,6 +18,9 @@ const uploadZipSource = async (req, res, next) => {
     if (!req.file) { 
       return res.status(400).json({ success: false, message: 'No file uploaded' }); 
     }
+    if (req.file.buffer.length < ZIP_SIGNATURE.length || !req.file.buffer.subarray(0, 4).equals(ZIP_SIGNATURE)) {
+      return res.status(400).json({ success: false, message: 'Uploaded file is not a valid ZIP archive' });
+    }
 
     const supabase = getSupabaseClient(req);
 
@@ -24,6 +29,7 @@ const uploadZipSource = async (req, res, next) => {
       .from('projects')
       .select('id')
       .eq('id', projectId)
+      .eq('owner_id', req.user.sub)
       .single();
 
     if (projectError || !project) { 
@@ -43,44 +49,32 @@ const uploadZipSource = async (req, res, next) => {
 
     if (svError) throw svError;
 
-    // Create analysis job with analyzing status
+    // Create an ingestion job. Analysis starts only after the worker has created the manifest.
     const { data: job, error: jobError } = await supabase
       .from('analysis_jobs')
       .insert({ 
         project_id: projectId, 
         source_version_id: sourceVersion.id, 
-        status: 'analyzing' 
+        status: 'queued'
       })
       .select()
       .single();
 
     if (jobError) throw jobError;
 
-    // Optional background storage & queue tasks
-    uploadSourceZip(req.file.buffer, projectId, job.id).catch(err => {
-      console.warn('Storage upload notice:', err.message);
-    });
-
-    enqueueIngestionJob({ 
+    const storagePath = await uploadSourceZip(req.file.buffer, projectId, sourceVersion.id);
+    await enqueueIngestionJob({
       projectId, 
       jobId: job.id, 
       sourceVersionId: sourceVersion.id, 
-      sourceType: 'zip' 
-    }).catch(err => {
-      console.warn('Queue enqueue notice:', err.message);
-    });
-
-    // Trigger AI service AST analysis pipeline in background
-    const ownerId = req.user?.sub || 'dc035a11-d7ca-47b5-a2ab-865714d71cd4';
-    proxyToAiService('POST', '/analysis/trigger', {
-      source_version_id: sourceVersion.id
-    }, { project_id: projectId, owner_id: ownerId }).catch(err => {
-      console.warn('Analysis trigger notice:', err.message);
+      storagePath,
+      ownerId: req.user.sub,
+      sourceType: 'zip'
     });
 
     return res.status(202).json({ 
       success: true, 
-      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'analyzing' } 
+      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'queued' }
     });
   } catch (error) { 
     next(error); 
@@ -103,6 +97,7 @@ const importGithubSource = async (req, res, next) => {
       .from('projects')
       .select('id')
       .eq('id', projectId)
+      .eq('owner_id', req.user.sub)
       .single();
 
     if (projectError || !project) { 
@@ -128,35 +123,26 @@ const importGithubSource = async (req, res, next) => {
       .insert({ 
         project_id: projectId, 
         source_version_id: sourceVersion.id, 
-        status: 'analyzing' 
+        status: 'queued'
       })
       .select()
       .single();
 
     if (jobError) throw jobError;
 
-    enqueueIngestionJob({ 
+    await enqueueIngestionJob({
       projectId, 
       jobId: job.id, 
       sourceVersionId: sourceVersion.id, 
       repoUrl, 
       branch: branch || 'main', 
+      ownerId: req.user.sub,
       sourceType: 'github' 
-    }).catch(err => {
-      console.warn('Queue enqueue notice:', err.message);
-    });
-
-    // Trigger AI service AST analysis pipeline in background
-    const ownerId = req.user?.sub || 'dc035a11-d7ca-47b5-a2ab-865714d71cd4';
-    proxyToAiService('POST', '/analysis/trigger', {
-      source_version_id: sourceVersion.id
-    }, { project_id: projectId, owner_id: ownerId }).catch(err => {
-      console.warn('Analysis trigger notice:', err.message);
     });
 
     return res.status(202).json({ 
       success: true, 
-      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'analyzing' } 
+      data: { jobId: job.id, sourceVersionId: sourceVersion.id, status: 'queued' }
     });
   } catch (error) { 
     next(error); 
