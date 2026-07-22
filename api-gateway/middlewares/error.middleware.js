@@ -4,7 +4,7 @@ const errorHandler = (err, req, res, next) => {
   console.error(`Request ${req.id || 'unknown'} failed:`, err.message);
   res.status(status).json({
     success: false,
-    message: status >= 500 ? 'Internal Server Error' : err.message,
+    message: err.expose || status < 500 ? err.message : 'Internal Server Error',
     ...(process.env.NODE_ENV === 'development' && status >= 500 ? { error: err.message } : {}),
   });
 };

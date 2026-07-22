@@ -238,29 +238,61 @@ async def trigger_analysis(
     """
     svid   = str(request.source_version_id)
 
-    # Ensure parent auth.users, project, and source_version records exist in local DB
-    await execute(
-        "INSERT INTO auth.users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
-        owner_id
-    )
-    await execute(
-        "INSERT INTO public.projects (id, name, owner_id, source_type) VALUES ($1, 'Project', $2, 'zip') ON CONFLICT (id) DO NOTHING",
-        project_id, owner_id
-    )
-    await execute(
-        "INSERT INTO public.source_versions (id, project_id, source_type) VALUES ($1, $2, 'zip') ON CONFLICT (id) DO NOTHING",
-        svid, project_id
-    )
+    # The gateway/worker own project and source creation. Never write to auth.users
+    # from here: Supabase's auth schema is managed by Supabase and rejects app writes.
+    try:
+        source = await fetchrow(
+            """
+            SELECT sv.id
+            FROM public.source_versions sv
+            JOIN public.projects p ON p.id = sv.project_id
+            WHERE sv.id = $1 AND sv.project_id = $2 AND p.owner_id = $3
+            """,
+            svid, project_id, owner_id,
+        )
+        if not source:
+            raise HTTPException(status_code=404, detail="Source version was not found for this project")
 
-    # Insert initial pending state into DB
-    result = await fetchrow(
-        """
-        INSERT INTO public.analysis_runs (project_id, source_version_id, owner_id, status)
-        VALUES ($1, $2, $3, 'pending')
-        RETURNING id
-        """,
-        project_id, svid, owner_id
-    )
+        manifest = await fetchrow(
+            "SELECT id FROM public.source_files WHERE source_version_id = $1 AND status = 'included' LIMIT 1",
+            svid,
+        )
+        if not manifest:
+            raise HTTPException(status_code=409, detail="Source ingestion is not complete; wait for the worker to create the source manifest")
+
+        existing = await fetchrow(
+            """
+            SELECT id, status FROM public.analysis_runs
+            WHERE source_version_id = $1 AND project_id = $2
+              AND status IN ('pending', 'running')
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            svid, project_id,
+        )
+        if existing:
+            return TriggerAnalysisResponse(
+                success=True,
+                analysis_run_id=uuid.UUID(str(existing['id'])),
+                status=existing['status'],
+                message="Analysis is already in progress.",
+            )
+
+        result = await fetchrow(
+            """
+            INSERT INTO public.analysis_runs (project_id, source_version_id, owner_id, status)
+            VALUES ($1, $2, $3, 'pending')
+            RETURNING id
+            """,
+            project_id, svid, owner_id,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unable to queue analysis for source_version=%s", svid)
+        raise HTTPException(
+            status_code=503,
+            detail="Analysis database is unavailable or migrations 01-03 have not been applied",
+        ) from exc
     
     if not result or 'id' not in result:
         raise HTTPException(status_code=500, detail="Failed to create analysis run in database")

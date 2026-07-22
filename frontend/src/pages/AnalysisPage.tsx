@@ -108,14 +108,6 @@ export default function AnalysisPage() {
         setActiveJob(latestJob);
 
         if (latestJob.status !== 'completed' && latestJob.status !== 'failed') {
-          if (latestJob.status === 'ready') {
-            try {
-              await api.post(`/api/projects/${projectId}/analysis/trigger`, { source_version_id: latestJob.source_version_id });
-            } catch (e) {
-              console.error("Failed to trigger AI analysis", e);
-            }
-          }
-
           setLoading(false);
           pollTimeout = setTimeout(fetchLatestAnalysis, 3000);
           return;
