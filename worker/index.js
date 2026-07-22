@@ -20,6 +20,13 @@ const SOURCE_EXTENSIONS = new Set(['.py', '.js', '.mjs', '.cjs', '.jsx', '.ts', 
 const normaliseEntryPath = (entryName) => entryName.replace(/\\/g, '/').replace(/^\/+/, '');
 
 const getLanguage = (extension) => ({ '.js': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript', '.jsx': 'javascript', '.ts': 'typescript', '.tsx': 'typescript', '.py': 'python', '.go': 'go', '.java': 'java', '.cs': 'csharp', '.rb': 'ruby', '.php': 'php', '.c': 'c', '.cpp': 'cpp', '.h': 'c' }[extension] || 'unknown');
+const describeError = (error) => {
+  if (error.response) {
+    const detail = error.response.data?.detail || error.response.data?.message || JSON.stringify(error.response.data);
+    return `HTTP ${error.response.status}: ${detail}`;
+  }
+  return error.message || String(error);
+};
 
 const processSourceZip = async (jobData) => {
   const { projectId, jobId, sourceVersionId, storagePath, ownerId } = jobData;
@@ -91,7 +98,12 @@ const processSourceZip = async (jobData) => {
   // 5. Trigger analysis only after all source files and the manifest are durable.
   await supabase.from('analysis_jobs').update({ status: 'ready' }).eq('id', jobId);
   const aiUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-  await axios.post(`${aiUrl}/analysis/trigger`, { source_version_id: sourceVersionId }, { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000 });
+  const triggerResult = await axios.post(
+    `${aiUrl}/analysis/trigger`,
+    { source_version_id: sourceVersionId },
+    { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000 },
+  );
+  console.log(`Analysis run queued: ${triggerResult.data.analysis_run_id}`);
 };
 
 const processGithubSource = async (jobData) => {
@@ -155,12 +167,13 @@ const worker = new Worker('ingestion', async job => {
       await processGithubSource(job.data);
     }
   } catch (err) {
-    console.error(`Job ${job.id} failed:`, err.message);
+    const errorMessage = describeError(err);
+    console.error(`Job ${job.id} failed:`, errorMessage);
     await supabase.from('analysis_jobs').update({ 
       status: 'failed',
-      error_code: err.message
+      error_code: errorMessage
     }).eq('id', job.data.jobId);
-    throw err;
+    throw new Error(errorMessage);
   }
 }, { connection: redisConnection });
 
