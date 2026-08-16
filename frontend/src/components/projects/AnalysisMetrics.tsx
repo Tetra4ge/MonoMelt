@@ -1,7 +1,7 @@
 interface AnalysisMetricsProps {
   metrics: {
     total_files: number;
-    total_loc: number;
+    total_lines: number;
     total_classes: number;
     total_functions: number;
     languages: Record<string, number>;
@@ -13,7 +13,7 @@ export default function AnalysisMetrics({ metrics }: AnalysisMetricsProps) {
 
   const cards = [
     { label: "Total Files", value: metrics.total_files },
-    { label: "Lines of Code", value: metrics.total_loc.toLocaleString() },
+    { label: "Lines of Code", value: (metrics.total_lines || 0).toLocaleString() },
     { label: "Total Classes", value: metrics.total_classes },
     { label: "Total Functions", value: metrics.total_functions },
   ];

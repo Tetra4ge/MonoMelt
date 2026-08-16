@@ -125,8 +125,11 @@ export default function AnalysisPage() {
             api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`),
             api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`)
           ]);
-          setMetrics(metricsRes.data);
-          setGraphData({ nodes: graphRes.data.nodes || [], edges: graphRes.data.edges || [] });
+          setMetrics(metricsRes.data?.data || null);
+          setGraphData({ 
+            nodes: graphRes.data?.data?.nodes || [], 
+            edges: graphRes.data?.data?.edges || [] 
+          });
         } catch (e) {
           console.error("Failed to fetch analysis data", e);
         }

@@ -117,18 +117,18 @@ async def _run_analysis_pipeline(
             import io, zipfile
             logger.info("Manifest empty, searching Supabase storage for project %s ZIP archives", project_id)
             try:
-                storage_items = supabase.storage.from_("openai").list(project_id)
+                storage_items = supabase.storage.from_("openai").list(f"projects/{project_id}")
                 zip_paths = []
                 for item in storage_items or []:
                     item_name = item.get("name", "")
                     if item_name.endswith(".zip"):
-                        zip_paths.append(f"{project_id}/{item_name}")
+                        zip_paths.append(f"projects/{project_id}/{item_name}")
                     elif "name" in item:
-                        sub_items = supabase.storage.from_("openai").list(f"{project_id}/{item_name}")
+                        sub_items = supabase.storage.from_("openai").list(f"projects/{project_id}/{item_name}")
                         for sub in sub_items or []:
                             sub_name = sub.get("name", "")
                             if sub_name.endswith(".zip"):
-                                zip_paths.append(f"{project_id}/{item_name}/{sub_name}")
+                                zip_paths.append(f"projects/{project_id}/{item_name}/{sub_name}")
 
                 for zip_path in zip_paths:
                     logger.info("Downloading and extracting %s", zip_path)
