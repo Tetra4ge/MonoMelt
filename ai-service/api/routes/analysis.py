@@ -114,7 +114,7 @@ async def _run_analysis_pipeline(
                     logger.warning("Could not download %s: %s", storage_path, exc)
         else:
             # Manifest empty — search Supabase storage bucket for project ZIP archive
-            import io, zipfile, os
+            import io, zipfile
             logger.info("Manifest empty, searching Supabase storage for project %s ZIP archives", project_id)
             try:
                 storage_items = supabase.storage.from_("openai").list(project_id)
