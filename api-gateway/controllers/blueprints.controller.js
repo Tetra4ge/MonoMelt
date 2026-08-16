@@ -5,8 +5,7 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: req.headers.authorization } }
+    auth: { persistSession: false, autoRefreshToken: false }
   });
 };
 
@@ -249,7 +248,8 @@ const downloadBlueprint = async (req, res) => {
       roadmap_stages: planRes.data?.roadmap?.stages || [],
       consistency_security_items: planRes.data?.consistency_security?.items || [],
       cost_performance: planRes.data?.cost_performance || null,
-      team_assignments: planRes.data?.team_mapping?.team_assignments || []
+      team_assignments: planRes.data?.team_mapping?.team_assignments || [],
+      assumptions: planRes.data?.assumptions || {}
     };
 
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);

@@ -278,7 +278,11 @@ const recalculatePlan = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: newRevision
+      data: {
+        ...plan,
+        revisions: [newRevision, ...(revisions || [])],
+        latest_revision: newRevision
+      }
     });
 
   } catch (err) {

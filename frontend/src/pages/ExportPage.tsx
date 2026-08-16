@@ -86,7 +86,7 @@ export default function ExportPage() {
   const handleDownload = async () => {
     if (!projectId || !blueprint?.id) return;
     try {
-      const response = await api.get(`/projects/${projectId}/blueprints/${blueprint.id}/download`, {
+      const response = await api.get(`/api/projects/${projectId}/blueprints/${blueprint.id}/download`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
