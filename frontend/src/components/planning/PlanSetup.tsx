@@ -55,7 +55,7 @@ export default function PlanSetup({ assumptions, disabled, submitLabel, onChange
 
         <label className="text-xs text-gray-400">
           Cost multiplier: {assumptions.cost_multiplier.toFixed(1)}x
-          <input type="number" min="0.5" max="3" step="0.1" value={assumptions.cost_multiplier} onChange={numberChange('cost_multiplier')} className="mt-2 w-full accent-white" disabled={disabled} />
+          <input type="range" min="0.5" max="3" step="0.1" value={assumptions.cost_multiplier} onChange={numberChange('cost_multiplier')} className="mt-3 w-full accent-white cursor-pointer" disabled={disabled} />
         </label>
 
         <label className="text-xs text-gray-400">
@@ -65,7 +65,7 @@ export default function PlanSetup({ assumptions, disabled, submitLabel, onChange
 
         <label className="text-xs text-gray-400">
           Migration window: {assumptions.migration_window_months} months
-          <input type="number" min="1" max="36" value={assumptions.migration_window_months} onChange={numberChange('migration_window_months')} className="mt-2 w-full accent-white" disabled={disabled} />
+          <input type="range" min="1" max="36" value={assumptions.migration_window_months} onChange={numberChange('migration_window_months')} className="mt-3 w-full accent-white cursor-pointer" disabled={disabled} />
         </label>
       </div>
 

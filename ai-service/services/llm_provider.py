@@ -64,6 +64,8 @@ async def extract_structured_data(prompt: str, response_schema: type[BaseModel],
     Forces the output to adhere to the given Pydantic schema.
     """
     content = None
+    schema_str = response_schema.schema_json()
+    prompt = f"{prompt}\n\nIMPORTANT: You MUST return a valid JSON object adhering exactly to this JSON schema:\n{schema_str}"
     
     try:
         logger.info(f"Attempting LLM extraction via OpenRouter using {model}...")

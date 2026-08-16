@@ -100,7 +100,8 @@ const createBlueprint = async (req, res) => {
       roadmap_stages: planRev.roadmap?.stages || [],
       consistency_security_items: planRev.consistency_security?.items || [],
       cost_performance: planRev.cost_performance || null,
-      team_assignments: planRev.team_mapping?.team_assignments || []
+      team_assignments: planRev.team_mapping?.team_assignments || [],
+      assumptions: planRev.assumptions || {}
     };
 
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);

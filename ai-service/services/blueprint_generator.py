@@ -147,6 +147,13 @@ class BlueprintGenerator:
 - **Plan Revision**: `{self.req.plan_revision_id}`
 - **Export Version**: `{self.req.version_number}`
 
+## Execution Parameters
+- **Cloud Provider**: `{self.req.assumptions.get('cloud_provider', 'aws').upper() if self.req.assumptions else 'AWS'}`
+- **Pricing Region**: `{self.req.assumptions.get('pricing_region', 'us-east-1') if self.req.assumptions else 'us-east-1'}`
+- **Risk Tolerance**: `{self.req.assumptions.get('risk_tolerance', 'medium').title() if self.req.assumptions else 'Medium'}`
+- **Available Teams**: `{self.req.assumptions.get('team_count', 3) if self.req.assumptions else 3}`
+- **Migration Window**: `{self.req.assumptions.get('migration_window_months', 8) if self.req.assumptions else 8} months`
+
 ## Package Structure
 - `decisions/`: Architecture Decision Records (ADRs)
 - `services/`: Service containers, Dockerfiles, and Kubernetes manifests
