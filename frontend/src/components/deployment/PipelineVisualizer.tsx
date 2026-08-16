@@ -1,20 +1,21 @@
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 
 interface PipelineVisualizerProps {
-  status: 'building' | 'provisioning' | 'deployed' | 'failed';
+  status: 'building' | 'provisioning' | 'deploying' | 'deployed' | 'failed';
 }
 
 const STAGES = [
   { id: 'building', label: '1. Building Images' },
   { id: 'provisioning', label: '2. Provisioning Infrastructure' },
-  { id: 'starting', label: '3. Starting Services' }, // Map 'deployed' intermediate
+  { id: 'deploying', label: '3. Starting Services' },
   { id: 'health', label: '4. Health Checks' }
 ];
 
 export default function PipelineVisualizer({ status }: PipelineVisualizerProps) {
-  // Determine current active index based on mock logs/status (simplified for hackathon)
+  // Determine current active index based on backend status
   let activeIndex = 0;
   if (status === 'provisioning') activeIndex = 1;
+  if (status === 'deploying') activeIndex = 2;
   if (status === 'deployed') activeIndex = 4; // all done
 
   return (

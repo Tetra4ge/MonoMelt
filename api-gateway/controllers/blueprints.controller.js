@@ -5,8 +5,7 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: req.headers.authorization } }
+    auth: { persistSession: false, autoRefreshToken: false }
   });
 };
 
@@ -17,12 +16,35 @@ const getSupabaseClient = (req) => {
 const createBlueprint = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { scenarioRevisionId, planRevisionId } = req.body;
+    let { scenarioRevisionId, planRevisionId, planId } = req.body;
+
+    if (planId && (!scenarioRevisionId || !planRevisionId)) {
+      const { data: plan, error: planErr } = await getSupabaseClient(req)
+        .from('migration_plans')
+        .select('scenario_revision_id')
+        .eq('id', planId)
+        .eq('project_id', projectId)
+        .single();
+      if (planErr || !plan?.scenario_revision_id) {
+        return res.status(404).json({ success: false, message: 'Migration plan or its scenario revision was not found.' });
+      }
+      const { data: revisions, error: revisionErr } = await getSupabaseClient(req)
+        .from('plan_revisions')
+        .select('id')
+        .eq('plan_id', planId)
+        .order('revision_number', { ascending: false })
+        .limit(1);
+      if (revisionErr || !revisions?.[0]) {
+        return res.status(404).json({ success: false, message: 'No plan revision was found for this migration plan.' });
+      }
+      scenarioRevisionId = plan.scenario_revision_id;
+      planRevisionId = revisions[0].id;
+    }
 
     if (!scenarioRevisionId || !planRevisionId) {
       return res.status(400).json({
         success: false,
-        message: 'scenarioRevisionId and planRevisionId are required.'
+        message: 'planId or both scenarioRevisionId and planRevisionId are required.'
       });
     }
 
@@ -50,6 +72,12 @@ const createBlueprint = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Plan revision not found.' });
     }
 
+    const { data: proposedServices, error: servicesErr } = await supabase
+      .from('proposed_services')
+      .select('*')
+      .eq('revision_id', scenarioRevisionId);
+    if (servicesErr) throw servicesErr;
+
     // 3. Count existing blueprints for version numbering
     const { data: existingBlueprints } = await supabase
       .from('blueprints')
@@ -67,11 +95,12 @@ const createBlueprint = async (req, res) => {
       scenario_revision_id: scenarioRevisionId,
       plan_revision_id: planRevisionId,
       version_number: nextVersion,
-      proposed_services: scenario.proposed_services || [],
+      proposed_services: proposedServices || [],
       roadmap_stages: planRev.roadmap?.stages || [],
       consistency_security_items: planRev.consistency_security?.items || [],
       cost_performance: planRev.cost_performance || null,
-      team_assignments: planRev.team_mapping?.team_assignments || []
+      team_assignments: planRev.team_mapping?.team_assignments || [],
+      assumptions: planRev.assumptions || {}
     };
 
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);
@@ -204,9 +233,10 @@ const downloadBlueprint = async (req, res) => {
     }
 
     // Fetch scenario & plan to regenerate zip stream if not stored as raw file
-    const [scenarioRes, planRes] = await Promise.all([
+    const [scenarioRes, planRes, servicesRes] = await Promise.all([
       supabase.from('scenario_revisions').select('*').eq('id', blueprint.scenario_revision_id).single(),
-      supabase.from('plan_revisions').select('*').eq('id', blueprint.plan_revision_id).single()
+      supabase.from('plan_revisions').select('*').eq('id', blueprint.plan_revision_id).single(),
+      supabase.from('proposed_services').select('*').eq('revision_id', blueprint.scenario_revision_id)
     ]);
 
     const aiPayload = {
@@ -214,11 +244,12 @@ const downloadBlueprint = async (req, res) => {
       scenario_revision_id: blueprint.scenario_revision_id,
       plan_revision_id: blueprint.plan_revision_id,
       version_number: blueprint.version_number,
-      proposed_services: scenarioRes.data?.proposed_services || [],
+      proposed_services: servicesRes.data || [],
       roadmap_stages: planRes.data?.roadmap?.stages || [],
       consistency_security_items: planRes.data?.consistency_security?.items || [],
       cost_performance: planRes.data?.cost_performance || null,
-      team_assignments: planRes.data?.team_mapping?.team_assignments || []
+      team_assignments: planRes.data?.team_mapping?.team_assignments || [],
+      assumptions: planRes.data?.assumptions || {}
     };
 
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);

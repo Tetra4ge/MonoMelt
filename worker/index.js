@@ -2,18 +2,32 @@ const { Worker } = require('bullmq');
 const IORedis = require('ioredis');
 const { createClient } = require('@supabase/supabase-js');
 const AdmZip = require('adm-zip');
-const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const axios = require('axios');
 require('dotenv').config();
 
 const redisConnection = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const MAX_FILES = Number(process.env.MAX_SOURCE_FILES || 10_000);
+const MAX_EXTRACTED_BYTES = Number(process.env.MAX_EXTRACTED_BYTES || 200 * 1024 * 1024);
+const MAX_FILE_BYTES = Number(process.env.MAX_SOURCE_FILE_BYTES || 5 * 1024 * 1024);
+const SOURCE_EXTENSIONS = new Set(['.py', '.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.java', '.go', '.cs', '.c', '.cpp', '.h', '.rb', '.php']);
+
+const normaliseEntryPath = (entryName) => entryName.replace(/\\/g, '/').replace(/^\/+/, '');
+
+const getLanguage = (extension) => ({ '.js': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript', '.jsx': 'javascript', '.ts': 'typescript', '.tsx': 'typescript', '.py': 'python', '.go': 'go', '.java': 'java', '.cs': 'csharp', '.rb': 'ruby', '.php': 'php', '.c': 'c', '.cpp': 'cpp', '.h': 'c' }[extension] || 'unknown');
+const describeError = (error) => {
+  if (error.response) {
+    const detail = error.response.data?.detail || error.response.data?.message || JSON.stringify(error.response.data);
+    return `HTTP ${error.response.status}: ${detail}`;
+  }
+  return error.message || String(error);
+};
 
 const processSourceZip = async (jobData) => {
-  const { projectId, jobId, sourceVersionId, storagePath } = jobData;
+  const { projectId, jobId, sourceVersionId, storagePath, ownerId } = jobData;
 
   // 1. Update job status to ingesting
   await supabase.from('analysis_jobs').update({ status: 'ingesting' }).eq('id', jobId);
@@ -30,43 +44,64 @@ const processSourceZip = async (jobData) => {
   const zipEntries = zip.getEntries();
   
   const manifest = [];
+  let extractedBytes = 0;
+  let includedCount = 0;
   
   for (const entry of zipEntries) {
-    // Skip directories and potentially unsafe paths
+    // Never extract directories, symlinks, absolute paths, or traversal paths.
     if (entry.isDirectory) continue;
-    if (entry.entryName.includes('..') || entry.entryName.startsWith('/')) continue;
+    const filePath = normaliseEntryPath(entry.entryName);
+    if (!filePath || filePath.split('/').some(segment => segment === '..') || /^[A-Za-z]:/.test(filePath) || entry.header.attr === 0xA000) continue;
+    if (filePath.split('/').length > 32) throw new Error('Archive path depth exceeds 32 segments');
+
+    if (zipEntries.length > MAX_FILES) throw new Error(`Archive exceeds ${MAX_FILES} file limit`);
+    if (entry.header.size > MAX_FILE_BYTES || extractedBytes + entry.header.size > MAX_EXTRACTED_BYTES) throw new Error('Archive exceeds configured extraction limits');
     
     // Extract info
     const content = entry.getData();
-    const contentHash = crypto.createHash('sha256').update(content).digest('hex');
     const byteSize = content.length;
-    
-    // Guess language (simplified)
-    const ext = path.extname(entry.entryName).toLowerCase();
-    let language = 'unknown';
-    if (ext === '.js') language = 'javascript';
-    else if (ext === '.ts') language = 'typescript';
-    else if (ext === '.py') language = 'python';
-    else if (ext === '.go') language = 'go';
+    extractedBytes += byteSize;
+    if (byteSize > MAX_FILE_BYTES || extractedBytes > MAX_EXTRACTED_BYTES) throw new Error('Archive exceeds configured extraction limits');
+    const ext = path.extname(filePath).toLowerCase();
+    const isSource = SOURCE_EXTENSIONS.has(ext) && !filePath.split('/').some(part => ['node_modules', '.git', 'vendor', 'dist', 'build', 'coverage'].includes(part));
+    const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+    const language = getLanguage(ext);
+
+    if (isSource) {
+      const sourcePath = `projects/${projectId}/${sourceVersionId}/files/${filePath}`;
+      const { error: sourceUploadError } = await supabase.storage.from('openai').upload(sourcePath, content, { upsert: true, contentType: 'text/plain' });
+      if (sourceUploadError) throw new Error(`Failed to store ${filePath}: ${sourceUploadError.message}`);
+      includedCount += 1;
+    }
     
     manifest.push({
       source_version_id: sourceVersionId,
-      file_path: entry.entryName,
+      file_path: filePath,
       byte_size: byteSize,
       content_hash: contentHash,
       language,
-      status: 'included'
+      status: isSource ? 'included' : 'excluded',
+      reason: isSource ? null : 'Unsupported, generated, or dependency file'
     });
   }
 
   // 4. Batch insert into source_files
+  if (includedCount === 0) throw new Error('Archive contains no supported source files');
   if (manifest.length > 0) {
+    await supabase.from('source_files').delete().eq('source_version_id', sourceVersionId);
     const { error: insertError } = await supabase.from('source_files').insert(manifest);
     if (insertError) throw new Error(`Failed to save manifest: ${insertError.message}`);
   }
 
-  // 5. Update job status to ready
+  // 5. Trigger analysis only after all source files and the manifest are durable.
   await supabase.from('analysis_jobs').update({ status: 'ready' }).eq('id', jobId);
+  const aiUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+  const triggerResult = await axios.post(
+    `${aiUrl}/analysis/trigger`,
+    { source_version_id: sourceVersionId },
+    { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000 },
+  );
+  console.log(`Analysis run queued: ${triggerResult.data.analysis_run_id}`);
 };
 
 const processGithubSource = async (jobData) => {
@@ -99,7 +134,7 @@ const processGithubSource = async (jobData) => {
   const arrayBuffer = await response.arrayBuffer();
   
   // 3. Upload to Supabase Storage for consistency and archiving
-  const storagePath = `projects/${projectId}/${sourceVersionId}_github.zip`;
+  const storagePath = `projects/${projectId}/${sourceVersionId}/source.zip`;
   console.log(`Uploading to Supabase storage at ${storagePath}...`);
   
   const { error: uploadError } = await supabase.storage
@@ -130,12 +165,13 @@ const worker = new Worker('ingestion', async job => {
       await processGithubSource(job.data);
     }
   } catch (err) {
-    console.error(`Job ${job.id} failed:`, err.message);
+    const errorMessage = describeError(err);
+    console.error(`Job ${job.id} failed:`, errorMessage);
     await supabase.from('analysis_jobs').update({ 
       status: 'failed',
-      error_code: err.message
+      error_code: errorMessage
     }).eq('id', job.data.jobId);
-    throw err;
+    throw new Error(errorMessage);
   }
 }, { connection: redisConnection });
 

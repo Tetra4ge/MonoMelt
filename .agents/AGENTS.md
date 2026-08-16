@@ -40,7 +40,7 @@ This service follows a domain-driven structure. Do not mix database queries dire
 *   **`core/`**: Configuration and security.
 *   **`db/`**: Connection logic for databases (`neo4j_client.py`, `pg_client.py`, `pinecone_client.py`).
 *   **`services/`**: Core business logic (AST parsing, decomposition algorithms).
-*   **`llm/`**: Code specifically for interacting with LLMs (`gemini_client.py`, `prompts.py`).
+*   **`llm/`**: Code specifically for interacting with LLMs (`gemini_client.py`, `prompts.py`). **CRITICAL RULE**: We are using OpenRouter as the primary LLM provider, with Google Gemini configured as the fallback. Do NOT implement or use direct OpenAI SDK keys; only use OpenRouter and Gemini API keys.
 *   **`models/`**: `schemas.py` for Pydantic models, `domain.py` for internal classes.
 *   **Naming Conventions:**
     *   Files and modules: **snake_case** (e.g., `ast_parser.py`).

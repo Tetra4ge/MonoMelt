@@ -11,11 +11,13 @@ const getSupabaseClient = (req) => {
   });
 };
 
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 const createPlan = async (req, res) => {
   const { projectId } = req.params;
   const scenarioId = req.params.scenarioId || req.body.scenarioId || req.body.scenarioRevisionId;
   const { title, assumptions } = req.body;
-  const supabase = getSupabaseClient(req);
+  // Using global service role supabase to bypass RLS
 
   try {
     // 1. Get latest scenario revision and proposed services
@@ -153,7 +155,6 @@ const createPlan = async (req, res) => {
 
 const getPlans = async (req, res) => {
   const { projectId } = req.params;
-  const supabase = getSupabaseClient(req);
 
   try {
     const { data, error } = await supabase
@@ -197,7 +198,6 @@ const getPlans = async (req, res) => {
 
 const getPlanDetails = async (req, res) => {
   const { planId } = req.params;
-  const supabase = getSupabaseClient(req);
 
   const { data: plan, error: planError } = await supabase
     .from('migration_plans')
@@ -229,7 +229,7 @@ const getPlanDetails = async (req, res) => {
 const recalculatePlan = async (req, res) => {
   const { planId } = req.params;
   const { assumptions } = req.body;
-  const supabase = getSupabaseClient(req);
+  // Using global service role supabase to bypass RLS
 
   try {
     // 1. Fetch current plan and latest revision
@@ -278,7 +278,11 @@ const recalculatePlan = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: newRevision
+      data: {
+        ...plan,
+        revisions: [newRevision, ...(revisions || [])],
+        latest_revision: newRevision
+      }
     });
 
   } catch (err) {

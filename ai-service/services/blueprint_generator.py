@@ -47,18 +47,23 @@ class BlueprintGenerator:
 
             for s in services:
                 s_name = s.get("name", "microservice").lower().replace(" ", "-")
+                service_root = f"blueprint/services/{s_name}"
+
+                # Runnable source scaffold. The generated Dockerfile below builds this application.
+                self._add_file(zf, f"{service_root}/package.json", self._generate_package_json(s_name))
+                self._add_file(zf, f"{service_root}/src/server.js", self._generate_service_source(s_name))
                 
                 # Dockerfile
                 dockerfile = self._generate_dockerfile(s_name)
-                self._add_file(zf, f"blueprint/services/{s_name}/Dockerfile", dockerfile)
+                self._add_file(zf, f"{service_root}/Dockerfile", dockerfile)
 
                 # K8s Deployment
                 k8s_deploy = self._generate_k8s_deployment(s_name)
-                self._add_file(zf, f"blueprint/services/{s_name}/k8s/deployment.yaml", k8s_deploy)
+                self._add_file(zf, f"{service_root}/k8s/deployment.yaml", k8s_deploy)
 
                 # K8s Service
                 k8s_svc = self._generate_k8s_service(s_name)
-                self._add_file(zf, f"blueprint/services/{s_name}/k8s/service.yaml", k8s_svc)
+                self._add_file(zf, f"{service_root}/k8s/service.yaml", k8s_svc)
 
             # 4. Contracts (OpenAPI & Events)
             openapi_spec = self._generate_openapi_spec(services)
@@ -105,7 +110,7 @@ class BlueprintGenerator:
                 }
             )
 
-            manifest_bytes = json.dumps(manifest.model_dump(mode='json'), indent=2).encode('utf-[#232328]')
+            manifest_bytes = json.dumps(manifest.model_dump(mode='json'), indent=2).encode('utf-8')
             zf.writestr("blueprint/manifest.json", manifest_bytes)
 
         zip_buffer.seek(0)
@@ -142,6 +147,13 @@ class BlueprintGenerator:
 - **Plan Revision**: `{self.req.plan_revision_id}`
 - **Export Version**: `{self.req.version_number}`
 
+## Execution Parameters
+- **Cloud Provider**: `{self.req.assumptions.get('cloud_provider', 'aws').upper() if self.req.assumptions else 'AWS'}`
+- **Pricing Region**: `{self.req.assumptions.get('pricing_region', 'us-east-1') if self.req.assumptions else 'us-east-1'}`
+- **Risk Tolerance**: `{self.req.assumptions.get('risk_tolerance', 'medium').title() if self.req.assumptions else 'Medium'}`
+- **Available Teams**: `{self.req.assumptions.get('team_count', 3) if self.req.assumptions else 3}`
+- **Migration Window**: `{self.req.assumptions.get('migration_window_months', 8) if self.req.assumptions else 8} months`
+
 ## Package Structure
 - `decisions/`: Architecture Decision Records (ADRs)
 - `services/`: Service containers, Dockerfiles, and Kubernetes manifests
@@ -172,17 +184,42 @@ Decompose the monolith into bounded contexts using a Strangler Fig pattern. Cros
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 FROM node:22-alpine AS runner
 WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-COPY --from=builder /app ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY package.json ./
+COPY src ./src
 USER appuser
 EXPOSE 8080
 ENV PORT=8080
 CMD ["npm", "start"]
 """
+
+    def _generate_package_json(self, service_name: str) -> str:
+        return json.dumps({
+            "name": service_name,
+            "version": "0.1.0",
+            "private": True,
+            "type": "commonjs",
+            "scripts": {"start": "node src/server.js"},
+            "dependencies": {"express": "^5.2.1"}
+        }, indent=2)
+
+    def _generate_service_source(self, service_name: str) -> str:
+        return f'''const express = require('express');
+
+const app = express();
+app.use(express.json());
+
+app.get('/health', (_req, res) => res.json({{ service: '{service_name}', status: 'up' }}));
+app.get('/api/v1/{service_name}', (_req, res) => res.json({{ service: '{service_name}', status: 'draft-contract' }}));
+
+const port = Number(process.env.PORT || 8080);
+app.listen(port, () => console.log(`{service_name} listening on ${{port}}`));
+'''
 
     def _generate_k8s_deployment(self, service_name: str) -> str:
         return f"""apiVersion: apps/v1

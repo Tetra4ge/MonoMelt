@@ -11,10 +11,8 @@ python-dotenv==1.0.1
 
 # Database Drivers
 neo4j==5.21.0
-SQLAlchemy==2.0.31
 asyncpg==0.29.0
 pinecone-client==4.1.1
-psycopg2-binary==2.9.9
 
 # Supabase SDK (for downloading files from storage in analysis pipeline)
 supabase==2.5.3
@@ -22,10 +20,6 @@ supabase==2.5.3
 # AI & LLM Integration
 google-generativeai==0.7.1
 openai==1.35.3
-
-# Asynchronous Tasks & Caching (Optional/Future-proofing)
-celery==5.4.0
-redis==5.0.7
 
 # Utility
 requests==2.32.3

@@ -95,9 +95,12 @@
  *           schema:
  *             type: object
  *             required:
- *               - scenarioRevisionId
- *               - planRevisionId
+ *               - planId
  *             properties:
+ *               planId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Migration plan ID. The gateway resolves its latest revision and selected scenario revision.
  *               scenarioRevisionId:
  *                 type: string
  *                 format: uuid

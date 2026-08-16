@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Rocket, Download } from 'lucide-react';
 import { triggerDeployment, getDeploymentLogs, getServicesHealth } from '../features/deployment/deployment.api';
@@ -20,14 +20,7 @@ export default function DeploymentPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
 
-  useEffect(() => {
-    // If the user lands here with a blueprint ID, we automatically kick off the deployment simulation
-    if (projectId && blueprintId && !isDeploying && !deployment) {
-      startDeployment();
-    }
-  }, [projectId, blueprintId]);
-
-  const startDeployment = async () => {
+  const startDeployment = useCallback(async () => {
     if (!projectId || !blueprintId) return;
     
     setIsDeploying(true);
@@ -35,33 +28,35 @@ export default function DeploymentPage() {
 
     try {
       // 1. Trigger the deployment
-      let currentDeployment = await triggerDeployment(projectId, blueprintId);
+      const currentDeployment = await triggerDeployment(projectId, blueprintId);
       setDeployment(currentDeployment);
 
       // 2. Poll for logs and status updates
       const pollInterval = setInterval(async () => {
         const updated = await getDeploymentLogs(projectId, currentDeployment.id);
-        
-        // Simulating progressive status updates based on log length
-        if (updated.logs.length > 3) updated.status = 'provisioning';
-        if (updated.logs.length >= 10) updated.status = 'deployed';
-
+        // Status is controlled entirely by backend
         setDeployment(updated);
 
         // 3. When deployed, fetch health metrics and stop polling
         if (updated.status === 'deployed') {
           clearInterval(pollInterval);
           setIsDeploying(false);
-          const healthData = await getServicesHealth(projectId);
+          const healthData = await getServicesHealth(projectId, currentDeployment.id);
           setServices(healthData);
         }
       }, 2000);
 
     } catch (err: any) {
-      setError(err.message || 'Failed to start deployment.');
+      setError(err?.message || 'Failed to start deployment.');
       setIsDeploying(false);
     }
-  };
+  }, [projectId, blueprintId]);
+
+  useEffect(() => {
+    if (!projectId || !blueprintId || isDeploying || deployment) return;
+    const timer = window.setTimeout(() => { void startDeployment(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [projectId, blueprintId, isDeploying, deployment, startDeployment]);
 
   const handleDownload = async () => {
     if (!projectId || !blueprintId) return;
@@ -77,7 +72,7 @@ export default function DeploymentPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
+    } catch {
       setError('Failed to download blueprint.');
     }
   };

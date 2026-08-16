@@ -30,7 +30,6 @@ services:
       - REDIS_URL=redis://redis:6379
     depends_on:
       - ai-service
-      - postgres
       - redis
 
   ai-service:
@@ -43,24 +42,22 @@ services:
       - ./ai-service/.env
     environment:
       - PORT=8000
-    depends_on:
-      - postgres
 
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=transformation_db
-    ports:
-      - "5432:5432"
+  worker:
+    build: ./worker
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./worker:/app
+      - /app/node_modules
+    env_file:
+      - ./worker/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      - redis
+      - ai-service
 
   redis:
     image: redis:7-alpine
     ports:
       - "6380:6379"
-
-volumes:
-  postgres_data:

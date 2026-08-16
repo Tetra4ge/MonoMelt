@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const { v4: uuidv4 } = require('uuid');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
+const { errorHandler } = require('./middlewares/error.middleware');
 
 // Load environment variables
 dotenv.config();
@@ -61,6 +62,7 @@ app.use('/api/projects/:projectId/intelligence', require('./routes/intelligence.
 app.use('/api/projects/:projectId/scenarios', require('./routes/decomposition.routes'));
 app.use('/api/projects/:projectId/plans', require('./routes/planning.routes'));
 app.use('/api/projects/:projectId/blueprints', require('./routes/blueprints.routes'));
+app.use('/api/projects/:projectId/deployments', require('./routes/deployments.routes'));
 app.use('/api/projects/:projectId', require('./routes/planning.routes'));
 
 /**
@@ -84,14 +86,7 @@ app.get('/health', (req, res) => {
 
 
 // Global Error Handler
-app.use((err, req, res, next) => {
-  console.error('Global Error Handler caught:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+app.use(errorHandler);
 
 // Start Server
 app.listen(PORT, () => {

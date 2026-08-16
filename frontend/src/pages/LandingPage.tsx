@@ -29,7 +29,7 @@ const LandingPage = () => {
       </main>
 
       <footer className="py-8 text-center text-gray-600 text-sm border-t border-gray-800">
-        <p>© 2026 MonoMELT Transformation Platform. Built for OpenAI Build Week.</p>
+        <p>© 2026 MonoMELT Transformation Platform.</p>
       </footer>
     </div>
   );

@@ -108,14 +108,6 @@ export default function AnalysisPage() {
         setActiveJob(latestJob);
 
         if (latestJob.status !== 'completed' && latestJob.status !== 'failed') {
-          if (latestJob.status === 'ready') {
-            try {
-              await api.post(`/api/projects/${projectId}/analysis/trigger`, { source_version_id: latestJob.source_version_id });
-            } catch (e) {
-              console.error("Failed to trigger AI analysis", e);
-            }
-          }
-
           setLoading(false);
           pollTimeout = setTimeout(fetchLatestAnalysis, 3000);
           return;
@@ -133,8 +125,11 @@ export default function AnalysisPage() {
             api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/metrics`),
             api.get(`/api/projects/${projectId}/analysis/${latestJob.source_version_id}/graph?depth=2&limit=500`)
           ]);
-          setMetrics(metricsRes.data);
-          setGraphData({ nodes: graphRes.data.nodes || [], edges: graphRes.data.edges || [] });
+          setMetrics(metricsRes.data?.data || null);
+          setGraphData({ 
+            nodes: graphRes.data?.data?.nodes || [], 
+            edges: graphRes.data?.data?.edges || [] 
+          });
         } catch (e) {
           console.error("Failed to fetch analysis data", e);
         }
@@ -316,7 +311,7 @@ export default function AnalysisPage() {
                   Enriching...
                 </>
               ) : (
-                '✨ Run AI Intelligence'
+                'RUN AI INTELLIGENCE'
               )}
             </button>
           )}

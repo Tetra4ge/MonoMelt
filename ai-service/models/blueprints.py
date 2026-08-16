@@ -37,6 +37,7 @@ class GenerateBlueprintRequest(BaseModel):
     consistency_security_items: list[dict[str, Any]] = Field(default_factory=list)
     cost_performance: Optional[dict[str, Any]] = None
     team_assignments: list[dict[str, Any]] = Field(default_factory=list)
+    assumptions: Optional[dict[str, Any]] = None
 
 
 class BlueprintResponse(BaseModel):

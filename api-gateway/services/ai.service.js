@@ -48,6 +48,7 @@ const proxyToAiService = async (method, path, body = null, queryParams = {}) => 
       const { status, data } = error.response;
       const err = new Error(data?.detail || data?.message || 'AI service error');
       err.statusCode = status;
+      err.expose = status === 409 || status === 503;
       throw err;
     }
     // Network error or timeout

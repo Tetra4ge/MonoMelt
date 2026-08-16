@@ -13,6 +13,7 @@ const getAllProjects = async (req, res, next) => {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
+      .eq('owner_id', req.user.sub)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -31,6 +32,7 @@ const getProjectById = async (req, res, next) => {
       .from('projects')
       .select('*')
       .eq('id', projectId)
+      .eq('owner_id', req.user.sub)
       .single();
 
     if (error || !data) { 
@@ -55,13 +57,7 @@ const createProject = async (req, res, next) => {
     };
 
     const { data, error } = await supabase.from('projects').insert(newProject).select().single();
-    if (error) {
-      console.warn('Project insert notice (retrying without owner_id):', error.message);
-      delete newProject.owner_id;
-      const { data: fallbackData, error: fbErr } = await supabase.from('projects').insert(newProject).select().single();
-      if (fbErr) throw fbErr;
-      return res.status(201).json({ success: true, data: fallbackData });
-    }
+    if (error) throw error;
 
     res.status(201).json({ success: true, data });
   } catch (error) { 

@@ -2,7 +2,7 @@ export interface Deployment {
   id: string;
   project_id: string;
   blueprint_id: string;
-  status: 'building' | 'provisioning' | 'deployed' | 'failed';
+  status: 'building' | 'provisioning' | 'deploying' | 'deployed' | 'failed';
   logs: string[];
   created_at: string;
   updated_at: string;

@@ -8,8 +8,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 /**
  * Upload a raw ZIP file to Supabase storage
  */
-const uploadSourceZip = async (fileBuffer, projectId, jobId) => {
-  const fileName = `${projectId}/${jobId}/source.zip`;
+const uploadSourceZip = async (fileBuffer, projectId, sourceVersionId) => {
+  const fileName = `projects/${projectId}/${sourceVersionId}/source.zip`;
   
   // Ensure bucket exists
   try {
@@ -25,10 +25,7 @@ const uploadSourceZip = async (fileBuffer, projectId, jobId) => {
       upsert: true
     });
     
-  if (error) {
-    console.warn(`Storage upload warning: ${error.message}`);
-    return fileName;
-  }
+  if (error) throw new Error(`Unable to store source archive: ${error.message}`);
   
   return fileName;
 };

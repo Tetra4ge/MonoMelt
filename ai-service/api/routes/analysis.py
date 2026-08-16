@@ -17,6 +17,7 @@ import asyncio
 import logging
 import uuid
 import json
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -101,7 +102,7 @@ async def _run_analysis_pipeline(
                 ext = os.path.splitext(file_info["file_path"])[1].lower()
                 if ext not in (".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php"):
                     continue
-                storage_path = f"{project_id}/{file_info['file_path']}"
+                storage_path = f"projects/{project_id}/{source_version_id}/files/{file_info['file_path']}"
                 try:
                     dl = supabase.storage.from_("openai").download(storage_path)
                     source = dl.decode("utf-8", errors="replace") if dl else ""
@@ -113,21 +114,21 @@ async def _run_analysis_pipeline(
                     logger.warning("Could not download %s: %s", storage_path, exc)
         else:
             # Manifest empty — search Supabase storage bucket for project ZIP archive
-            import io, zipfile, os
+            import io, zipfile
             logger.info("Manifest empty, searching Supabase storage for project %s ZIP archives", project_id)
             try:
-                storage_items = supabase.storage.from_("openai").list(project_id)
+                storage_items = supabase.storage.from_("openai").list(f"projects/{project_id}")
                 zip_paths = []
                 for item in storage_items or []:
                     item_name = item.get("name", "")
                     if item_name.endswith(".zip"):
-                        zip_paths.append(f"{project_id}/{item_name}")
+                        zip_paths.append(f"projects/{project_id}/{item_name}")
                     elif "name" in item:
-                        sub_items = supabase.storage.from_("openai").list(f"{project_id}/{item_name}")
+                        sub_items = supabase.storage.from_("openai").list(f"projects/{project_id}/{item_name}")
                         for sub in sub_items or []:
                             sub_name = sub.get("name", "")
                             if sub_name.endswith(".zip"):
-                                zip_paths.append(f"{project_id}/{item_name}/{sub_name}")
+                                zip_paths.append(f"projects/{project_id}/{item_name}/{sub_name}")
 
                 for zip_path in zip_paths:
                     logger.info("Downloading and extracting %s", zip_path)
@@ -237,29 +238,61 @@ async def trigger_analysis(
     """
     svid   = str(request.source_version_id)
 
-    # Ensure parent auth.users, project, and source_version records exist in local DB
-    await execute(
-        "INSERT INTO auth.users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
-        owner_id
-    )
-    await execute(
-        "INSERT INTO public.projects (id, name, owner_id, source_type) VALUES ($1, 'Project', $2, 'zip') ON CONFLICT (id) DO NOTHING",
-        project_id, owner_id
-    )
-    await execute(
-        "INSERT INTO public.source_versions (id, project_id, source_type) VALUES ($1, $2, 'zip') ON CONFLICT (id) DO NOTHING",
-        svid, project_id
-    )
+    # The gateway/worker own project and source creation. Never write to auth.users
+    # from here: Supabase's auth schema is managed by Supabase and rejects app writes.
+    try:
+        source = await fetchrow(
+            """
+            SELECT sv.id
+            FROM public.source_versions sv
+            JOIN public.projects p ON p.id = sv.project_id
+            WHERE sv.id = $1 AND sv.project_id = $2 AND p.owner_id = $3
+            """,
+            svid, project_id, owner_id,
+        )
+        if not source:
+            raise HTTPException(status_code=404, detail="Source version was not found for this project")
 
-    # Insert initial pending state into DB
-    result = await fetchrow(
-        """
-        INSERT INTO public.analysis_runs (project_id, source_version_id, owner_id, status)
-        VALUES ($1, $2, $3, 'pending')
-        RETURNING id
-        """,
-        project_id, svid, owner_id
-    )
+        manifest = await fetchrow(
+            "SELECT id FROM public.source_files WHERE source_version_id = $1 AND status = 'included' LIMIT 1",
+            svid,
+        )
+        if not manifest:
+            raise HTTPException(status_code=409, detail="Source ingestion is not complete; wait for the worker to create the source manifest")
+
+        existing = await fetchrow(
+            """
+            SELECT id, status FROM public.analysis_runs
+            WHERE source_version_id = $1 AND project_id = $2
+              AND status IN ('pending', 'running')
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            svid, project_id,
+        )
+        if existing:
+            return TriggerAnalysisResponse(
+                success=True,
+                analysis_run_id=uuid.UUID(str(existing['id'])),
+                status=existing['status'],
+                message="Analysis is already in progress.",
+            )
+
+        result = await fetchrow(
+            """
+            INSERT INTO public.analysis_runs (project_id, source_version_id, owner_id, status)
+            VALUES ($1, $2, $3, 'pending')
+            RETURNING id
+            """,
+            project_id, svid, owner_id,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unable to queue analysis for source_version=%s", svid)
+        raise HTTPException(
+            status_code=503,
+            detail="Analysis database is unavailable or migrations 01-03 have not been applied",
+        ) from exc
     
     if not result or 'id' not in result:
         raise HTTPException(status_code=500, detail="Failed to create analysis run in database")

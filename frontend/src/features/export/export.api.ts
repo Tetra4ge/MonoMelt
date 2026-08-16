@@ -3,7 +3,7 @@ import type { ApiEnvelope, Blueprint } from './types';
 
 export async function createBlueprint(projectId: string, planId: string): Promise<Blueprint> {
   const response = await api.post<ApiEnvelope<Blueprint>>(`/api/projects/${projectId}/blueprints`, {
-    plan_id: planId
+    planId
   });
   return response.data.data;
 }
