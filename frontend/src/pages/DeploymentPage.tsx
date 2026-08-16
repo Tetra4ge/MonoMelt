@@ -34,11 +34,7 @@ export default function DeploymentPage() {
       // 2. Poll for logs and status updates
       const pollInterval = setInterval(async () => {
         const updated = await getDeploymentLogs(projectId, currentDeployment.id);
-        
-        // Simulating progressive status updates based on log length
-        if (updated.logs.length > 3) updated.status = 'provisioning';
-        if (updated.logs.length >= 10) updated.status = 'deployed';
-
+        // Status is controlled entirely by backend
         setDeployment(updated);
 
         // 3. When deployed, fetch health metrics and stop polling
