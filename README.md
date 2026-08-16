@@ -35,17 +35,17 @@ graph TD
     classDef data fill:#0a0a0a,stroke:#F59E0B,stroke-width:2px,color:#fff
     
     %% Nodes
-    Client[("💻 React Frontend<br/>(SPA)")]:::client
+    Client[("React Frontend<br/>(SPA)")]:::client
     
-    Gateway["🚪 API Gateway<br/>(Node/Express)"]:::gateway
+    Gateway["API Gateway<br/>(Node/Express)"]:::gateway
     
-    Auth["🔐 Auth Service<br/>(Supabase)"]:::data
-    Worker["⚙️ Background Worker<br/>(BullMQ/Node)"]:::service
-    AI["🧠 AI Service<br/>(FastAPI/Python)"]:::service
+    Auth["Auth Service<br/>(Supabase)"]:::data
+    Worker["Background Worker<br/>(BullMQ/Node)"]:::service
+    AI["AI Service<br/>(FastAPI/Python)"]:::service
     
-    Redis[("🔴 Redis Cache")]:::data
-    Postgres[("🐘 Supabase<br/>(PostgreSQL)")]:::data
-    Neo4j[("🕸️ Neo4j<br/>(Graph DB)")]:::data
+    Redis[("Redis Cache")]:::data
+    Postgres[("Supabase<br/>(PostgreSQL)")]:::data
+    Neo4j[("Neo4j<br/>(Graph DB)")]:::data
     
     %% Connections
     Client <-->|REST API| Gateway
@@ -61,7 +61,47 @@ graph TD
     Worker -->|Parse AST| Neo4j
     
     AI <-->|Graph Analysis| Neo4j
-    AI <-->|Prompt LLMs| External[("OpenAI API")]
+    AI <-->|Prompt LLMs| External[("OpenRouter API")]
+```
+
+---
+
+## 🔄 Backend Data Flow
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef ingest fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef userReq fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef process fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef storage fill:#ff5722,stroke:#e64a19,stroke-width:2px,color:#fff
+    classDef decision fill:#00BCD4,stroke:#0097A7,stroke-width:2px,color:#fff
+    
+    Upload((User Uploads Monolith)):::ingest
+    Gateway[API Gateway & Auth]:::userReq
+    Worker[Worker Extracts AST & Hashes]:::ingest
+    StoreGraph[(Map to Neo4j & Postgres)]:::storage
+    
+    Upload --> Gateway
+    Gateway --> Worker
+    Worker --> StoreGraph
+    
+    Analyze[AI Analyzes Code Dependencies]:::process
+    StoreGraph --> Analyze
+    
+    Prompt[Prompt LLMs via OpenRouter]:::process
+    Analyze --> Prompt
+    
+    Check{Is Split Strategy Optimal?}:::decision
+    Prompt --> Check
+    
+    Check -->|No - High Coupling Detected| Analyze
+    
+    Generate[Generate Terraform & Microservices]:::process
+    Check -->|Yes - Domain Aligned| Generate
+    
+    Download((User Downloads Blueprint)):::userReq
+    Generate --> Download
 ```
 
 ---
@@ -188,5 +228,4 @@ GEMINI_API_KEY=your_gemini_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 ```
 
----
-*Built for the OpenAI Build Week Challenge.*
+```

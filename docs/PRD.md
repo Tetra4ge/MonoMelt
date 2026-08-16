@@ -4,7 +4,7 @@
 ---
 
 ### 1. Executive Summary
-The Legacy Monolith to Microservices Transformation Intelligence Platform is a comprehensive, AI-driven solution designed to assist enterprise engineering teams in safely and efficiently breaking down monolithic codebases into modern microservice architectures. Built for the OpenAI Build Week Challenge, the platform utilizes advanced LLM (Gemini/OpenRouter) integration to analyze code, generate transformation blueprints, provide risk assessments, and output ready-to-deploy migration scripts.
+The Legacy Monolith to Microservices Transformation Intelligence Platform is a comprehensive, AI-driven solution designed to assist enterprise engineering teams in safely and efficiently breaking down monolithic codebases into modern microservice architectures. The platform utilizes advanced LLM (Gemini/OpenRouter) integration to analyze code, generate transformation blueprints, provide risk assessments, and output ready-to-deploy migration scripts.
 
 ### 2. Problem Statement
 Transitioning from a monolith to microservices is fraught with risks:
