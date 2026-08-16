@@ -44,8 +44,8 @@ class DecompositionEngine:
         query = """
         MATCH (n {source_version_id: $svid})
         OPTIONAL MATCH (n)-[r]->(m {source_version_id: $svid})
-        RETURN n.id AS source, labels(n)[0] AS source_label, n.name AS source_name,
-               m.id AS target, type(r) AS rel_type
+        RETURN n.node_id AS source, labels(n)[0] AS source_label, n.name AS source_name,
+               m.node_id AS target, type(r) AS rel_type
         """
         async with driver.session() as session:
             result = await session.run(query, svid=str(self.source_version_id))
