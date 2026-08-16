@@ -311,7 +311,7 @@ export default function AnalysisPage() {
                   Enriching...
                 </>
               ) : (
-                '✨ Run AI Intelligence'
+                'RUN AI INTELLIGENCE'
               )}
             </button>
           )}
