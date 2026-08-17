@@ -1,0 +1,13 @@
+{
+  "cost_range_max_usd": 1521,
+  "cost_range_min_usd": 994.5,
+  "sensitivity_drivers": [
+    "Cloud Provider: AWS (us-east-1)",
+    "Service Count: 1 independent containers",
+    "Infrastructure Scaling Multiplier: 1.8x",
+    "Network Inter-Service Hop Latency: ~4.5ms"
+  ],
+  "avg_latency_increase_ms": 4.5,
+  "monolith_monthly_cost_usd": 2160,
+  "microservices_monthly_cost_usd": 1170
+}

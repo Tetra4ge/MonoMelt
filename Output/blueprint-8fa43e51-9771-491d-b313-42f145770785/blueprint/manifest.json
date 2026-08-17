@@ -1,0 +1,430 @@
+{
+  "generator_version": "1.0.0",
+  "project_id": "73bcf401-4bd0-4c3d-a0fa-21142938c045",
+  "scenario_revision_id": "e2d20aae-23b7-48c5-a8dc-ade06ef3e80a",
+  "plan_revision_id": "06507fc4-8f8b-45af-a9ec-0e866633ef06",
+  "version_number": 1,
+  "artifacts": [
+    {
+      "path": "blueprint/README.md",
+      "sha256": "b6b83b4a66244d0021e06b521ab61ffb864ef98acca70dc70f176f4d3386bf94",
+      "size_bytes": 1101,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/decisions/ADR-001-microservices-decomposition.md",
+      "sha256": "b617702a3649700da16f7d6d149907907072ad487f158ade7fb57e2b6803f9e8",
+      "size_bytes": 557,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_1/package.json",
+      "sha256": "aa1fd956e94669fd1555ec46ec4c050a9aeb5e4193b4aad04ef7f6de3cc722ee",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_1/src/server.js",
+      "sha256": "bce4517f997b17b78d5c6b646d4737f6826d80797e7b96c17d1586a78b69718c",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_1/Dockerfile",
+      "sha256": "94690cca8ca88b5b82da950cb75fe2a3f6f7b02ef62d801b45ff72202dc00c35",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_1/k8s/deployment.yaml",
+      "sha256": "787f7c19335db420df1596a1f98dbd19efd0d3b303b9a430d1d5c491b3ed5717",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_1/k8s/service.yaml",
+      "sha256": "40c1a5d25804529f86beca4fe43111f89510276db8b13a05e899373698fb0064",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_2/package.json",
+      "sha256": "84f934c013b14313dc6d3da195cb6f1958efe4e5916b2bbda963f28d1638a7ba",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_2/src/server.js",
+      "sha256": "bf2d517bcb32345f13cd59cd011f8fa905367d6517a7d2a87713712998ea6c43",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_2/Dockerfile",
+      "sha256": "bd4741e8bf158920e1e7bc00f920aa6afb65824c009e40e2000dccf77b2f5cea",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_2/k8s/deployment.yaml",
+      "sha256": "b69009183f61b83f490d1cdb4fde313f1bdf05a9fc65ff5646b3c048c5b539db",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_2/k8s/service.yaml",
+      "sha256": "8c01f38bdfaa2e60e6ad6058fb515dc0ce14be2b5ecaa2e070fcadb53d478c5d",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_4/package.json",
+      "sha256": "ed2cf7f8a20abf843748d1514da6469ddff29b55253ecfb938e922871eab44d6",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_4/src/server.js",
+      "sha256": "a085f5a53764408425afa2e716f8eabbf2f7fa415748d5857287c2c3d5bed0d6",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_4/Dockerfile",
+      "sha256": "a85bd83b09e444c691e20d121b1ba85ea4e54dfe2f60e0f66924eaa95a499b24",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_4/k8s/deployment.yaml",
+      "sha256": "aa172cbc687b7e4eabc9ec21f2243e18733a588e8d1813f20b527d986528a306",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_4/k8s/service.yaml",
+      "sha256": "739852967bb7d5c2e8237f74e72352d4c34f4aa97fc55d4035b29396a980f427",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_5/package.json",
+      "sha256": "9c1dbdd637cb85aa2c4244236b95b7b4b9d391151949a0830d47d1f85ea723ce",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_5/src/server.js",
+      "sha256": "f4a5144624bd4c9d81874f97847a3debb351f37bdfd77b949ea426dbcdf947f1",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_5/Dockerfile",
+      "sha256": "0f98ca2f5f77c03559ea830b11c7466ad5c3905ac4c8c4a324e6ef9a6a961e16",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_5/k8s/deployment.yaml",
+      "sha256": "ac5189a67d11c6d93e0552bc56a40315af614176e4798c1ea5bc7b171aa8db5a",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_5/k8s/service.yaml",
+      "sha256": "0c4796fc4d552cc21e9c987e41cbf710657951ef217bb426f84cc98be7ba5294",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_7/package.json",
+      "sha256": "0f4d01216dcb0fe6ec5f84687bdd0d238e4f60eaa0d1e23135995df203a23ae6",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_7/src/server.js",
+      "sha256": "531353180d89d2e92a04d3ac006fc80bad6aecf65f77b2af102d7191ef7bd6b9",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_7/Dockerfile",
+      "sha256": "6f0fac4bff22ba8a781c1a377591686f04b5f8939398dc93130118f77d2eb664",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_7/k8s/deployment.yaml",
+      "sha256": "fbd1284dd4047b54fc31a06b1f64d3999686978c9809a947d928ca0c99953f1f",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_7/k8s/service.yaml",
+      "sha256": "97dea4676455aa4abb90a4f89a26bbe2d36e5a4b5d677b59072219e4404d8a42",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_8/package.json",
+      "sha256": "9ce6604b3f557f46f7467c4d143e665c374c0a945cb2cdeb2b74fcf4924802a9",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_8/src/server.js",
+      "sha256": "785f4b4074dc5926706248cee793f833e5ccd732a0519b9a9973c74242ca749b",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_8/Dockerfile",
+      "sha256": "56c9d7dff2a56377de9aade40d46ba0b5abc15f0a3125ada9af46e0596fdcb36",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_8/k8s/deployment.yaml",
+      "sha256": "5220b190d28bd97dadd4d625bd15f17ca8b4f3b83d7a3cf53faadf4f2dadc9eb",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_8/k8s/service.yaml",
+      "sha256": "e17212163b0d4b8cfc79f11d8cae866ed2c0acce7c59ca9b59be755efac95308",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_10/package.json",
+      "sha256": "3c9ce75f17e3ce1ef8bdd34592e189117ea5b0736773c68210f6e9deb54339fa",
+      "size_bytes": 192,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_10/src/server.js",
+      "sha256": "63b6b77fe7e500ede8a57f80fa9c5a743e4940e412ab3cad8655e4631250e950",
+      "size_bytes": 401,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_10/Dockerfile",
+      "sha256": "e1f500975927298dbc2c6f478f14f0eb3b08bc7b89de4fb862789def6542feaa",
+      "size_bytes": 385,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_10/k8s/deployment.yaml",
+      "sha256": "a2d7d45c29d1c5f295a73517bec4361b9b495dfbb6f426bfc8695379956ef435",
+      "size_bytes": 903,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_10/k8s/service.yaml",
+      "sha256": "e849e421c81930654d2747e86c57013dfedd7ba3b19a4df0eb35d7cd8dca572d",
+      "size_bytes": 175,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_11/package.json",
+      "sha256": "fb8050b73072ae9f48b46f70e2c36589015f7eb24b33740311c699d524c22d44",
+      "size_bytes": 192,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_11/src/server.js",
+      "sha256": "73dbf88e814dda173d5d60ff53847130c0a60500c0bf105281207079d89952df",
+      "size_bytes": 401,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_11/Dockerfile",
+      "sha256": "c866cc027e021b333fb9a9ecce3f72beceaa6a61dad5ebbe9d7793a61317dd46",
+      "size_bytes": 385,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_11/k8s/deployment.yaml",
+      "sha256": "44b08d5b5328acb82d8bcc6886ef6810cc7f5318dda9e5941c6c3c9a68d1b27a",
+      "size_bytes": 903,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_11/k8s/service.yaml",
+      "sha256": "ebc617b400f368996ce6570f9b54f1d65484fb3252ba9eaa9a6fe54bfa830096",
+      "size_bytes": 175,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_12/package.json",
+      "sha256": "e9b83224d09c7a491c29a40359a0f30db8b6d617c4680af7dae80637f2c9a5e7",
+      "size_bytes": 192,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_12/src/server.js",
+      "sha256": "0a685ceed940fa215cb6bda27ab0a339f1b49e90a6a836190ea44088e2b637ae",
+      "size_bytes": 401,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_12/Dockerfile",
+      "sha256": "5388f3728b4058b8a3237abeb3d6f72a0a345bad35ff820c434aeca5f3514230",
+      "size_bytes": 385,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_12/k8s/deployment.yaml",
+      "sha256": "c12afd878ac193ceffa829bb7c8f8f5dc14a2daf3de1d7858865bf1d715955ba",
+      "size_bytes": 903,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_12/k8s/service.yaml",
+      "sha256": "90f6e8ba2f675cec8fb802e075b4b3bfcfb53173677b8deb63413191b3c7baad",
+      "size_bytes": 175,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_9/package.json",
+      "sha256": "57e29a106a5438e789c9c4645da63bf238dd8e0d090b903923e4aad0d8b05efb",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_9/src/server.js",
+      "sha256": "b4eca06ae992c45232b14682f1387e9166aa7f7a6c8f14416a8143e37b36790c",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_9/Dockerfile",
+      "sha256": "e312fdd1f81d2490e85784dfb9356c5c9ef33e121589ac5ee61b304710e0fe6f",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_9/k8s/deployment.yaml",
+      "sha256": "721a321ec307e83604f654127fdfb865a1ed8eeea1bb51266ada45d9b3af3f4f",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_9/k8s/service.yaml",
+      "sha256": "668546d9621996e91abbfce71131b62c9ca77a860616a3dceb0b76a1b09b72e7",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_3/package.json",
+      "sha256": "88c3a64c045e07ee70613f9a18905b39e25f5f8b1cf85770482e89e6ed65ad19",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_3/src/server.js",
+      "sha256": "ef646852d6d16904fc9420b74aa54df72b12c9765ea459f28895b0d7b4141f29",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_3/Dockerfile",
+      "sha256": "79407606797063320040349a56ec22c303f2018d7432b206dde6738f0585882a",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_3/k8s/deployment.yaml",
+      "sha256": "04de41ee66fe38eaa24c69c5ece01ed36ef0989da934af1dc81b347aab06a7fd",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_3/k8s/service.yaml",
+      "sha256": "8ecc83a06fb76fef96a84b69e65d425db33e01fcd4423133143559fc02dbc1ad",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_6/package.json",
+      "sha256": "e696dfdb1eef7c6aa9b0fc560daaff621272ff328cdb7f4002ea735423f8df64",
+      "size_bytes": 191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_6/src/server.js",
+      "sha256": "c24b7291914b284e7a146d7568c941159a38a6eb2cf0c20c775d59dc28266228",
+      "size_bytes": 397,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/service_6/Dockerfile",
+      "sha256": "b26f795d80344cda93a3975b7c7a9a8bc20212246326274452bb7feb9c4c5919",
+      "size_bytes": 384,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_6/k8s/deployment.yaml",
+      "sha256": "573ee0abddea3b541b7040eaaa6df503d4165f0ddbb3dbb353904eae75f4d8ae",
+      "size_bytes": 897,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/service_6/k8s/service.yaml",
+      "sha256": "305bbd634eab875cfe19d7c3f8d7dfc1f53e21da3b11903716e6c68ca88e994b",
+      "size_bytes": 173,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/contracts/openapi.json",
+      "sha256": "706784f3e0cd77b24251bb206f27844192fec641d32c7e8b7ac925810fc42156",
+      "size_bytes": 7065,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/contracts/events.json",
+      "sha256": "e719a48bfd0d07399db959509f18b8ab5a64bf4bcee1aba838983e7b4204acd1",
+      "size_bytes": 3611,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/infrastructure/gateway-routes.json",
+      "sha256": "e4eafe0024b90ec1cf6cf62bc8ae82b29d7c840ba7e5a2f42ae66acf8a7b5626",
+      "size_bytes": 2018,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/infrastructure/secret-template.yaml",
+      "sha256": "ec84718fa350c4a41ec21f19148ac3d3486d6a94da2bbfc830bf889a4c2b6f45",
+      "size_bytes": 229,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/migration/migration-guide.json",
+      "sha256": "e0aadba7a25538c768a19170d5e2ae7462745f515dedae3d8a2e9947d585aecd",
+      "size_bytes": 3353,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/reports/cost-performance-report.json",
+      "sha256": "c4ec08884fb03403f83eea036d2aaf7b3f45e58c212491918657d3f3c00bd366",
+      "size_bytes": 389,
+      "content_type": "application/json"
+    }
+  ],
+  "input_provenance": {
+    "service_count": 12,
+    "roadmap_stage_count": 5
+  },
+  "warnings": [
+    "Generated artifacts contain draft templates and secret placeholders.",
+    "Mandatory engineering, security, and platform review is required prior to deployment."
+  ],
+  "validation_results": {
+    "openapi_valid": true,
+    "k8s_schema_valid": true,
+    "no_credentials_detected": true
+  }
+}

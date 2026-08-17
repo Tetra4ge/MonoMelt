@@ -1,0 +1,76 @@
+{
+  "routes": [
+    {
+      "path_prefix": "/api/v1/service_1",
+      "target_service": "http://service_1:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_2",
+      "target_service": "http://service_2:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_4",
+      "target_service": "http://service_4:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_5",
+      "target_service": "http://service_5:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_7",
+      "target_service": "http://service_7:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_8",
+      "target_service": "http://service_8:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_10",
+      "target_service": "http://service_10:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_11",
+      "target_service": "http://service_11:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_12",
+      "target_service": "http://service_12:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_9",
+      "target_service": "http://service_9:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_3",
+      "target_service": "http://service_3:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/service_6",
+      "target_service": "http://service_6:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    }
+  ]
+}
