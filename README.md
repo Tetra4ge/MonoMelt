@@ -68,41 +68,7 @@ graph TD
 
 ## 🔄 Backend Data Flow
 
-```mermaid
-graph TD
-    %% Define Styles
-    classDef ingest fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
-    classDef userReq fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
-    classDef process fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
-    classDef storage fill:#ff5722,stroke:#e64a19,stroke-width:2px,color:#fff
-    classDef decision fill:#00BCD4,stroke:#0097A7,stroke-width:2px,color:#fff
-    
-    Upload((User Uploads Monolith)):::ingest
-    Gateway[API Gateway & Auth]:::userReq
-    Worker[Worker Extracts AST & Hashes]:::ingest
-    StoreGraph[(Map to Neo4j & Postgres)]:::storage
-    
-    Upload --> Gateway
-    Gateway --> Worker
-    Worker --> StoreGraph
-    
-    Analyze[AI Analyzes Code Dependencies]:::process
-    StoreGraph --> Analyze
-    
-    Prompt[Prompt LLMs via OpenRouter]:::process
-    Analyze --> Prompt
-    
-    Check{Is Split Strategy Optimal?}:::decision
-    Prompt --> Check
-    
-    Check -->|No - High Coupling Detected| Analyze
-    
-    Generate[Generate Terraform & Microservices]:::process
-    Check -->|Yes - Domain Aligned| Generate
-    
-    Download((User Downloads Blueprint)):::userReq
-    Generate --> Download
-```
+![Backend Data Flow](Images/MonoMelt%20Backend.png)
 
 ---
 
