@@ -147,3 +147,17 @@ class HealthResponse(BaseModel):
     status: str
     neo4j: str
     timestamp: datetime
+
+# ---------------------------------------------------------------------------
+# Report Generation (Phase 3)
+# ---------------------------------------------------------------------------
+
+class ReportGenerateRequest(BaseModel):
+    project_id: str
+    owner_id: str
+
+class ReportGenerateResponse(BaseModel):
+    success: bool
+    message: str
+    status: str
+    project_id: str
