@@ -13,6 +13,7 @@ from api.routes.intelligence import router as intelligence_router
 from api.routes.decomposition import router as decomposition_router
 from api.routes.planning import router as planning_router
 from api.routes.blueprints import router as blueprints_router
+from api.routes.reports import router as reports_router
 from db.neo4j_client import get_driver, close_driver, verify_connectivity
 
 
@@ -49,6 +50,7 @@ app.include_router(intelligence_router)
 app.include_router(decomposition_router, prefix="/decomposition", tags=["Decomposition"])
 app.include_router(planning_router)
 app.include_router(blueprints_router)
+app.include_router(reports_router, prefix="/api")
 
 
 @app.get("/health", tags=["Health"])
