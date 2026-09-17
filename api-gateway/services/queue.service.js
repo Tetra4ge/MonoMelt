@@ -7,6 +7,9 @@ const connection = {
 // Queue for ingestion tasks
 const ingestionQueue = new Queue('ingestion', { connection });
 
+// Queue for report generation tasks
+const reportQueue = new Queue('report-generation', { connection });
+
 /**
  * Enqueue a new ingestion job
  * @param {Object} data Job payload
@@ -27,7 +30,26 @@ const enqueueIngestionJob = async (data) => {
   return job;
 };
 
+/**
+ * Enqueue a new report generation job
+ * @param {Object} data Job payload containing projectId and ownerId
+ * @returns {Promise<import('bullmq').Job>}
+ */
+const enqueueReportJob = async (data) => {
+  return await reportQueue.add('generate-report', data, {
+    removeOnComplete: true,
+    removeOnFail: false,
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000
+    }
+  });
+};
+
 module.exports = {
   ingestionQueue,
-  enqueueIngestionJob
+  enqueueIngestionJob,
+  reportQueue,
+  enqueueReportJob
 };

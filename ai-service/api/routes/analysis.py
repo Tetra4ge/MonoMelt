@@ -291,7 +291,7 @@ async def trigger_analysis(
         logger.exception("Unable to queue analysis for source_version=%s", svid)
         raise HTTPException(
             status_code=503,
-            detail="Analysis database is unavailable or migrations 01-03 have not been applied",
+            detail=f"Analysis database error: {str(exc)}",
         ) from exc
     
     if not result or 'id' not in result:

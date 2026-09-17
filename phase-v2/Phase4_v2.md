@@ -17,8 +17,8 @@ This document serves as the comprehensive, 150+ line technical specification for
 ### 2.1 Decoupled Microservice Communication
 The `worker` service (Node.js) must communicate with the `ai-service` (Python/FastAPI) over the internal Docker network. It is crucial that the worker does not wait synchronously for the Python service to finish generation. Because we implemented `BackgroundTasks` in Phase 3, the Python service will return a 202 Accepted instantly. The Node.js worker can then safely mark its BullMQ job as `completed` without blocking the main event loop.
 
-### 2.2 Polling vs WebSockets
-To deliver the finalized report to the frontend, we must choose between WebSockets and HTTP Polling. Given the strict time constraints of a hackathon and the fact that report generation takes ~15 seconds, setting up a robust WebSocket connection is architectural overkill. Instead, Phase 4 will implement a simple, stateless HTTP `GET` route in the API Gateway. The React app (Phase 5) will be instructed to poll this route every 3 seconds until the status reads `completed`.
+### 2.2 Real-Time Delivery via WebSockets
+Because this is a full semester project rather than a hackathon prototype, we will implement a robust, real-time WebSocket connection. The API Gateway will utilize `socket.io` and a Redis Pub/Sub subscriber. When the Python AI Service finishes generation, it will publish an event to Redis. The API Gateway will instantly broadcast this to the specific React client, entirely eliminating the need for HTTP polling.
 
 ---
 
@@ -98,94 +98,75 @@ await reportQueue.add('generate-report', {
 
 ---
 
-## 4. API Gateway Routes (`api-gateway`)
+## 4. API Gateway Real-Time Sync (`api-gateway`)
 
-Once the Python backend generates the report and saves it to Supabase (Phase 1/3), the API Gateway must expose it to the React frontend.
+Once the Python backend generates the report and saves it to Supabase (Phase 1/3), the API Gateway must notify the React frontend via WebSockets.
 
-### 4.1 Route Definition (`routes/reports.routes.js`)
+### 4.1 Redis Pub/Sub & Socket.io Setup (`socket.js`)
+
+We will instantiate a Socket.io server and a Redis Subscriber in the API Gateway.
+
+```javascript
+import { Server } from 'socket.io';
+import Redis from 'ioredis';
+
+const redisSubscriber = new Redis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT
+});
+
+export const initializeSockets = (httpServer) => {
+    const io = new Server(httpServer, {
+        cors: { origin: process.env.FRONTEND_URL }
+    });
+
+    // Handle Frontend Connections
+    io.on('connection', (socket) => {
+        // Client joins a room specific to their project ID
+        socket.on('join_project', (projectId) => {
+            socket.join(projectId);
+            console.log(`Client joined project room: ${projectId}`);
+        });
+    });
+
+    // Listen for Python AI Service broadcasts
+    redisSubscriber.subscribe('report-updates');
+    redisSubscriber.on('message', (channel, message) => {
+        if (channel === 'report-updates') {
+            const data = JSON.parse(message);
+            // Broadcast exclusively to clients viewing this project
+            io.to(data.project_id).emit('report_completed', data);
+        }
+    });
+};
+```
+
+### 4.2 Initial Fetch Route (`routes/reports.routes.js`)
+We still need a standard HTTP route for the frontend's initial page load (before the socket event fires).
 
 ```javascript
 import express from 'express';
-import { getLatestReport, getReportHistory } from '../controllers/reports.controller.js';
+import { supabase } from '../config/supabase.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
-
-// Both routes require standard JWT authentication
 router.use(requireAuth);
 
-// Fetch the most recent report (used for polling and main dashboard)
-router.get('/:projectId', getLatestReport);
-
-// Fetch all historical versions (used for the dropdown UI)
-router.get('/:projectId/history', getReportHistory);
+router.get('/:projectId', async (req, res) => {
+    const { data, error } = await supabase
+        .from('project_reports')
+        .select('*')
+        .eq('project_id', req.params.projectId)
+        .eq('owner_id', req.user.id)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .single();
+        
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ success: false });
+    return res.status(200).json({ success: true, data: data || null });
+});
 
 export default router;
-```
-
-### 4.2 Controller Logic (`controllers/reports.controller.js`)
-
-```javascript
-import { supabase } from '../config/supabase.js';
-
-export const getLatestReport = async (req, res) => {
-    try {
-        const { projectId } = req.params;
-        const userId = req.user.id; // From requireAuth middleware
-
-        // Query the schema defined in Phase 1
-        const { data, error } = await supabase
-            .from('project_reports')
-            .select('*')
-            .eq('project_id', projectId)
-            .eq('owner_id', userId) // Security enforcement
-            .order('version_number', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (error) {
-            // Supabase returns PGRST116 if no rows are found
-            if (error.code === 'PGRST116') {
-                return res.status(404).json({ success: false, message: 'No report found.' });
-            }
-            throw error;
-        }
-
-        return res.status(200).json({
-            success: true,
-            data: data
-        });
-
-    } catch (err) {
-        console.error('[API Gateway] getLatestReport Error:', err);
-        return res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
-
-export const getReportHistory = async (req, res) => {
-    try {
-        const { projectId } = req.params;
-        const userId = req.user.id;
-
-        // Fetch just the metadata for the history dropdown, omitting the heavy payload
-        const { data, error } = await supabase
-            .from('project_reports')
-            .select('id, version_number, status, created_at, notion_url')
-            .eq('project_id', projectId)
-            .eq('owner_id', userId)
-            .order('version_number', { ascending: false });
-
-        if (error) throw error;
-
-        return res.status(200).json({
-            success: true,
-            data: data
-        });
-
-    } catch (err) {
-        return res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
 ```
 
 ---
@@ -207,4 +188,4 @@ With Phase 4 complete, the backend is now 100% finished.
 2. FastAPI processes the data and saves it to Postgres.
 3. Express serves the finalized JSON securely to authenticated users.
 
-In **Phase 5**, we shift entirely to the Frontend. We will construct `ReportPage.tsx`, utilizing React Query to poll the newly created `GET /api/reports/:projectId` route, and we will build the dynamic Tailwind/Recharts user interface to render the complex nested JSON payload visually.
+In **Phase 5**, we shift entirely to the Frontend. We will construct `ReportPage.tsx`, utilizing `socket.io-client` to listen for the real-time `report_completed` event emitted by the Gateway, and we will build the dynamic Tailwind/Recharts user interface to render the complex nested JSON payload visually.
