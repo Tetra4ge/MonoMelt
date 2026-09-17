@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
+const { enqueueReportJob } = require('../services/queue.service');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -130,6 +131,10 @@ const createBlueprint = async (req, res) => {
     if (insertErr) {
       throw insertErr;
     }
+
+    // 6. Trigger final report generation since blueprint is the last agent
+    await enqueueReportJob({ projectId: projectId, ownerId: req.user.id })
+      .catch(err => console.error('Failed to trigger report generation:', err.message));
 
     return res.status(200).json({
       success: true,

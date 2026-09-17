@@ -1,4 +1,4 @@
-const { Worker } = require('bullmq');
+const { Worker, Queue } = require('bullmq');
 const IORedis = require('ioredis');
 const { createClient } = require('@supabase/supabase-js');
 const AdmZip = require('adm-zip');
@@ -9,6 +9,8 @@ require('dotenv').config();
 
 const redisConnection = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
 
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+const reportQueue = new Queue('report-generation', { connection: redisConnection });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const MAX_FILES = Number(process.env.MAX_SOURCE_FILES || 10_000);
 const MAX_EXTRACTED_BYTES = Number(process.env.MAX_EXTRACTED_BYTES || 200 * 1024 * 1024);
@@ -178,9 +180,56 @@ const worker = new Worker('ingestion', async job => {
 worker.on('completed', job => {
   console.log(`Job ${job.id} has completed!`);
 });
-
 worker.on('failed', (job, err) => {
   console.log(`Job ${job.id} has failed with ${err.message}`);
 });
-
 console.log('Worker is listening for jobs on "ingestion" queue...');
+
+// worker to trigger report generation
+const reportWorker = new Worker('report-generation', async (job) => {
+  const { projectId, ownerId } = job.data;
+  
+  try {
+    console.log(`[Worker] Triggering Report Generation for Project: ${projectId}`);
+    
+    // Trigger Phase 3 FastAPI Endpoint
+    const response = await axios.post(`${AI_SERVICE_URL}/api/reports/generate`, {
+      project_id: projectId,
+      owner_id: ownerId
+    });
+    
+    // Because Phase 3 returns a 202 instantly via BackgroundTasks,
+    // this log will appear almost immediately.
+    console.log(`[Worker] FastAPI Acknowledged: ${response.data.message}`);
+    
+    return { success: true, message: "Report generation handed off to AI service." };
+    
+  } catch (error) {
+    console.error(`[Worker] Failed to trigger report generation:`, error.message);
+    // Throwing an error forces BullMQ to retry the job based on backoff settings
+    throw new Error('Failed to connect to AI Service');
+  }
+}, { 
+    connection: redisConnection,
+    concurrency: 5 // Allow multiple reports to trigger simultaneously
+});
+reportWorker.on('failed', (job, err) => {
+  console.error(`[BullMQ] Job ${job.id} failed: ${err.message}`);
+});
+console.log('Worker is listening for jobs on "report-generation" queue...');
+
+// 3.3 The Trigger Hook
+// Call this function at the end of your Decomposition/Planning pipeline
+const triggerReportGeneration = async (projectId, ownerId) => {
+  await reportQueue.add('generate-report', {
+    projectId: projectId,
+    ownerId: ownerId
+  }, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 }
+  });
+};
+
+module.exports = {
+  triggerReportGeneration
+};
