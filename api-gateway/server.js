@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
@@ -88,7 +89,12 @@ app.get('/health', (req, res) => {
 // Global Error Handler
 app.use(errorHandler);
 
+// Create HTTP Server and Initialize WebSockets
+const server = http.createServer(app);
+const { initializeSockets } = require('./socket');
+initializeSockets(server);
+
 // Start Server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 API Gateway is running on http://localhost:${PORT}`);
 });
