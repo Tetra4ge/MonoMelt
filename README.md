@@ -270,4 +270,9 @@ OPENROUTER_API_KEY=sk-or-v1-...
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-```
+---
+
+<div align="center">
+  <br/>
+  <b>Built by Team <a href="https://github.com/Tetra4ge">TetraFourge</a></b>
+</div>
