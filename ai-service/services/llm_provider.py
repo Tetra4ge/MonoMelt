@@ -97,3 +97,35 @@ async def extract_structured_data(prompt: str, response_schema: type[BaseModel],
         return response_schema(**data)
     except Exception as e:
         raise RuntimeError(f"Failed to parse LLM JSON response against schema: {e}\nRaw Content: {content}")
+
+class ContentResponse:
+    def __init__(self, text: str):
+        self.text = text
+
+async def generate_content(prompt: str, model="google/gemini-2.5-flash") -> ContentResponse:
+    """
+    Calls the LLM via OpenRouter for standard text generation.
+    Returns an object with a .text attribute.
+    """
+    try:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return ContentResponse(response.choices[0].message.content)
+    except Exception as e:
+        logger.warning(f"OpenRouter text generation failed: {e}. Attempting direct Gemini fallback...")
+        gemini_model_name = "gemini-2.5-flash" if "gemini-2.5-flash" in model else "gemini-1.5-pro"
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", "dummy"))
+        gemini_model = genai.GenerativeModel(model_name=gemini_model_name)
+        try:
+            response = await gemini_model.generate_content_async(prompt)
+            return ContentResponse(response.text)
+        except AttributeError:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, 
+                lambda: gemini_model.generate_content(prompt)
+            )
+            return ContentResponse(response.text)

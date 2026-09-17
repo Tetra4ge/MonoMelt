@@ -2,8 +2,10 @@ import asyncio
 from supabase import create_client, Client
 import neo4j
 from neo4j import AsyncGraphDatabase
-from core.config import settings
+from core.config import get_settings
 from services.llm_provider import generate_content
+
+settings = get_settings()
 from models.reports import ExecutiveSummary, DecompositionService, CostAnalysis, RiskAssessment, FinalReport
 
 class ReportAgent:
@@ -11,8 +13,8 @@ class ReportAgent:
         self.project_id = project_id
         self.supabase = supabase_client
         self.neo4j_driver = AsyncGraphDatabase.driver(
-            settings.NEO4J_URI, 
-            auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
+            settings.neo4j_uri, 
+            auth=(settings.neo4j_username, settings.neo4j_password)
         )
 
     async def _fetch_postgres_context(self) -> dict:
