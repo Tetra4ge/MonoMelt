@@ -104,7 +104,43 @@ Provides a stunning, highly-interactive "Live Terminal" UI to simulate a complet
 
 ---
 
-## 🚀 Local Setup & Installation
+## The 6 Intelligence Agents
+
+MonoMELT’s core processing pipeline is driven by a symphony of specialized AI agents, each handling a distinct phase of the complex monolithic transformation process. 
+
+### 1. Analysis Agent
+**Source Code Ingestion & Graph Construction (`ast_parser.py` & `graph_builder.py`)**
+The pipeline begins by deeply analyzing the legacy monolith without executing it. The Analysis Agent parses raw source files (Python, JavaScript, TypeScript) and generates a normalized Abstract Syntax Tree (AST). It extracts symbols, internal references, external package imports, and function calls. It then hands this structured data over to a Graph Builder, which constructs a highly connected, tenant-isolated dependency graph in **Neo4j**. This results in a mathematical model of exactly how every file and class in the monolith relies on one another.
+
+### 2. Intelligence Agent
+**Code Smell & Domain Extraction (`enrichment.py`)**
+With the graph constructed, the Intelligence Agent performs deep LLM-driven analysis across the codebase. It doesn't just look at syntax; it infers bounded contexts and domain boundaries. It identifies severe anti-patterns (like God Classes or circular dependencies), flags high-risk security vulnerabilities, and highlights hidden coupling that would normally cause microservices to fail in production. This agent annotates the Neo4j graph with these intelligence findings.
+
+### 3. Decomposition Agent
+**Algorithmic Boundary Detection (`decomposition_engine.py`)**
+This agent is responsible for the actual "splitting" of the monolith. Instead of guessing, it applies rigorous graph theory algorithms (such as the Louvain method for community detection) to mathematically divide the Neo4j graph into optimal microservice clusters. It generates multiple distinct scenarios for the user to choose from—such as an "Aggressive Split" for maximum scalability or a "Conservative Split" to minimize initial migration friction ensuring the resulting microservices have high cohesion and low coupling.
+
+### 4. Planning Agent
+**Strategic Migration & Cost Projections (`planning_engine.py`)**
+Before a single line of code is moved, the Planning Agent calculates the business and operational impact of the transformation. It simulates the monthly cloud infrastructure costs of the new microservices, maps the new architecture to engineering teams using Conway's Law (to minimize cross-team friction), and generates a phased, step-by-step migration roadmap to ensure zero downtime during the transition.
+
+### 5. Blueprint Generator Agent
+**Infrastructure-as-Code Execution (`blueprint_generator.py`)**
+Once a strategy is approved, the Blueprint Agent acts as the final execution engine. It deterministically translates the abstract microservice design into a ready-to-deploy `.zip` package. This bundle includes boilerplate FastAPI/Express server code, Kubernetes manifests, `docker-compose` networks, Terraform scripts for AWS provisioning, and formally documented Architecture Decision Records (ADRs).
+
+### 6. Report Generator Agent
+**Executive Summarization (`report_generator.py`)**
+The final agent aggregates the output of all the previous phases and translates the deep technical metrics into a human-readable, business-facing JSON report. It prompts the LLM to write an executive summary justifying the cost multipliers and architectural shifts, which is then fed directly to the React frontend dashboard in real-time via WebSockets.
+
+---
+
+## Agent Data Flow
+
+![Agent Flow](Images/agent_flow.png)
+
+---
+
+## Local Setup & Installation
 
 ### Prerequisites
 - **Node.js** (v18+)
