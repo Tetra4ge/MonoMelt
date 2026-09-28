@@ -276,3 +276,30 @@ GEMINI_API_KEY=your_gemini_api_key
   <br/>
   <b>Built by Team <a href="https://github.com/Tetra4ge">TetraFourge</a></b>
 </div>
+
+## Team TetraFourge
+
+<table align="center">
+  <tr>
+    <td align="center" width="25%">
+      <a href="https://github.com/prajwal-priyadarshan"><img src="https://github.com/prajwal-priyadarshan.png?size=200" width="100" alt="Prajwal-priyadarshan"></a><br>
+      <b>G Prajwal Priyadarshan</b><br>
+      <a href="https://github.com/prajwal-priyadarshan">@prajwal-priyadarshan</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/KKabilan07"><img src="https://github.com/KKabilan07.png?size=200" width="100" alt="K Kabilan"></a><br>
+      <b>Kabilan K</b><br>
+      <a href="https://github.com/KKabilan07">@KKabilan07</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/KishoreB25"><img src="https://github.com/KishoreB25.png?size=200" width="100" alt="Kishore B"></a><br>
+      <b>Kishore B</b><br>
+      <a href="https://github.com/KishoreB25">@KishoreB25</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/Rahul-8283"><img src="https://github.com/Rahul-8283.png?size=200" width="100" alt="Baranidharan S"></a><br>
+      <b>Rahul L S</b><br>
+      <a href="https://github.com/Rahul-8283">@Rahul-8283</a>
+    </td>
+  </tr>
+</table>
