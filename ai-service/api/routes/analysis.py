@@ -40,7 +40,7 @@ from services.import_resolver import resolve_imports
 from services.graph_builder import build_graph, delete_graph
 from services.metrics_calculator import compute_local_metrics, compute_graph_metrics
 from db.neo4j_client import run_query, verify_connectivity
-from db.pg_client import fetch, fetchrow, execute
+from db.pg_client import fetch, fetchrow, execute, execute_many
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
@@ -48,6 +48,91 @@ router = APIRouter(prefix="/analysis", tags=["Analysis"])
 # ---------------------------------------------------------------------------
 # Background analysis pipeline
 # ---------------------------------------------------------------------------
+
+GRAPH_LANGUAGES = ("python", "javascript", "typescript")
+SOURCE_EXTENSIONS = (".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php")
+DOWNLOAD_WORKERS = 8
+
+
+def _load_source_files(supabase, project_id: str, source_version_id: str) -> list[dict]:
+    """Blocking: read the file manifest and download every source file (parallel)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    response = supabase.table("source_files") \
+        .select("file_path, language, content_hash") \
+        .eq("source_version_id", source_version_id) \
+        .eq("status", "included") \
+        .execute()
+    manifest = response.data or []
+
+    if not manifest:
+        return _load_sources_from_zip(supabase, project_id)
+
+    def download(file_info: dict) -> Optional[dict]:
+        file_path = file_info["file_path"]
+        if os.path.splitext(file_path)[1].lower() not in SOURCE_EXTENSIONS:
+            return None
+        storage_path = f"projects/{project_id}/{source_version_id}/files/{file_path}"
+        try:
+            data = supabase.storage.from_("openai").download(storage_path)
+            return {"file_path": file_path, "source": data.decode("utf-8", errors="replace") if data else ""}
+        except Exception as exc:
+            logger.warning("Could not download %s: %s", storage_path, exc)
+            return None
+
+    with ThreadPoolExecutor(max_workers=DOWNLOAD_WORKERS) as pool:
+        return [f for f in pool.map(download, manifest) if f is not None]
+
+
+def _load_sources_from_zip(supabase, project_id: str) -> list[dict]:
+    """Fallback when the manifest is empty: read source straight from the stored ZIP archive(s)."""
+    import io
+    import zipfile
+
+    logger.info("Manifest empty, searching Supabase storage for project %s ZIP archives", project_id)
+    files: list[dict] = []
+    try:
+        zip_paths = []
+        for item in supabase.storage.from_("openai").list(f"projects/{project_id}") or []:
+            item_name = item.get("name", "")
+            if item_name.endswith(".zip"):
+                zip_paths.append(f"projects/{project_id}/{item_name}")
+            elif item_name:
+                for sub in supabase.storage.from_("openai").list(f"projects/{project_id}/{item_name}") or []:
+                    if sub.get("name", "").endswith(".zip"):
+                        zip_paths.append(f"projects/{project_id}/{item_name}/{sub['name']}")
+
+        for zip_path in zip_paths:
+            zip_bytes = supabase.storage.from_("openai").download(zip_path)
+            if not zip_bytes:
+                continue
+            with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+                for name in archive.namelist():
+                    if os.path.splitext(name)[1].lower() in SOURCE_EXTENSIONS:
+                        files.append({"file_path": name, "source": archive.read(name).decode("utf-8", errors="replace")})
+    except Exception as exc:
+        logger.error("Failed to extract ZIP from storage for project %s: %s", project_id, exc)
+    return files
+
+
+async def _save_diagnostics(analysis_run_id: str, parsed) -> None:
+    """Persist parser warnings/errors so GET /analysis/{id}/diagnostics has data."""
+    rows = [
+        (analysis_run_id, pf.file_path, d.get("parser", "unknown"), d.get("severity", "warning"),
+         d.get("message", ""), d.get("line"), d.get("column"))
+        for pf in parsed
+        for d in pf.diagnostics
+    ]
+    if rows:
+        await execute_many(
+            """
+            INSERT INTO public.parser_diagnostics
+                (analysis_run_id, file_path, parser, severity, message, line_number, column_number)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            """,
+            rows,
+        )
+
 
 async def _run_analysis_pipeline(
     analysis_run_id: str,
@@ -80,77 +165,24 @@ async def _run_analysis_pipeline(
         # Update Supabase status to analyzing so frontend knows we started
         supabase.table("analysis_jobs").update({"status": "analyzing"}).eq("source_version_id", source_version_id).execute()
 
-        # 1. Get file manifest
-        response = supabase.table("source_files") \
-            .select("file_path, language, content_hash") \
-            .eq("source_version_id", source_version_id) \
-            .eq("status", "included") \
-            .execute()
-
-        manifest = response.data or []
-        logger.info("Analysis run %s: %d files in manifest", analysis_run_id, len(manifest))
-
-        # 2. Download file content from storage and attach to manifest
-        sv_resp = supabase.table("source_versions") \
-            .select("metadata") \
-            .eq("id", source_version_id) \
-            .single() \
-            .execute()
-
-        files_for_parsing = []
-        if manifest:
-            for file_info in manifest:
-                ext = os.path.splitext(file_info["file_path"])[1].lower()
-                if ext not in (".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php"):
-                    continue
-                storage_path = f"projects/{project_id}/{source_version_id}/files/{file_info['file_path']}"
-                try:
-                    dl = supabase.storage.from_("openai").download(storage_path)
-                    source = dl.decode("utf-8", errors="replace") if dl else ""
-                    files_for_parsing.append({
-                        "file_path": file_info["file_path"],
-                        "source": source,
-                    })
-                except Exception as exc:
-                    logger.warning("Could not download %s: %s", storage_path, exc)
-        else:
-            # Manifest empty — search Supabase storage bucket for project ZIP archive
-            import io, zipfile
-            logger.info("Manifest empty, searching Supabase storage for project %s ZIP archives", project_id)
-            try:
-                storage_items = supabase.storage.from_("openai").list(f"projects/{project_id}")
-                zip_paths = []
-                for item in storage_items or []:
-                    item_name = item.get("name", "")
-                    if item_name.endswith(".zip"):
-                        zip_paths.append(f"projects/{project_id}/{item_name}")
-                    elif "name" in item:
-                        sub_items = supabase.storage.from_("openai").list(f"projects/{project_id}/{item_name}")
-                        for sub in sub_items or []:
-                            sub_name = sub.get("name", "")
-                            if sub_name.endswith(".zip"):
-                                zip_paths.append(f"projects/{project_id}/{item_name}/{sub_name}")
-
-                for zip_path in zip_paths:
-                    logger.info("Downloading and extracting %s", zip_path)
-                    zip_bytes = supabase.storage.from_("openai").download(zip_path)
-                    if zip_bytes:
-                        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
-                            for name in z.namelist():
-                                ext = os.path.splitext(name)[1].lower()
-                                if ext in (".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".cs", ".c", ".cpp", ".h", ".rb", ".php"):
-                                    try:
-                                        content = z.read(name).decode("utf-8", errors="replace")
-                                        files_for_parsing.append({"file_path": name, "source": content})
-                                    except Exception as exc:
-                                        logger.warning("Failed reading zip item %s: %s", name, exc)
-            except Exception as exc:
-                logger.error("Failed to extract ZIP from storage for project %s: %s", project_id, exc)
+        # 1+2. Load the manifest and download file contents. These are blocking
+        # Supabase calls (thousands for a large repo), so keep them off the event loop.
+        files_for_parsing = await asyncio.to_thread(
+            _load_source_files, supabase, project_id, source_version_id
+        )
+        logger.info("Analysis run %s: %d source files downloaded", analysis_run_id, len(files_for_parsing))
 
         # 3. Parse
-        parsed = parse_files(files_for_parsing)
+        parsed = await asyncio.to_thread(parse_files, files_for_parsing)
         resolve_imports(parsed)  # link imports to uploaded files -> real File->File edges
         logger.info("Parsed %d files", len(parsed))
+
+        if not any(pf.language in GRAPH_LANGUAGES for pf in parsed):
+            raise ValueError(
+                "No supported source files found. MonoMelt currently analyses Python, JavaScript and TypeScript."
+            )
+
+        await _save_diagnostics(analysis_run_id, parsed)
 
         # 4. Build Neo4j graph (idempotent — delete first)
         await delete_graph(source_version_id, project_id, owner_id)
@@ -218,8 +250,8 @@ async def _run_analysis_pipeline(
                 "status": "failed",
                 "error_code": str(exc)
             }).eq("source_version_id", source_version_id).execute()
-        except:
-            pass
+        except Exception:
+            logger.exception("Could not mark analysis job %s as failed", source_version_id)
 
 
 # ---------------------------------------------------------------------------
