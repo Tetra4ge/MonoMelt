@@ -64,7 +64,7 @@ const generateReport = async (req, res) => {
         return res.status(202).json({ success: true, message: 'Report generation queued.' });
     } catch (error) {
         console.error('Queue Report Exception:', error.message);
-        return res.status(500).json({ success: false, message: 'Failed to queue report generation' });
+        return res.status(error.statusCode || 500).json({ success: false, message: error.statusCode ? error.message : 'Failed to queue report generation' });
     }
 };
 

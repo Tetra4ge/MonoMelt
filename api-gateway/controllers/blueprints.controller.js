@@ -163,8 +163,9 @@ const createBlueprint = async (req, res) => {
       throw insertErr;
     }
 
-    // 6. Trigger final report generation since blueprint is the last agent
-    await enqueueReportJob({ projectId: projectId, ownerId: req.user.id })
+    // 6. Trigger final report generation since blueprint is the last agent.
+    // Not awaited: the blueprint is already saved, and a queue outage must not delay or fail the response.
+    enqueueReportJob({ projectId: projectId, ownerId: req.user.id })
       .catch(err => console.error('Failed to trigger report generation:', err.message));
 
     return res.status(200).json({

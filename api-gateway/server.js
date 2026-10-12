@@ -7,12 +7,13 @@ const { v4: uuidv4 } = require('uuid');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
 const { errorHandler } = require('./middlewares/error.middleware');
-const { requireAuth } = require('./middlewares/auth.middleware');
-const { proxyToAiService } = require('./services/ai.service');
-const { requireProjectOwner } = require('./middlewares/project.middleware');
 
-// Load environment variables
+// Load environment variables (must run before any module that reads process.env at require time)
 dotenv.config();
+
+const { requireAuth } = require('./middlewares/auth.middleware');
+const { requireProjectOwner } = require('./middlewares/project.middleware');
+const { proxyToAiService } = require('./services/ai.service');
 
 // Validate Required Environment Variables
 const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_JWT_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL'];
