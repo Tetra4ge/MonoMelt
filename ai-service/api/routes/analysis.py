@@ -36,6 +36,7 @@ from models.schemas import (
     HealthResponse,
 )
 from services.ast_parser import parse_files
+from services.import_resolver import resolve_imports
 from services.graph_builder import build_graph, delete_graph
 from services.metrics_calculator import compute_local_metrics, compute_graph_metrics
 from db.neo4j_client import run_query, verify_connectivity
@@ -148,6 +149,7 @@ async def _run_analysis_pipeline(
 
         # 3. Parse
         parsed = parse_files(files_for_parsing)
+        resolve_imports(parsed)  # link imports to uploaded files -> real File->File edges
         logger.info("Parsed %d files", len(parsed))
 
         # 4. Build Neo4j graph (idempotent — delete first)

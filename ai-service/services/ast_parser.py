@@ -81,51 +81,29 @@ def _parse_python(file_path: str, source: str) -> ParsedFile:
             diagnostics=diagnostics,
         )
 
-    for node in ast.walk(tree):
-        # --- Symbols ---
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbols.append(ParsedSymbol(
-                name=node.name,
-                symbol_type="function",
-                start_line=node.lineno,
-                end_line=node.end_lineno or node.lineno,
-            ))
-        elif isinstance(node, ast.ClassDef):
-            symbols.append(ParsedSymbol(
-                name=node.name,
-                symbol_type="class",
-                start_line=node.lineno,
-                end_line=node.end_lineno or node.lineno,
-            ))
-            # Extract methods inside this class
-            for child in ast.walk(node):
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and child is not node:
-                    symbols.append(ParsedSymbol(
-                        name=child.name,
-                        symbol_type="method",
-                        start_line=child.lineno,
-                        end_line=child.end_lineno or child.lineno,
-                        parent=node.name,
-                    ))
+    _collect_python_symbols(tree, symbols, None)
 
+    for node in ast.walk(tree):
         # --- Imports ---
-        elif isinstance(node, ast.Import):
+        if isinstance(node, ast.Import):
             for alias in node.names:
                 imports.append(ParsedImport(
                     source_file=file_path,
                     target_module=alias.name,
-                    is_external=_is_external_python(alias.name),
+                    is_external=True,   # provisional; import_resolver decides
                     extraction_method=ExtractionMethod.STATIC,
                     line=node.lineno,
                 ))
         elif isinstance(node, ast.ImportFrom):
-            if node.module:
+            if node.module or node.level:
+                # Keep the relative level as leading dots (`from ..x import y` -> "..x")
                 imports.append(ParsedImport(
                     source_file=file_path,
-                    target_module=node.module,
-                    is_external=_is_external_python(node.module),
+                    target_module="." * node.level + (node.module or ""),
+                    is_external=node.level == 0,
                     extraction_method=ExtractionMethod.STATIC,
                     line=node.lineno,
+                    names=[a.name for a in node.names if a.name != "*"],
                 ))
 
     return ParsedFile(
@@ -139,24 +117,33 @@ def _parse_python(file_path: str, source: str) -> ParsedFile:
     )
 
 
-def _is_external_python(module: str) -> bool:
-    """Heuristic: relative imports (leading dot) or standard library are internal."""
-    if not module:
-        return False
-    first_part = module.split(".")[0]
-    # Standard library top-level names (non-exhaustive but covers common ones)
-    _stdlib = {
-        "os", "sys", "re", "json", "math", "io", "pathlib", "typing",
-        "collections", "functools", "itertools", "datetime", "time",
-        "logging", "unittest", "asyncio", "concurrent", "threading",
-        "subprocess", "socket", "http", "urllib", "email", "xml",
-        "csv", "hashlib", "hmac", "base64", "struct", "copy", "abc",
-        "dataclasses", "enum", "contextlib", "warnings", "traceback",
-        "inspect", "ast", "dis", "gc", "weakref", "platform", "shutil",
-        "tempfile", "glob", "fnmatch", "pickle", "shelve", "sqlite3",
-        "uuid", "random", "statistics", "decimal", "fractions", "array",
-    }
-    return first_part not in _stdlib
+def _collect_python_symbols(node: ast.AST, symbols: list[ParsedSymbol], parent_class: Optional[str]) -> None:
+    """
+    Walk the tree once, tagging each function as a method (directly inside a
+    class body) or a function. A plain ast.walk would report every method
+    twice - once as a function and once as a method.
+    """
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, ast.ClassDef):
+            symbols.append(ParsedSymbol(
+                name=child.name,
+                symbol_type="class",
+                start_line=child.lineno,
+                end_line=child.end_lineno or child.lineno,
+                parent=parent_class,
+            ))
+            _collect_python_symbols(child, symbols, child.name)
+        elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            symbols.append(ParsedSymbol(
+                name=child.name,
+                symbol_type="method" if parent_class else "function",
+                start_line=child.lineno,
+                end_line=child.end_lineno or child.lineno,
+                parent=parent_class,
+            ))
+            _collect_python_symbols(child, symbols, None)
+        else:
+            _collect_python_symbols(child, symbols, parent_class)
 
 
 # ---------------------------------------------------------------------------
@@ -164,13 +151,24 @@ def _is_external_python(module: str) -> bool:
 # ---------------------------------------------------------------------------
 
 # Match: import ... from 'mod'  |  import 'mod'
+# [^'";]*? lets the binding list span several lines (`import {\n a,\n b\n} from 'x'`).
 _JS_IMPORT_RE = re.compile(
-    r"""import\s+(?:.*?\s+from\s+)?['"]([@\w./\-]+)['"]""",
+    r"""(?:^|[\s;])import\s+(?:[^'";]*?\s+from\s+)?['"]([^'"\n]+)['"]""",
+    re.MULTILINE,
+)
+# Match: export * from 'mod' | export { a } from 'mod'
+_JS_EXPORT_FROM_RE = re.compile(
+    r"""export\s+(?:type\s+)?(?:\*(?:\s+as\s+\w+)?|\{[^}]*\})\s+from\s+['"]([^'"\n]+)['"]""",
+    re.MULTILINE,
+)
+# Match: import('mod')
+_JS_DYNAMIC_IMPORT_RE = re.compile(
+    r"""\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)""",
     re.MULTILINE,
 )
 # Match: require('mod')
 _JS_REQUIRE_RE = re.compile(
-    r"""require\s*\(\s*['"]([@\w./\-]+)['"]\s*\)""",
+    r"""require\s*\(\s*['"]([^'"\n]+)['"]\s*\)""",
     re.MULTILINE,
 )
 # Match: export default function name | export function name | export class name
@@ -220,15 +218,26 @@ def _parse_js_ts(file_path: str, source: str, language: str) -> ParsedFile:
             line=_line_of(m.start()),
         ))
 
-    for m in _JS_REQUIRE_RE.finditer(source):
+    for m in _JS_EXPORT_FROM_RE.finditer(source):
         mod = m.group(1)
         imports.append(ParsedImport(
             source_file=file_path,
             target_module=mod,
             is_external=not (mod.startswith(".") or mod.startswith("/")),
-            extraction_method=ExtractionMethod.INFERRED,
+            extraction_method=ExtractionMethod.STATIC,
             line=_line_of(m.start()),
         ))
+
+    for pattern in (_JS_REQUIRE_RE, _JS_DYNAMIC_IMPORT_RE):
+        for m in pattern.finditer(source):
+            mod = m.group(1)
+            imports.append(ParsedImport(
+                source_file=file_path,
+                target_module=mod,
+                is_external=not (mod.startswith(".") or mod.startswith("/")),
+                extraction_method=ExtractionMethod.INFERRED,
+                line=_line_of(m.start()),
+            ))
 
     # --- Symbols: classes ---
     seen_names: set[str] = set()
