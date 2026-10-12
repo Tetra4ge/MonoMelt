@@ -11,6 +11,28 @@ const getSupabaseClient = (req) => {
   });
 };
 
+/** Confirms a scenario revision belongs to this project (it is looked up by id alone otherwise). */
+async function scenarioRevisionInProject(supabase, projectId, revisionId) {
+  const { data } = await supabase
+    .from('scenario_revisions')
+    .select('id, decomposition_scenarios!inner(project_id)')
+    .eq('id', revisionId)
+    .eq('decomposition_scenarios.project_id', projectId)
+    .maybeSingle();
+  return !!data;
+}
+
+/** Same check for plan revisions, via their migration plan. */
+async function planRevisionInProject(supabase, projectId, revisionId) {
+  const { data } = await supabase
+    .from('plan_revisions')
+    .select('id, migration_plans!inner(project_id)')
+    .eq('id', revisionId)
+    .eq('migration_plans.project_id', projectId)
+    .maybeSingle();
+  return !!data;
+}
+
 /**
  * POST /api/projects/:projectId/blueprints
  * Generates a versioned blueprint export package
@@ -52,6 +74,11 @@ const createBlueprint = async (req, res) => {
 
     const supabase = getSupabaseClient(req);
 
+    if (!(await scenarioRevisionInProject(supabase, projectId, scenarioRevisionId)) ||
+        !(await planRevisionInProject(supabase, projectId, planRevisionId))) {
+      return res.status(404).json({ success: false, message: 'Scenario or plan revision not found for this project.' });
+    }
+
     // 1. Fetch scenario revision
     const { data: scenario, error: scenarioErr } = await supabase
       .from('scenario_revisions')
@@ -79,6 +106,9 @@ const createBlueprint = async (req, res) => {
       .select('*')
       .eq('revision_id', scenarioRevisionId);
     if (servicesErr) throw servicesErr;
+    if (!proposedServices || proposedServices.length === 0) {
+      return res.status(409).json({ success: false, message: 'The scenario has no proposed services to generate a blueprint for.' });
+    }
 
     // 3. Count existing blueprints for version numbering
     const { data: existingBlueprints } = await supabase
@@ -148,7 +178,7 @@ const createBlueprint = async (req, res) => {
 
   } catch (error) {
     console.error('Create Blueprint Error:', error.message);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to generate blueprint'
     });
@@ -238,6 +268,10 @@ const downloadBlueprint = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Blueprint not found' });
     }
 
+    if (!blueprint.scenario_revision_id || !blueprint.plan_revision_id) {
+      return res.status(410).json({ success: false, message: 'The scenario or plan this blueprint was built from no longer exists.' });
+    }
+
     // Fetch scenario & plan to regenerate zip stream if not stored as raw file
     const [scenarioRes, planRes, servicesRes] = await Promise.all([
       supabase.from('scenario_revisions').select('*').eq('id', blueprint.scenario_revision_id).single(),
@@ -271,7 +305,7 @@ const downloadBlueprint = async (req, res) => {
 
   } catch (error) {
     console.error('Download Blueprint Error:', error.message);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to download blueprint package'
     });
