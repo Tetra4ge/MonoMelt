@@ -9,6 +9,7 @@ interface Node {
   language?: string;
   properties?: {
     loc?: number;
+    symbol_type?: string | null;
   };
 }
 
@@ -72,9 +73,14 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
   }, []);
 
   const graphData = useMemo(() => {
+    // react-force-graph throws if a link references a node it does not have, so
+    // drop any edge whose endpoint is outside the loaded page.
+    const ids = new Set(nodes.map(n => n.id));
     return {
       nodes: nodes.map(n => ({ ...n, id: n.id })),
-      links: edges.map(e => ({ source: e.source_id, target: e.target_id, label: e.relationship }))
+      links: edges
+        .filter(e => ids.has(e.source_id) && ids.has(e.target_id))
+        .map(e => ({ source: e.source_id, target: e.target_id, label: e.relationship }))
     };
   }, [nodes, edges]);
 
@@ -84,7 +90,7 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
     if (proposedServices) {
       proposedServices.forEach((service, index) => {
         const color = SERVICE_COLORS[index % SERVICE_COLORS.length];
-        service.assigned_nodes.forEach(nodeId => {
+        (service.assigned_nodes ?? []).forEach(nodeId => {
           map.set(nodeId, color);
         });
       });
@@ -100,11 +106,15 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
       return '#333333'; // Unassigned or orphaned nodes
     }
 
-    // Default syntax coloring
+    // Default syntax coloring (symbols are tagged with their symbol_type by the API)
     if (node.label === 'File') return '#3b82f6';
-    if (node.label === 'Class') return '#22c55e';
-    if (node.label === 'Symbol' && node.properties?.symbol_type === 'function') return '#ef4444';
-    if (node.label === 'Symbol') return '#eab308';
+    if (node.label === 'ExternalDependency') return '#6b7280';
+    if (node.label === 'Symbol') {
+      const type = node.properties?.symbol_type;
+      if (type === 'class') return '#22c55e';
+      if (type === 'function' || type === 'method') return '#ef4444';
+      return '#eab308';
+    }
     return '#888888';
   };
 
@@ -134,7 +144,8 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
           <>
             <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#3b82f6]"></div> Files</div>
             <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#22c55e]"></div> Classes</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#ef4444]"></div> Functions</div>
+            <div className="flex items-center gap-2 mb-1"><div className="w-3 h-3 bg-[#ef4444]"></div> Functions / methods</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#6b7280]"></div> External packages</div>
           </>
         )}
       </div>
