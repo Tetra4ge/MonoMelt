@@ -8,6 +8,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
 const { errorHandler } = require('./middlewares/error.middleware');
 const { requireAuth } = require('./middlewares/auth.middleware');
+const { proxyToAiService } = require('./services/ai.service');
 const { requireProjectOwner } = require('./middlewares/project.middleware');
 
 // Load environment variables
@@ -81,11 +82,23 @@ app.use('/api/projects/:projectId', require('./routes/planning.routes'));
  *       200:
  *         description: Gateway is up and running.
  */
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Report the real state of the AI service and its Neo4j connection.
+  let aiService = 'down';
+  let neo4j = 'unknown';
+  try {
+    const ai = await proxyToAiService('GET', '/health', null, {}, { timeout: 3000 });
+    aiService = 'up';
+    neo4j = ai.neo4j === 'connected' ? 'connected' : 'unavailable';
+  } catch (err) {
+    aiService = 'down';
+  }
+
   res.status(200).json({
     success: true,
     service: 'api-gateway',
     status: 'up',
+    services: { 'ai-service': aiService, neo4j },
     timestamp: new Date().toISOString()
   });
 });

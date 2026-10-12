@@ -13,11 +13,23 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [health, setHealth] = useState<{ gateway: string; ai: string; neo4j: string }>({ gateway: 'checking', ai: 'checking', neo4j: 'checking' });
 
   const handleSignOut = async () => {
     navigate('/');
     await signOut();
   };
+
+  useEffect(() => {
+    // Real service status from the gateway's aggregated /health.
+    api.get('/health')
+      .then(res => setHealth({
+        gateway: 'up',
+        ai: res.data.services?.['ai-service'] ?? 'down',
+        neo4j: res.data.services?.neo4j ?? 'unknown',
+      }))
+      .catch(() => setHealth({ gateway: 'down', ai: 'unknown', neo4j: 'unknown' }));
+  }, []);
 
   useEffect(() => {
     const fetchRecentProjects = async () => {
@@ -193,18 +205,22 @@ const Dashboard: React.FC = () => {
                 <h3 className="font-bold text-sm tracking-wide">SYSTEM_STATUS</h3>
               </div>
               <div className="space-y-4 font-mono text-xs">
-                <div className="flex justify-between items-center border-b border-[#222] pb-2">
-                  <span className="text-gray-500">api-gateway</span>
-                  <span className="text-emerald-500 font-bold">ONLINE</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-[#222] pb-2">
-                  <span className="text-gray-500">ai-service</span>
-                  <span className="text-emerald-500 font-bold">ONLINE</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-[#222] pb-2">
-                  <span className="text-gray-500">neo4j_graph</span>
-                  <span className="text-gray-600 font-bold">OFFLINE</span>
-                </div>
+                {([
+                  ['api-gateway', health.gateway],
+                  ['ai-service', health.ai],
+                  ['neo4j_graph', health.neo4j],
+                ] as const).map(([name, state]) => {
+                  const ok = state === 'up' || state === 'connected';
+                  const pending = state === 'checking' || state === 'unknown';
+                  return (
+                    <div key={name} className="flex justify-between items-center border-b border-[#222] pb-2">
+                      <span className="text-gray-500">{name}</span>
+                      <span className={`font-bold uppercase ${ok ? 'text-emerald-500' : pending ? 'text-gray-600' : 'text-red-500'}`}>
+                        {ok ? 'ONLINE' : pending ? state : 'OFFLINE'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

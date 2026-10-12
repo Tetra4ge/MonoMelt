@@ -7,16 +7,19 @@ import { ExecutiveSummary } from '../components/report/ExecutiveSummary';
 import { CostProjectionsChart } from '../components/report/CostProjectionsChart';
 import { DecompositionGrid } from '../components/report/DecompositionGrid';
 import { RiskMatrix } from '../components/report/RiskMatrix';
-import { Loader2, ArrowUpRight, Terminal, LogOut } from 'lucide-react';
+import { Loader2, Terminal, LogOut } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 
 export default function ReportPage() {
   const { projectId } = useParams();
   const { signOut } = useAuthStore();
   const { data, isLoading, isError } = useProjectReport(projectId!);
   useReportSocket(projectId);
-  const [isExporting, setIsExporting] = useState(false);
-  const [notionUrl, setNotionUrl] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [isQueueing, setIsQueueing] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -36,6 +39,52 @@ export default function ReportPage() {
 
   const report = data?.data;
 
+  const handleGenerate = async () => {
+    setIsQueueing(true);
+    setQueueError(null);
+    try {
+      await api.post(`/api/projects/${projectId}/reports/generate`);
+      await queryClient.invalidateQueries({ queryKey: ['report', projectId] });
+    } catch (err) {
+      setQueueError(getErrorMessage(err, 'Could not queue report generation.'));
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  // No report yet, or the last one failed: say so and let the user (re)generate it.
+  if (!report || report.status === 'failed') {
+    const failed = report?.status === 'failed';
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4 font-mono px-6 text-center">
+        <h2 className="text-xl font-bold text-white tracking-widest">
+          &gt; {failed ? 'report_generation_failed' : 'no_report_yet'}
+        </h2>
+        <p className="text-gray-500 text-xs max-w-md">
+          {failed
+            ? (report?.payload?.error || 'The last attempt failed.')
+            : 'Reports are generated after a blueprint is created. You can also queue one now if a migration plan exists.'}
+        </p>
+        {queueError && <p className="text-red-400 text-xs">{queueError}</p>}
+        <div className="flex gap-3">
+          <button
+            onClick={handleGenerate}
+            disabled={isQueueing}
+            className="px-6 py-2 bg-white text-black font-bold rounded-sm hover:bg-gray-200 transition disabled:opacity-50 text-xs tracking-wide uppercase"
+          >
+            {isQueueing ? 'Queueing...' : failed ? 'Retry report' : 'Generate report'}
+          </button>
+          <Link
+            to={`/dashboard/projects/${projectId}/export`}
+            className="px-6 py-2 border border-[#333] text-gray-300 hover:text-white rounded-sm text-xs tracking-wide uppercase"
+          >
+            Back to export
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Render polling state
   if (report?.status === 'generating' || report?.status === 'pending') {
     return (
@@ -46,18 +95,6 @@ export default function ReportPage() {
       </div>
     );
   }
-
-  const handleNotionExport = async () => {
-    setIsExporting(true);
-    try {
-      const res = await api.post(`/api/reports/${projectId}/export-to-notion`);
-      setNotionUrl(res.data.notion_url);
-    } catch (err) {
-      console.error("Failed to export to Notion", err);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-300 p-8 font-mono">
@@ -97,19 +134,13 @@ export default function ReportPage() {
           </div>
           
           <div className="flex gap-4">
-            {notionUrl ? (
-              <a href={notionUrl} target="_blank" rel="noreferrer" className="flex items-center px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-sm hover:bg-blue-500/20 transition text-xs font-bold tracking-wide">
-                View in Notion <ArrowUpRight className="ml-2 w-4 h-4" />
-              </a>
-            ) : (
-              <button 
-                onClick={handleNotionExport} 
-                disabled={isExporting}
-                className="px-6 py-2 bg-white text-black font-bold rounded-sm hover:bg-gray-200 transition disabled:opacity-50 text-xs tracking-wide uppercase"
-              >
-                {isExporting ? 'Exporting...' : 'Export to Notion'}
-              </button>
-            )}
+            <button
+              disabled
+              title="Notion export is not available yet"
+              className="px-6 py-2 bg-[#222] text-gray-500 font-bold rounded-sm cursor-not-allowed text-xs tracking-wide uppercase"
+            >
+              Export to Notion (coming soon)
+            </button>
           </div>
         </div>
 

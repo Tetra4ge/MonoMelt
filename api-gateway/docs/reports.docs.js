@@ -30,5 +30,25 @@
  *                   nullable: true
  *       500:
  *         description: Server error occurred while fetching the report.
+ *
+ * /api/projects/{projectId}/reports/generate:
+ *   post:
+ *     summary: Queue a new report version
+ *     description: Queues report generation for the project (for example to retry a failed report). Rejected while a report is already generating.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       202:
+ *         description: Report generation queued.
+ *       409:
+ *         description: A report is already being generated.
  */
 module.exports = {};

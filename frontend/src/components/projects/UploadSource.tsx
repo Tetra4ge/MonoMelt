@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api  from '../../lib/api';
+import { getErrorMessage } from '../../lib/errors';
 
 interface UploadSourceProps {
   projectId: string;
@@ -29,8 +30,8 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
       });
 
       onJobStarted();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Upload failed.'));
     } finally {
       setIsUploading(false);
     }
@@ -46,8 +47,8 @@ export function UploadSource({ projectId, onJobStarted }: UploadSourceProps) {
     try {
       await api.post(`/api/projects/${projectId}/sources/github`, { repoUrl, branch });
       onJobStarted();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Import failed.'));
     } finally {
       setIsUploading(false);
     }
