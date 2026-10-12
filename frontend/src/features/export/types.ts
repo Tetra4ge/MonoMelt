@@ -1,22 +1,34 @@
-export interface BlueprintFile {
-  name: string;
-  content: string;
+export interface BlueprintArtifact {
+  path: string;
+  sha256: string;
+  size_bytes: number;
+  content_type: string;
+}
+
+export interface BlueprintManifest {
+  generator_version?: string;
+  version_number?: number;
+  artifacts?: BlueprintArtifact[];
+  warnings?: string[];
+  validation_results?: Record<string, boolean>;
 }
 
 export interface Blueprint {
   id: string;
   project_id: string;
-  plan_id: string;
+  scenario_revision_id: string | null;
+  plan_revision_id: string | null;
+  version_number: number;
   status: 'pending' | 'generating' | 'completed' | 'failed';
-  terraform_code?: Record<string, string>;
-  service_code?: Record<string, any>;
-  error_message?: string;
+  manifest?: BlueprintManifest;
   created_at: string;
-  updated_at: string;
+  /** path -> text content, returned when a blueprint is created */
+  files?: Record<string, string>;
 }
 
 export interface ApiEnvelope<T> {
   success: boolean;
   data: T;
+  message?: string;
   error?: string;
 }

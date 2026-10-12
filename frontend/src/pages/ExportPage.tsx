@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Download, Rocket } from 'lucide-react';
-import { createBlueprint, getBlueprints, getBlueprint } from '../features/export/export.api';
+import { Download, FileText, Rocket } from 'lucide-react';
+import { createBlueprint, getBlueprints, getBlueprint, getBlueprintFiles } from '../features/export/export.api';
 import type { Blueprint } from '../features/export/types';
 import api from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 import BlueprintPreview from '../components/export/BlueprintPreview';
 import GenerationStatus from '../components/export/GenerationStatus';
 
@@ -15,47 +16,59 @@ export default function ExportPage() {
   const planId = queryParams.get('planId');
 
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
+  const [files, setFiles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadFiles = useCallback(async (blueprintId: string) => {
+    if (!projectId) return;
+    try {
+      setFiles(await getBlueprintFiles(projectId, blueprintId));
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load the blueprint preview.'));
+    }
+  }, [projectId]);
+
+  // Load the most recent blueprint (and its preview) when the page opens.
   useEffect(() => {
     if (!projectId) return;
+    let cancelled = false;
 
-    let pollInterval: any;
-
-    const checkExistingBlueprints = async () => {
+    (async () => {
       try {
         const blueprints = await getBlueprints(projectId);
+        if (cancelled) return;
         if (blueprints.length > 0) {
-          const latest = blueprints[0];
-          setBlueprint(latest);
-          
-          if (latest.status === 'generating') {
-            setGenerating(true);
-            pollInterval = setInterval(async () => {
-              const updated = await getBlueprint(projectId, latest.id);
-              setBlueprint(updated);
-              if (updated.status !== 'generating') {
-                setGenerating(false);
-                clearInterval(pollInterval);
-              }
-            }, 3000);
-          }
+          setBlueprint(blueprints[0]);
+          if (blueprints[0].status === 'completed') await loadFiles(blueprints[0].id);
         }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load blueprints.');
+      } catch (err) {
+        if (!cancelled) setError(getErrorMessage(err, 'Failed to load blueprints.'));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
+    })();
 
-    checkExistingBlueprints();
+    return () => { cancelled = true; };
+  }, [projectId, loadFiles]);
 
-    return () => {
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [projectId]);
+  // Only a blueprint that is still generating needs polling; the timer is cleaned up on unmount.
+  useEffect(() => {
+    if (!projectId || blueprint?.status !== 'generating') return;
+    const id = blueprint.id;
+    const timer = setInterval(async () => {
+      try {
+        const updated = await getBlueprint(projectId, id);
+        setBlueprint(updated);
+        if (updated.status === 'completed') await loadFiles(id);
+      } catch (err) {
+        setError(getErrorMessage(err, 'Lost track of the blueprint generation.'));
+        clearInterval(timer);
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [projectId, blueprint?.id, blueprint?.status, loadFiles]);
 
   const handleGenerate = async () => {
     if (!projectId || !planId) {
@@ -66,19 +79,12 @@ export default function ExportPage() {
     try {
       setGenerating(true);
       setError(null);
-      const newBlueprint = await createBlueprint(projectId, planId);
-      setBlueprint(newBlueprint);
-
-      const pollInterval = setInterval(async () => {
-        const updated = await getBlueprint(projectId, newBlueprint.id);
-        setBlueprint(updated);
-        if (updated.status !== 'generating') {
-          setGenerating(false);
-          clearInterval(pollInterval);
-        }
-      }, 3000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate blueprints.');
+      const created = await createBlueprint(projectId, planId);
+      setFiles(created.files ?? {});
+      setBlueprint(created);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to generate blueprints.'));
+    } finally {
       setGenerating(false);
     }
   };
@@ -92,13 +98,13 @@ export default function ExportPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `blueprint-${blueprint.id}.zip`);
+      link.setAttribute('download', `blueprint-v${blueprint.version_number}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch {
-      setError('Failed to download blueprint.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to download blueprint.'));
     }
   };
 
@@ -150,8 +156,8 @@ export default function ExportPage() {
         )}
 
         {/* State: Generating */}
-        {generating && (
-          <GenerationStatus status={blueprint?.status || 'generating'} />
+        {(generating || blueprint?.status === 'generating') && (
+          <GenerationStatus status="generating" />
         )}
 
         {/* State: Generated */}
@@ -171,6 +177,13 @@ export default function ExportPage() {
                   Download ZIP
                 </button>
                 <button
+                  onClick={() => navigate(`/dashboard/projects/${projectId}/report`)}
+                  className="bg-[#222] hover:bg-[#333] border border-[#333] text-white px-6 py-3 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  View Report
+                </button>
+                <button
                   onClick={() => navigate(`/dashboard/projects/${projectId}/deployment?blueprintId=${blueprint.id}`)}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
                 >
@@ -180,7 +193,7 @@ export default function ExportPage() {
               </div>
             </div>
             
-            <BlueprintPreview blueprint={blueprint} />
+            <BlueprintPreview files={files} />
           </div>
         )}
 
