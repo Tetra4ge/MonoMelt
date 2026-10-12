@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProjectReport } from '../hooks/useProjectReport';
+import { useReportSocket } from '../hooks/useReportSocket';
 import { ExecutiveSummary } from '../components/report/ExecutiveSummary';
 import { CostProjectionsChart } from '../components/report/CostProjectionsChart';
 import { DecompositionGrid } from '../components/report/DecompositionGrid';
+import { RiskMatrix } from '../components/report/RiskMatrix';
 import { Loader2, ArrowUpRight, Terminal, LogOut } from 'lucide-react';
 import api from '../lib/api';
 
 export default function ReportPage() {
   const { projectId } = useParams();
-  const { user, signOut } = useAuthStore();
+  const { signOut } = useAuthStore();
   const { data, isLoading, isError } = useProjectReport(projectId!);
+  useReportSocket(projectId);
   const [isExporting, setIsExporting] = useState(false);
   const [notionUrl, setNotionUrl] = useState<string | null>(null);
 
@@ -124,6 +127,10 @@ export default function ReportPage() {
 
           <div className="xl:col-span-1">
             <CostProjectionsChart data={report?.payload?.cost_analysis} />
+          </div>
+
+          <div className="xl:col-span-3">
+            <RiskMatrix data={report?.payload?.risk_assessment} />
           </div>
 
         </div>
