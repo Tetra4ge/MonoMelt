@@ -44,3 +44,5 @@ class BlueprintResponse(BaseModel):
     success: bool
     manifest: BlueprintManifest
     blueprint_zip_base64: str
+    # path -> text content of every generated file, for in-app preview
+    files: dict[str, str] = Field(default_factory=dict)
