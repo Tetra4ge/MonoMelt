@@ -28,14 +28,19 @@ async def run_intelligence_pipeline(project_id: str, source_version_id: str, own
     logger.info(f"Starting Intelligence Pipeline for project: {project_id}")
     
     # 1. Fetch graph data from Neo4j (Files, Symbols, Dependencies)
+    # Tenant-scoped (owner + project + source version). Files carry their
+    # import degree so the LLM sees the most connected ones first; the cap
+    # keeps the prompt bounded.
     query = """
-    MATCH (n {source_version_id: $svid})
-    WHERE n:File OR n:Symbol OR n:ExternalDependency
-    RETURN n.node_id AS id, labels(n)[0] AS label, n.name AS name, n.file_path AS file_path
-    LIMIT 200
+    MATCH (f:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+    OPTIONAL MATCH (f)-[:IMPORTS]->(dep)
+    WITH f, count(dep) AS imports
+    ORDER BY imports DESC, f.node_id
+    LIMIT 150
+    RETURN f.node_id AS id, 'File' AS label, f.file_path AS name, f.file_path AS file_path, imports
     """
     try:
-        nodes = await run_query(query, {"svid": source_version_id})
+        nodes = await run_query(query, {"svid": source_version_id, "pid": project_id, "oid": owner_id})
     except Exception as e:
         logger.error(f"Failed to fetch graph from Neo4j: {e}")
         return
@@ -80,7 +85,7 @@ async def run_intelligence_pipeline(project_id: str, source_version_id: str, own
             """,
             project_id, source_version_id, owner_id, finding.finding_type,
             json.dumps(finding.subject_ids), finding.explanation,
-            finding.confidence, json.dumps(finding.evidence_ids)
+            min(1.0, max(0.0, finding.confidence)), json.dumps(finding.evidence_ids)
         )
         
     logger.info("Intelligence pipeline completed successfully.")

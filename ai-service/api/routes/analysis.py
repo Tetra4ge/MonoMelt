@@ -352,11 +352,15 @@ async def trigger_analysis(
 
 
 @router.get("/run/{run_id}/status")
-async def get_run_status(run_id: str):
-    """Get the current status of an analysis run."""
+async def get_run_status(
+    run_id: str,
+    project_id: str = Query(...),
+    owner_id: str   = Query(...),
+):
+    """Get the current status of an analysis run (scoped to its owner)."""
     row = await fetchrow(
-        "SELECT id, project_id, source_version_id, owner_id, status, started_at, completed_at, error_message, graph_summary FROM public.analysis_runs WHERE id = $1",
-        run_id
+        "SELECT id, project_id, source_version_id, owner_id, status, started_at, completed_at, error_message, graph_summary FROM public.analysis_runs WHERE id = $1 AND project_id = $2 AND owner_id = $3",
+        run_id, project_id, owner_id
     )
     
     if not row:
@@ -385,8 +389,8 @@ async def get_metrics(
     """Return aggregate metrics for a completed analysis."""
     # Find the latest completed run for this source version
     run = await fetchrow(
-        "SELECT id FROM public.analysis_runs WHERE source_version_id = $1 AND status = 'completed' ORDER BY created_at DESC LIMIT 1",
-        source_version_id
+        "SELECT id FROM public.analysis_runs WHERE source_version_id = $1 AND project_id = $2 AND owner_id = $3 AND status = 'completed' ORDER BY created_at DESC LIMIT 1",
+        source_version_id, project_id, owner_id
     )
     if not run:
         raise HTTPException(status_code=404, detail="No completed analysis found for this source version")
@@ -426,7 +430,10 @@ async def get_graph(
     Nodes and edges are scoped strictly to this source version.
     """
     skip = int(cursor) if cursor and cursor.isdigit() else 0
+    scope = {"svid": source_version_id, "pid": project_id, "oid": owner_id}
 
+    # Files first, then external packages, then symbols, so a bounded page
+    # shows the file-level architecture rather than thousands of methods.
     node_cypher = """
     MATCH (n {source_version_id: $svid, project_id: $pid, owner_id: $oid})
     WHERE n:File OR n:ExternalDependency OR n:Symbol
@@ -435,26 +442,38 @@ async def get_graph(
            n.file_path  AS file_path,
            COALESCE(n.name, n.file_path) AS name,
            n.language   AS language,
-           n.lines_of_code AS loc
-    ORDER BY n.node_id
+           n.lines_of_code AS loc,
+           n.symbol_type AS symbol_type
+    ORDER BY CASE WHEN n:File THEN 0 WHEN n:ExternalDependency THEN 1 ELSE 2 END, n.node_id
     SKIP $skip LIMIT $limit
     """
+    # Only edges whose endpoints are both in the returned page, so the
+    # frontend never receives a link to a node it does not have.
     edge_cypher = """
-    MATCH (a {source_version_id: $svid, project_id: $pid, owner_id: $oid})
-          -[r]->(b {source_version_id: $svid})
+    MATCH (a {source_version_id: $svid, project_id: $pid, owner_id: $oid})-[r]->(b {source_version_id: $svid})
+    WHERE a.node_id IN $ids AND b.node_id IN $ids
     RETURN a.node_id AS source_id,
            b.node_id AS target_id,
            type(r)   AS relationship,
            coalesce(r.confidence, 1.0)         AS confidence,
            coalesce(r.extraction_method, 'static') AS extraction_method
-    SKIP $skip LIMIT $limit
+    """
+    count_nodes_cypher = """
+    MATCH (n {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+    WHERE n:File OR n:ExternalDependency OR n:Symbol
+    RETURN count(n) AS total
+    """
+    count_edges_cypher = """
+    MATCH (a {source_version_id: $svid, project_id: $pid, owner_id: $oid})-[r]->(b {source_version_id: $svid})
+    RETURN count(r) AS total
     """
 
-    params = {"svid": source_version_id, "pid": project_id, "oid": owner_id, "skip": skip, "limit": limit}
-
     try:
-        raw_nodes = await run_query(node_cypher, params)
-        raw_edges = await run_query(edge_cypher, params)
+        raw_nodes = await run_query(node_cypher, {**scope, "skip": skip, "limit": limit})
+        ids = [r["id"] for r in raw_nodes]
+        raw_edges = await run_query(edge_cypher, {**scope, "ids": ids}) if ids else []
+        total_nodes = (await run_query(count_nodes_cypher, scope))[0]["total"]
+        total_edges = (await run_query(count_edges_cypher, scope))[0]["total"]
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"Graph DB unavailable: {exc}")
 
@@ -465,7 +484,7 @@ async def get_graph(
             name=r["name"] or r["id"],
             file_path=r.get("file_path"),
             language=r.get("language"),
-            properties={"loc": r.get("loc", 0)},
+            properties={"loc": r.get("loc") or 0, "symbol_type": r.get("symbol_type")},
         )
         for r in raw_nodes
     ]
@@ -480,15 +499,15 @@ async def get_graph(
         for r in raw_edges
     ]
 
-    next_cursor = str(skip + limit) if len(raw_nodes) == limit else None
+    next_cursor = str(skip + limit) if skip + len(raw_nodes) < total_nodes else None
 
     from uuid import UUID
     return GraphResponse(
         source_version_id=UUID(source_version_id),
         nodes=nodes,
         edges=edges,
-        total_nodes=len(nodes),
-        total_edges=len(edges),
+        total_nodes=total_nodes,
+        total_edges=total_edges,
         cursor=next_cursor,
     )
 
@@ -501,8 +520,8 @@ async def get_diagnostics(
 ):
     """Return parser diagnostics (warnings + errors) from the last analysis run."""
     run = await fetchrow(
-        "SELECT id FROM public.analysis_runs WHERE source_version_id = $1 ORDER BY created_at DESC LIMIT 1",
-        source_version_id
+        "SELECT id FROM public.analysis_runs WHERE source_version_id = $1 AND project_id = $2 AND owner_id = $3 ORDER BY created_at DESC LIMIT 1",
+        source_version_id, project_id, owner_id
     )
     if not run:
         raise HTTPException(status_code=404, detail="No analysis run found for this source version")
