@@ -13,10 +13,13 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL
       : (process.env.AI_SERVICE_DEV_URL || 'http://localhost:8000'));
 const TIMEOUT_MS = 30_000; // 30s — analysis can be slow
 
+// Shared secret checked by the AI service (core/security.py). Optional in local dev.
+const internalHeaders = process.env.INTERNAL_API_KEY ? { 'X-Internal-Key': process.env.INTERNAL_API_KEY } : {};
+
 const client = axios.create({
   baseURL: AI_SERVICE_URL,
   timeout: TIMEOUT_MS,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', ...internalHeaders },
 });
 
 /**
@@ -27,7 +30,7 @@ const client = axios.create({
  * @param {object} queryParams - URL query parameters
  * @returns {Promise<object>} parsed JSON response
  */
-const proxyToAiService = async (method, path, body = null, queryParams = {}) => {
+const proxyToAiService = async (method, path, body = null, queryParams = {}, options = {}) => {
   // Remove undefined/null query params
   const params = Object.fromEntries(
     Object.entries(queryParams).filter(([_, v]) => v !== null && v !== undefined)
@@ -39,6 +42,7 @@ const proxyToAiService = async (method, path, body = null, queryParams = {}) => 
       url: path,
       params,
       data: body,
+      ...(options.timeout ? { timeout: options.timeout } : {}),
     });
 
     return response.data;
@@ -58,4 +62,4 @@ const proxyToAiService = async (method, path, body = null, queryParams = {}) => 
   }
 };
 
-module.exports = { proxyToAiService };
+module.exports = { proxyToAiService, internalHeaders };

@@ -1,8 +1,9 @@
 const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
 const { enqueueReportJob } = require('../services/queue.service');
+const { proxyToAiService } = require('../services/ai.service');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+// Blueprint generation zips many files, so allow more time than the default proxy timeout.
+const BLUEPRINT_TIMEOUT_MS = 120_000;
 
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -104,13 +105,13 @@ const createBlueprint = async (req, res) => {
       assumptions: planRev.assumptions || {}
     };
 
-    const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);
+    const aiData = await proxyToAiService('POST', '/api/blueprints/generate', aiPayload, {}, { timeout: BLUEPRINT_TIMEOUT_MS });
 
-    if (!aiRes.data?.success) {
+    if (!aiData?.success) {
       throw new Error('AI Service failed to generate blueprint archive');
     }
 
-    const { manifest, blueprint_zip_base64 } = aiRes.data;
+    const { manifest, blueprint_zip_base64 } = aiData;
 
     // 5. Persist record in Supabase
     const { data: insertedBlueprint, error: insertErr } = await supabase
@@ -257,8 +258,8 @@ const downloadBlueprint = async (req, res) => {
       assumptions: planRes.data?.assumptions || {}
     };
 
-    const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);
-    const { blueprint_zip_base64 } = aiRes.data;
+    const aiData = await proxyToAiService('POST', '/api/blueprints/generate', aiPayload, {}, { timeout: BLUEPRINT_TIMEOUT_MS });
+    const { blueprint_zip_base64 } = aiData;
 
     const zipBuffer = Buffer.from(blueprint_zip_base64, 'base64');
 

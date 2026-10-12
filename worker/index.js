@@ -11,6 +11,7 @@ const redisConnection = new IORedis(process.env.REDIS_URL, { maxRetriesPerReques
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 const reportQueue = new Queue('report-generation', { connection: redisConnection });
+const internalHeaders = process.env.INTERNAL_API_KEY ? { 'X-Internal-Key': process.env.INTERNAL_API_KEY } : {};
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const MAX_FILES = Number(process.env.MAX_SOURCE_FILES || 10_000);
 const MAX_EXTRACTED_BYTES = Number(process.env.MAX_EXTRACTED_BYTES || 200 * 1024 * 1024);
@@ -101,7 +102,7 @@ const processSourceZip = async (jobData) => {
   const triggerResult = await axios.post(
     `${aiUrl}/analysis/trigger`,
     { source_version_id: sourceVersionId },
-    { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000 },
+    { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000, headers: internalHeaders },
   );
   console.log(`Analysis run queued: ${triggerResult.data.analysis_run_id}`);
 };
@@ -196,7 +197,7 @@ const reportWorker = new Worker('report-generation', async (job) => {
     const response = await axios.post(`${AI_SERVICE_URL}/api/reports/generate`, {
       project_id: projectId,
       owner_id: ownerId
-    });
+    }, { timeout: 30_000, headers: internalHeaders });
     
     // Because Phase 3 returns a 202 instantly via BackgroundTasks,
     // this log will appear almost immediately.

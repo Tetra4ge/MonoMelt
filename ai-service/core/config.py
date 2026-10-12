@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     pinecone_api_key: str = ""
     pinecone_environment: str = "us-east-1"
 
+    # Shared secret the gateway/worker send as X-Internal-Key (empty = auth disabled, dev only)
+    internal_api_key: str = ""
+    # Comma-separated browser origins allowed to call the AI service directly (normally none are needed)
+    allowed_origins: str = "http://localhost:4000"
+
     # Redis (used to publish report-updates for the API Gateway's WebSocket relay)
     redis_url: str = "redis://localhost:6379"
 
