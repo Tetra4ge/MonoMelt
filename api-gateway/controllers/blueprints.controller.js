@@ -172,6 +172,7 @@ const createBlueprint = async (req, res) => {
       message: 'Blueprint package generated successfully',
       data: {
         ...insertedBlueprint,
+        files: aiData.files || {},
         blueprint_zip_base64
       }
     });
@@ -249,60 +250,83 @@ const getBlueprintById = async (req, res) => {
 };
 
 /**
+ * Rebuilds the AI request for an existing blueprint from the stored scenario and
+ * plan revisions, and regenerates the package (generation is deterministic).
+ * Returns null (after sending the response) if the blueprint cannot be rebuilt.
+ */
+async function regenerateBlueprint(req, res) {
+  const { projectId, blueprintId } = req.params;
+  const supabase = getSupabaseClient(req);
+
+  const { data: blueprint, error } = await supabase
+    .from('blueprints')
+    .select('*')
+    .eq('id', blueprintId)
+    .eq('project_id', projectId)
+    .maybeSingle();
+
+  if (error || !blueprint) {
+    res.status(404).json({ success: false, message: 'Blueprint not found' });
+    return null;
+  }
+  if (!blueprint.scenario_revision_id || !blueprint.plan_revision_id) {
+    res.status(410).json({ success: false, message: 'The scenario or plan this blueprint was built from no longer exists.' });
+    return null;
+  }
+
+  const [planRes, servicesRes] = await Promise.all([
+    supabase.from('plan_revisions').select('*').eq('id', blueprint.plan_revision_id).single(),
+    supabase.from('proposed_services').select('*').eq('revision_id', blueprint.scenario_revision_id)
+  ]);
+
+  const aiPayload = {
+    project_id: projectId,
+    scenario_revision_id: blueprint.scenario_revision_id,
+    plan_revision_id: blueprint.plan_revision_id,
+    version_number: blueprint.version_number,
+    proposed_services: servicesRes.data || [],
+    roadmap_stages: planRes.data?.roadmap?.stages || [],
+    consistency_security_items: planRes.data?.consistency_security?.items || [],
+    cost_performance: planRes.data?.cost_performance || null,
+    team_assignments: planRes.data?.team_mapping?.team_assignments || [],
+    assumptions: planRes.data?.assumptions || {}
+  };
+
+  const aiData = await proxyToAiService('POST', '/api/blueprints/generate', aiPayload, {}, { timeout: BLUEPRINT_TIMEOUT_MS });
+  return { blueprint, aiData };
+}
+
+/**
+ * GET /api/projects/:projectId/blueprints/:blueprintId/files
+ * Returns the generated files (path -> text) so the UI can preview them.
+ */
+const getBlueprintFiles = async (req, res) => {
+  try {
+    const result = await regenerateBlueprint(req, res);
+    if (!result) return;
+    return res.status(200).json({ success: true, data: { files: result.aiData.files || {} } });
+  } catch (error) {
+    console.error('Get Blueprint Files Error:', error.message);
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to load blueprint files' });
+  }
+};
+
+/**
  * GET /api/projects/:projectId/blueprints/:blueprintId/download
  * Downloads the ZIP archive or generates base64 export stream
  */
 const downloadBlueprint = async (req, res) => {
   try {
-    const { projectId, blueprintId } = req.params;
-    const supabase = getSupabaseClient(req);
+    const result = await regenerateBlueprint(req, res);
+    if (!result) return;
 
-    const { data: blueprint, error } = await supabase
-      .from('blueprints')
-      .select('*')
-      .eq('id', blueprintId)
-      .eq('project_id', projectId)
-      .single();
-
-    if (error || !blueprint) {
-      return res.status(404).json({ success: false, message: 'Blueprint not found' });
-    }
-
-    if (!blueprint.scenario_revision_id || !blueprint.plan_revision_id) {
-      return res.status(410).json({ success: false, message: 'The scenario or plan this blueprint was built from no longer exists.' });
-    }
-
-    // Fetch scenario & plan to regenerate zip stream if not stored as raw file
-    const [scenarioRes, planRes, servicesRes] = await Promise.all([
-      supabase.from('scenario_revisions').select('*').eq('id', blueprint.scenario_revision_id).single(),
-      supabase.from('plan_revisions').select('*').eq('id', blueprint.plan_revision_id).single(),
-      supabase.from('proposed_services').select('*').eq('revision_id', blueprint.scenario_revision_id)
-    ]);
-
-    const aiPayload = {
-      project_id: projectId,
-      scenario_revision_id: blueprint.scenario_revision_id,
-      plan_revision_id: blueprint.plan_revision_id,
-      version_number: blueprint.version_number,
-      proposed_services: servicesRes.data || [],
-      roadmap_stages: planRes.data?.roadmap?.stages || [],
-      consistency_security_items: planRes.data?.consistency_security?.items || [],
-      cost_performance: planRes.data?.cost_performance || null,
-      team_assignments: planRes.data?.team_mapping?.team_assignments || [],
-      assumptions: planRes.data?.assumptions || {}
-    };
-
-    const aiData = await proxyToAiService('POST', '/api/blueprints/generate', aiPayload, {}, { timeout: BLUEPRINT_TIMEOUT_MS });
-    const { blueprint_zip_base64 } = aiData;
-
-    const zipBuffer = Buffer.from(blueprint_zip_base64, 'base64');
+    const zipBuffer = Buffer.from(result.aiData.blueprint_zip_base64, 'base64');
 
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="blueprint_v${blueprint.version_number}.zip"`);
+    res.setHeader('Content-Disposition', `attachment; filename="blueprint_v${result.blueprint.version_number}.zip"`);
     res.setHeader('Content-Length', zipBuffer.length);
 
     return res.send(zipBuffer);
-
   } catch (error) {
     console.error('Download Blueprint Error:', error.message);
     return res.status(error.statusCode || 500).json({
@@ -316,5 +340,6 @@ module.exports = {
   createBlueprint,
   getBlueprints,
   getBlueprintById,
+  getBlueprintFiles,
   downloadBlueprint
 };

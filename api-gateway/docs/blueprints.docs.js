@@ -169,6 +169,46 @@
  *       200:
  *         description: Blueprint manifest details
  * 
+ * /api/projects/{projectId}/blueprints/{blueprintId}/files:
+ *   get:
+ *     summary: Preview the files inside a blueprint package
+ *     description: Regenerates the (deterministic) package and returns each generated file's text content keyed by its path in the ZIP.
+ *     tags: [Architecture Blueprints]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: blueprintId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Map of file path to file content
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     files:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: string
+ *       404:
+ *         description: Blueprint not found
+ * 
  * /api/projects/{projectId}/blueprints/{blueprintId}/download:
  *   get:
  *     summary: Download architecture blueprint ZIP package
