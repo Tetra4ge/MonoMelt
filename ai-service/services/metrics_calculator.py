@@ -7,7 +7,7 @@ Metrics computed:
   - File, line, symbol counts
   - Language breakdown
   - Fan-in / fan-out per file (from import edges)
-  - Cycle detection (simplified: files that are imported by their own imports)
+  - Cycle detection (strongly connected components of the file import graph)
   - Centrality candidates (high fan-in files = decomposition boundary hints)
   - Unresolved imports count
   - Graph component count (disconnected sub-graphs)
@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+
+import networkx as nx
 from models.domain import ParsedFile
 from models.schemas import AggregateMetrics, FileMetric
 from db.neo4j_client import run_query
@@ -81,8 +83,7 @@ async def compute_graph_metrics(
     try:
         fan_out_data = await _get_fan_out(source_version_id, project_id, owner_id)
         fan_in_data  = await _get_fan_in(source_version_id, project_id, owner_id)
-        cycle_count  = await _count_cycles(source_version_id, project_id, owner_id)
-        components   = await _count_components(source_version_id, project_id, owner_id)
+        cycle_count, components = await _file_graph_stats(source_version_id, project_id, owner_id)
         centrality   = await _top_centrality(source_version_id, project_id, owner_id)
     except Exception as exc:
         logger.warning("Graph metrics query failed: %s — using defaults", exc)
@@ -176,30 +177,36 @@ async def _get_fan_in(svid: str, pid: str, oid: str) -> list[dict]:
     return await run_query(cypher, {"svid": svid, "pid": pid, "oid": oid})
 
 
-async def _count_cycles(svid: str, pid: str, oid: str) -> int:
+async def _file_graph_stats(svid: str, pid: str, oid: str) -> tuple[int, int]:
     """
-    Simplified cycle detection: find files that mutually import each other.
-    Full SCC detection is expensive — this gives a safe lower bound.
-    """
-    cypher = """
-    MATCH (a:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
-          -[:IMPORTS]->(b:File {source_version_id: $svid})
-          -[:IMPORTS]->(a)
-    RETURN count(a) AS cycles
-    """
-    rows = await run_query(cypher, {"svid": svid, "pid": pid, "oid": oid})
-    return rows[0]["cycles"] if rows else 0
+    Returns (cycle_count, graph_components) for the internal File -> File import graph.
 
-
-async def _count_components(svid: str, pid: str, oid: str) -> int:
-    """Count weakly connected components in the file graph."""
-    cypher = """
-    MATCH (f:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
-    RETURN count(f) AS total
+    cycle_count: number of strongly connected components with more than one file
+    (each is a set of files that transitively import each other), plus self-imports.
+    graph_components: weakly connected components, i.e. independent clusters of files.
     """
-    rows = await run_query(cypher, {"svid": svid, "pid": pid, "oid": oid})
-    # Rough approximation: actual WCC requires GDS plugin; return file count as upper bound
-    return rows[0]["total"] if rows else 0
+    params = {"svid": svid, "pid": pid, "oid": oid}
+    nodes = await run_query(
+        "MATCH (f:File {source_version_id: $svid, project_id: $pid, owner_id: $oid}) RETURN f.node_id AS id",
+        params,
+    )
+    edges = await run_query(
+        """
+        MATCH (a:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+              -[:IMPORTS]->(b:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+        RETURN a.node_id AS source, b.node_id AS target
+        """,
+        params,
+    )
+
+    graph = nx.DiGraph()
+    graph.add_nodes_from(r["id"] for r in nodes)
+    graph.add_edges_from((r["source"], r["target"]) for r in edges)
+
+    cycles = sum(1 for comp in nx.strongly_connected_components(graph) if len(comp) > 1)
+    cycles += nx.number_of_selfloops(graph)
+    components = nx.number_weakly_connected_components(graph) if graph.number_of_nodes() else 0
+    return cycles, components
 
 
 async def _top_centrality(svid: str, pid: str, oid: str) -> list[dict]:
