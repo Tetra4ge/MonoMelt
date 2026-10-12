@@ -50,7 +50,11 @@ const proxyToAiService = async (method, path, body = null, queryParams = {}, opt
     if (error.response) {
       // The AI service returned an error response
       const { status, data } = error.response;
-      const err = new Error(data?.detail || data?.message || 'AI service error');
+      // FastAPI validation errors come back as a list of {loc, msg} objects.
+      const detail = Array.isArray(data?.detail)
+        ? data.detail.map(d => `${(d.loc || []).slice(1).join('.')}: ${d.msg}`).join('; ')
+        : data?.detail;
+      const err = new Error(detail || data?.message || 'AI service error');
       err.statusCode = status;
       err.expose = status === 409 || status === 503;
       throw err;

@@ -8,6 +8,9 @@ const supabase = createClient(
 
 const requireAuth = async (req, res, next) => {
   try {
+    // Already authenticated earlier in the chain (e.g. by the project guard).
+    if (req.user) return next();
+
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'Missing bearer token' });

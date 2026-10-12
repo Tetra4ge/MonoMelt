@@ -7,6 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
 const { errorHandler } = require('./middlewares/error.middleware');
+const { requireAuth } = require('./middlewares/auth.middleware');
+const { requireProjectOwner } = require('./middlewares/project.middleware');
 
 // Load environment variables
 dotenv.config();
@@ -57,6 +59,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
 app.use('/api/auth', require('./routes/auth.routes'));
+// Every project-scoped route below requires the caller to own the project.
+app.use('/api/projects/:projectId', requireAuth, requireProjectOwner);
 app.use('/api/projects', require('./routes/projects.routes'));
 app.use('/api/projects/:projectId/analysis', require('./routes/analysis.routes'));
 app.use('/api/projects/:projectId/intelligence', require('./routes/intelligence.routes'));
