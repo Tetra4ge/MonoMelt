@@ -65,6 +65,12 @@ export default function ScenarioScorecard({ scenario, proposedServices }: { scen
         </>
       )}
       
+      {scenario.status === 'failed' && (
+        <div className="p-6 text-center text-sm text-red-400">
+          This decomposition run failed. Re-run the analysis, then generate the scenario again.
+        </div>
+      )}
+
       {scenario.status === 'generating' && (
          <div className="p-8 flex flex-col items-center justify-center">
          <div className="w-8 h-8 border-2 border-[#222] border-t-blue-500 rounded-full animate-spin mb-4"></div>
