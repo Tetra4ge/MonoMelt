@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     pinecone_api_key: str = ""
     pinecone_environment: str = "us-east-1"
 
+    # Redis (used to publish report-updates for the API Gateway's WebSocket relay)
+    redis_url: str = "redis://localhost:6379"
+
     # LLM Keys (future)
     gemini_api_key: str = ""
     openrouter_api_key: str = ""

@@ -24,6 +24,9 @@ openai==1.35.3
 # Utility
 requests==2.32.3
 
+# Redis (publishes report-updates for the API Gateway's WebSocket relay)
+redis==5.0.4
+
 # Graph & Clustering
 networkx==3.3
 python-louvain==0.16
