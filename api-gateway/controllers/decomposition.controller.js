@@ -35,8 +35,10 @@ const getScenarios = async (req, res) => {
   res.json({ success: true, data });
 };
 
+const STRATEGIES = ['conservative', 'aggressive', 'domain'];
+
 const getScenarioDetails = async (req, res) => {
-  const { scenarioId } = req.params;
+  const { projectId, scenarioId } = req.params;
   const supabase = getSupabaseClient(req);
 
   // We need to fetch the scenario, its latest revision, and the proposed services for that revision.
@@ -44,7 +46,8 @@ const getScenarioDetails = async (req, res) => {
     .from('decomposition_scenarios')
     .select('*')
     .eq('id', scenarioId)
-    .single();
+    .eq('project_id', projectId)
+    .maybeSingle();
 
   if (scenarioError) return res.status(500).json({ error: scenarioError.message });
   if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
@@ -90,63 +93,69 @@ const triggerGeneration = async (req, res) => {
   if (!source_version_id || !strategy_type) {
     return res.status(400).json({ error: 'source_version_id and strategy_type are required' });
   }
-
-  const ownerId = req.user?.sub || 'dc035a11-d7ca-47b5-a2ab-865714d71cd4';
-  const scenarioId = require('crypto').randomUUID();
-
-  let scenario = {
-    id: scenarioId,
-    project_id: projectId,
-    source_version_id,
-    owner_id: ownerId,
-    strategy_type,
-    status: 'generating'
-  };
-
-  try {
-    const { data, error } = await supabase
-      .from('decomposition_scenarios')
-      .insert([scenario])
-      .select()
-      .single();
-
-    if (!error && data) {
-      scenario = data;
-    }
-  } catch (e) {
-    console.warn("decomposition_scenarios insert warning:", e.message);
+  if (!STRATEGIES.includes(strategy_type)) {
+    return res.status(400).json({ error: `strategy_type must be one of: ${STRATEGIES.join(', ')}` });
   }
 
-  // Trigger Python AI Service asynchronously
+  // The source version must belong to this project, otherwise a caller could
+  // cluster another tenant's graph by passing its id.
+  const { data: sourceVersion } = await supabase
+    .from('source_versions')
+    .select('id')
+    .eq('id', source_version_id)
+    .eq('project_id', projectId)
+    .maybeSingle();
+  if (!sourceVersion) return res.status(404).json({ error: 'Source version not found for this project' });
+
+  const ownerId = req.user.sub;
+
+  const { data: scenario, error: insertError } = await supabase
+    .from('decomposition_scenarios')
+    .insert([{ project_id: projectId, source_version_id, owner_id: ownerId, strategy_type, status: 'generating' }])
+    .select()
+    .single();
+
+  if (insertError || !scenario) {
+    console.error('decomposition_scenarios insert failed:', insertError?.message);
+    return res.status(500).json({ error: 'Failed to create the decomposition scenario' });
+  }
+
   try {
-    const aiResponse = await proxyToAiService(
-      'POST', 
-      `/decomposition/generate`, 
-      {
-        scenario_id: scenario.id,
-        project_id: projectId,
-        source_version_id,
-        strategy_type,
-        owner_id: ownerId
-      }
-    );
-    
+    await proxyToAiService('POST', '/decomposition/generate', {
+      scenario_id: scenario.id,
+      project_id: projectId,
+      source_version_id,
+      strategy_type,
+      owner_id: ownerId,
+    });
     res.status(202).json({ success: true, data: scenario, ai_status: 'triggered' });
   } catch (err) {
-    console.warn("AI Service trigger notice:", err.message);
-    res.status(202).json({ success: true, data: scenario, ai_status: 'fallback' });
+    // Don't leave the scenario stuck in 'generating' (the UI would poll forever).
+    console.error('AI service decomposition trigger failed:', err.message);
+    await supabase.from('decomposition_scenarios').update({ status: 'failed' }).eq('id', scenario.id);
+    res.status(err.statusCode && err.statusCode < 500 ? err.statusCode : 502).json({
+      error: `Decomposition could not be started: ${err.message}`,
+    });
   }
 };
 
 const createRevision = async (req, res) => {
     // For handling manual user edits to a scenario's boundaries
-    const { scenarioId } = req.params;
+    const { projectId, scenarioId } = req.params;
     const { services } = req.body; // Array of { name, assigned_nodes }
     const supabase = getSupabaseClient(req);
   
-    if (!services || !Array.isArray(services)) {
+    if (!services || !Array.isArray(services) || services.length === 0) {
       return res.status(400).json({ error: 'services array is required' });
     }
+
+    const { data: scenario } = await supabase
+      .from('decomposition_scenarios')
+      .select('id')
+      .eq('id', scenarioId)
+      .eq('project_id', projectId)
+      .maybeSingle();
+    if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
   
     // 1. Get current max revision number
     const { data: latestRev, error: maxError } = await supabase

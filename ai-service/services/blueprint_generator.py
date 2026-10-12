@@ -5,6 +5,7 @@ Builds deterministic architecture export ZIP packages containing Dockerfiles, K8
 
 import io
 import json
+import re
 import zipfile
 import hashlib
 import base64
@@ -17,10 +18,30 @@ from models.blueprints import (
 )
 
 
+DNS_LABEL_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$")
+SECRET_PATTERNS = [
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    re.compile(r"ghp_[A-Za-z0-9]{36}"),
+    re.compile(r"sk-[A-Za-z0-9]{20,}"),
+]
+
+
+def to_service_slug(name: str) -> str:
+    """
+    Service names come from clustering ("Service_1") or user edits, and end up in
+    ZIP paths, Kubernetes object names, hostnames and JS source. Reduce them to a
+    DNS-1123 label so none of those can break (or escape the archive).
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", str(name or "").lower()).strip("-")[:39].strip("-")
+    return slug or "service"
+
+
 class BlueprintGenerator:
     def __init__(self, request: GenerateBlueprintRequest):
         self.req = request
         self.artifacts: list[ArtifactFile] = []
+        self.files: dict[str, str] = {}
         self.warnings: list[str] = [
             "Generated artifacts contain draft templates and secret placeholders.",
             "Mandatory engineering, security, and platform review is required prior to deployment."
@@ -39,14 +60,10 @@ class BlueprintGenerator:
             self._add_file(zf, "blueprint/decisions/ADR-001-microservices-decomposition.md", adr_content)
 
             # 3. Services (Dockerfiles & K8s manifests)
-            services = self.req.proposed_services or [
-                {"name": "user-service"},
-                {"name": "order-service"},
-                {"name": "payment-service"}
-            ]
+            services = self._normalized_services()
 
             for s in services:
-                s_name = s.get("name", "microservice").lower().replace(" ", "-")
+                s_name = s["name"]
                 service_root = f"blueprint/services/{s_name}"
 
                 # Runnable source scaffold. The generated Dockerfile below builds this application.
@@ -79,6 +96,8 @@ class BlueprintGenerator:
             secret_template = self._generate_secret_template()
             self._add_file(zf, "blueprint/infrastructure/secret-template.yaml", secret_template)
 
+            self._add_file(zf, "blueprint/infrastructure/terraform/main.tf", self._generate_terraform(services))
+
             # 6. Migration Aids
             migration_plan = {
                 "roadmap_stages": self.req.roadmap_stages,
@@ -103,11 +122,7 @@ class BlueprintGenerator:
                     "roadmap_stage_count": len(self.req.roadmap_stages)
                 },
                 warnings=self.warnings,
-                validation_results={
-                    "openapi_valid": True,
-                    "k8s_schema_valid": True,
-                    "no_credentials_detected": True
-                }
+                validation_results=self._validate(openapi_spec, services)
             )
 
             manifest_bytes = json.dumps(manifest.model_dump(mode='json'), indent=2).encode('utf-8')
@@ -119,12 +134,40 @@ class BlueprintGenerator:
         return BlueprintResponse(
             success=True,
             manifest=manifest,
-            blueprint_zip_base64=zip_base64
+            blueprint_zip_base64=zip_base64,
+            files=self.files,
         )
+
+    def _normalized_services(self) -> list[dict[str, Any]]:
+        """Proposed services with safe, unique, DNS-compatible names. Never invents services."""
+        if not self.req.proposed_services:
+            raise ValueError("No proposed services were provided; a blueprint needs at least one service.")
+        seen: set[str] = set()
+        services = []
+        for raw in self.req.proposed_services:
+            base = to_service_slug(raw.get("name"))
+            name, n = base, 2
+            while name in seen:
+                suffix = f"-{n}"
+                name, n = f"{base[:39 - len(suffix)]}{suffix}", n + 1
+            seen.add(name)
+            services.append({**raw, "name": name})
+        return services
+
+    def _validate(self, openapi_spec: dict[str, Any], services: list[dict[str, Any]]) -> dict[str, bool]:
+        """Real checks on what was generated (these used to be hardcoded to True)."""
+        contents = self.files.values()
+        return {
+            "openapi_valid": bool(openapi_spec.get("paths")) and all(p.startswith("/api/v1/") for p in openapi_spec["paths"]),
+            "k8s_schema_valid": all(DNS_LABEL_RE.match(s["name"]) for s in services)
+                and all(f"blueprint/services/{s['name']}/k8s/deployment.yaml" in self.files for s in services),
+            "no_credentials_detected": not any(pattern.search(text) for text in contents for pattern in SECRET_PATTERNS),
+        }
 
     def _add_file(self, zf: zipfile.ZipFile, path: str, content: str):
         data = content.encode('utf-8')
         sha = hashlib.sha256(data).hexdigest()
+        self.files[path] = content
         
         self.artifacts.append(
             ArtifactFile(
@@ -158,7 +201,7 @@ class BlueprintGenerator:
 - `decisions/`: Architecture Decision Records (ADRs)
 - `services/`: Service containers, Dockerfiles, and Kubernetes manifests
 - `contracts/`: OpenAPI 3.0 and Event contract templates
-- `infrastructure/`: API Gateway route map & Kubernetes Secret templates
+- `infrastructure/`: API Gateway route map, Kubernetes Secret template and draft Terraform (`terraform/main.tf`)
 - `migration/`: Phased rollout sequence & data consistency rules
 - `reports/`: Cost and latency projection reports
 - `manifest.json`: Cryptographic SHA-256 validation manifest
@@ -285,7 +328,7 @@ spec:
     def _generate_openapi_spec(self, services: list[dict[str, Any]]) -> dict[str, Any]:
         paths = {}
         for s in services:
-            s_name = s.get("name", "service").lower().replace(" ", "-")
+            s_name = s["name"]
             paths[f"/api/v1/{s_name}"] = {
                 "get": {
                     "summary": f"List items for {s_name}",
@@ -320,8 +363,8 @@ spec:
         return {
             "event_contracts": [
                 {
-                    "event_name": f"{s.get('name', 'service').lower()}.created",
-                    "publisher": s.get('name', 'service'),
+                    "event_name": f"{s['name']}.created",
+                    "publisher": s['name'],
                     "schema": {"type": "object", "properties": {"id": {"type": "string"}, "timestamp": {"type": "string"}}}
                 }
                 for s in services
@@ -332,8 +375,8 @@ spec:
         return {
             "routes": [
                 {
-                    "path_prefix": f"/api/v1/{s.get('name', 'service').lower()}",
-                    "target_service": f"http://{s.get('name', 'service').lower()}:8080",
+                    "path_prefix": f"/api/v1/{s['name']}",
+                    "target_service": f"http://{s['name']}:8080",
                     "rate_limit_per_min": 1000,
                     "auth_required": True
                 }
@@ -350,4 +393,125 @@ type: Opaque
 stringData:
   DATABASE_URL: "postgresql://USER:PLACEHOLDER_PASSWORD@postgres-host:5432/db"
   JWT_SECRET: "PLACEHOLDER_JWT_SECRET_CHANGE_ME"
+"""
+
+    def _generate_terraform(self, services: list[dict[str, Any]]) -> str:
+        """Draft container-registry + logging scaffold for the chosen cloud."""
+        assumptions = self.req.assumptions or {}
+        provider = str(assumptions.get("cloud_provider", "aws")).lower()
+        region = str(assumptions.get("pricing_region", "us-east-1"))
+        service_list = ", ".join(f'"{s["name"]}"' for s in services)
+        header = "# DRAFT - generated scaffold. Review before `terraform apply`.\n"
+
+        if provider == "azure":
+            return header + f"""terraform {{
+  required_providers {{
+    azurerm = {{ source = "hashicorp/azurerm", version = "~> 3.100" }}
+  }}
+}}
+
+provider "azurerm" {{
+  features {{}}
+}}
+
+variable "location" {{
+  type    = string
+  default = "{region}"
+}}
+
+locals {{
+  services = [{service_list}]
+}}
+
+resource "azurerm_resource_group" "main" {{
+  name     = "monomelt-services"
+  location = var.location
+}}
+
+resource "azurerm_container_registry" "main" {{
+  name                = "monomeltregistry"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku                 = "Standard"
+}}
+
+resource "azurerm_log_analytics_workspace" "main" {{
+  name                = "monomelt-logs"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  retention_in_days   = 30
+}}
+"""
+
+        if provider == "gcp":
+            return header + f"""terraform {{
+  required_providers {{
+    google = {{ source = "hashicorp/google", version = "~> 5.0" }}
+  }}
+}}
+
+variable "project_id" {{
+  type = string
+}}
+
+variable "region" {{
+  type    = string
+  default = "{region}"
+}}
+
+provider "google" {{
+  project = var.project_id
+  region  = var.region
+}}
+
+locals {{
+  services = [{service_list}]
+}}
+
+resource "google_artifact_registry_repository" "service" {{
+  for_each      = toset(local.services)
+  repository_id = each.key
+  format        = "DOCKER"
+  location      = var.region
+}}
+"""
+
+        return header + f"""terraform {{
+  required_providers {{
+    aws = {{ source = "hashicorp/aws", version = "~> 5.0" }}
+  }}
+}}
+
+variable "region" {{
+  type    = string
+  default = "{region}"
+}}
+
+provider "aws" {{
+  region = var.region
+}}
+
+locals {{
+  services = [{service_list}]
+}}
+
+resource "aws_ecr_repository" "service" {{
+  for_each             = toset(local.services)
+  name                 = each.key
+  image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {{
+    scan_on_push = true
+  }}
+}}
+
+resource "aws_cloudwatch_log_group" "service" {{
+  for_each          = toset(local.services)
+  name              = "/monomelt/${{each.key}}"
+  retention_in_days = 30
+}}
+
+output "ecr_repository_urls" {{
+  value = {{ for name, repo in aws_ecr_repository.service : name => repo.repository_url }}
+}}
 """

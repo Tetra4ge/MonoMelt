@@ -17,3 +17,10 @@ export async function getBlueprint(projectId: string, blueprintId: string): Prom
   const response = await api.get<ApiEnvelope<Blueprint>>(`/api/projects/${projectId}/blueprints/${blueprintId}`);
   return response.data.data;
 }
+
+export async function getBlueprintFiles(projectId: string, blueprintId: string): Promise<Record<string, string>> {
+  const response = await api.get<ApiEnvelope<{ files: Record<string, string> }>>(
+    `/api/projects/${projectId}/blueprints/${blueprintId}/files`
+  );
+  return response.data.data.files ?? {};
+}

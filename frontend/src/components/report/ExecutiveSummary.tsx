@@ -1,4 +1,3 @@
-import React from 'react';
 import { Activity, Clock, AlertTriangle } from 'lucide-react';
 
 export const ExecutiveSummary = ({ data }: { data: any }) => {

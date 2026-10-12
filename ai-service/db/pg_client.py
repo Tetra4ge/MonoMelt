@@ -42,6 +42,15 @@ async def execute(query: str, *args) -> str:
         await conn.close()
 
 
+async def execute_many(query: str, args_list: list[tuple]) -> None:
+    """Run one write query for many argument tuples on a single connection."""
+    conn = await get_pg_connection()
+    try:
+        await conn.executemany(query, args_list)
+    finally:
+        await conn.close()
+
+
 async def fetch(query: str, *args) -> list[dict]:
     """Execute a read query and return rows as list of dicts."""
     conn = await get_pg_connection()

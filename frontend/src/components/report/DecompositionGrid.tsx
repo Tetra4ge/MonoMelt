@@ -1,4 +1,3 @@
-import React from 'react';
 import { Layers, Users, Link as LinkIcon } from 'lucide-react';
 
 export const DecompositionGrid = ({ data }: { data: any[] }) => {

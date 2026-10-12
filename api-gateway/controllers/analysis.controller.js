@@ -11,8 +11,8 @@ const triggerAnalysis = async (req, res, next) => {
 
 const getAnalysisStatus = async (req, res, next) => {
   try {
-    const { runId } = req.params;
-    const result = await proxyToAiService('GET', `/analysis/run/${runId}/status`);
+    const { projectId, runId } = req.params;
+    const result = await proxyToAiService('GET', `/analysis/run/${runId}/status`, null, { project_id: projectId, owner_id: req.user.sub });
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
 };

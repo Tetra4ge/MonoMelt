@@ -1,14 +1,37 @@
 const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
 const { enqueueReportJob } = require('../services/queue.service');
+const { proxyToAiService } = require('../services/ai.service');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+// Blueprint generation zips many files, so allow more time than the default proxy timeout.
+const BLUEPRINT_TIMEOUT_MS = 120_000;
 
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 };
+
+/** Confirms a scenario revision belongs to this project (it is looked up by id alone otherwise). */
+async function scenarioRevisionInProject(supabase, projectId, revisionId) {
+  const { data } = await supabase
+    .from('scenario_revisions')
+    .select('id, decomposition_scenarios!inner(project_id)')
+    .eq('id', revisionId)
+    .eq('decomposition_scenarios.project_id', projectId)
+    .maybeSingle();
+  return !!data;
+}
+
+/** Same check for plan revisions, via their migration plan. */
+async function planRevisionInProject(supabase, projectId, revisionId) {
+  const { data } = await supabase
+    .from('plan_revisions')
+    .select('id, migration_plans!inner(project_id)')
+    .eq('id', revisionId)
+    .eq('migration_plans.project_id', projectId)
+    .maybeSingle();
+  return !!data;
+}
 
 /**
  * POST /api/projects/:projectId/blueprints
@@ -51,6 +74,11 @@ const createBlueprint = async (req, res) => {
 
     const supabase = getSupabaseClient(req);
 
+    if (!(await scenarioRevisionInProject(supabase, projectId, scenarioRevisionId)) ||
+        !(await planRevisionInProject(supabase, projectId, planRevisionId))) {
+      return res.status(404).json({ success: false, message: 'Scenario or plan revision not found for this project.' });
+    }
+
     // 1. Fetch scenario revision
     const { data: scenario, error: scenarioErr } = await supabase
       .from('scenario_revisions')
@@ -78,6 +106,9 @@ const createBlueprint = async (req, res) => {
       .select('*')
       .eq('revision_id', scenarioRevisionId);
     if (servicesErr) throw servicesErr;
+    if (!proposedServices || proposedServices.length === 0) {
+      return res.status(409).json({ success: false, message: 'The scenario has no proposed services to generate a blueprint for.' });
+    }
 
     // 3. Count existing blueprints for version numbering
     const { data: existingBlueprints } = await supabase
@@ -104,13 +135,13 @@ const createBlueprint = async (req, res) => {
       assumptions: planRev.assumptions || {}
     };
 
-    const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);
+    const aiData = await proxyToAiService('POST', '/api/blueprints/generate', aiPayload, {}, { timeout: BLUEPRINT_TIMEOUT_MS });
 
-    if (!aiRes.data?.success) {
+    if (!aiData?.success) {
       throw new Error('AI Service failed to generate blueprint archive');
     }
 
-    const { manifest, blueprint_zip_base64 } = aiRes.data;
+    const { manifest, blueprint_zip_base64 } = aiData;
 
     // 5. Persist record in Supabase
     const { data: insertedBlueprint, error: insertErr } = await supabase
@@ -132,8 +163,9 @@ const createBlueprint = async (req, res) => {
       throw insertErr;
     }
 
-    // 6. Trigger final report generation since blueprint is the last agent
-    await enqueueReportJob({ projectId: projectId, ownerId: req.user.id })
+    // 6. Trigger final report generation since blueprint is the last agent.
+    // Not awaited: the blueprint is already saved, and a queue outage must not delay or fail the response.
+    enqueueReportJob({ projectId: projectId, ownerId: req.user.id })
       .catch(err => console.error('Failed to trigger report generation:', err.message));
 
     return res.status(200).json({
@@ -141,13 +173,14 @@ const createBlueprint = async (req, res) => {
       message: 'Blueprint package generated successfully',
       data: {
         ...insertedBlueprint,
+        files: aiData.files || {},
         blueprint_zip_base64
       }
     });
 
   } catch (error) {
     console.error('Create Blueprint Error:', error.message);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to generate blueprint'
     });
@@ -218,59 +251,86 @@ const getBlueprintById = async (req, res) => {
 };
 
 /**
+ * Rebuilds the AI request for an existing blueprint from the stored scenario and
+ * plan revisions, and regenerates the package (generation is deterministic).
+ * Returns null (after sending the response) if the blueprint cannot be rebuilt.
+ */
+async function regenerateBlueprint(req, res) {
+  const { projectId, blueprintId } = req.params;
+  const supabase = getSupabaseClient(req);
+
+  const { data: blueprint, error } = await supabase
+    .from('blueprints')
+    .select('*')
+    .eq('id', blueprintId)
+    .eq('project_id', projectId)
+    .maybeSingle();
+
+  if (error || !blueprint) {
+    res.status(404).json({ success: false, message: 'Blueprint not found' });
+    return null;
+  }
+  if (!blueprint.scenario_revision_id || !blueprint.plan_revision_id) {
+    res.status(410).json({ success: false, message: 'The scenario or plan this blueprint was built from no longer exists.' });
+    return null;
+  }
+
+  const [planRes, servicesRes] = await Promise.all([
+    supabase.from('plan_revisions').select('*').eq('id', blueprint.plan_revision_id).single(),
+    supabase.from('proposed_services').select('*').eq('revision_id', blueprint.scenario_revision_id)
+  ]);
+
+  const aiPayload = {
+    project_id: projectId,
+    scenario_revision_id: blueprint.scenario_revision_id,
+    plan_revision_id: blueprint.plan_revision_id,
+    version_number: blueprint.version_number,
+    proposed_services: servicesRes.data || [],
+    roadmap_stages: planRes.data?.roadmap?.stages || [],
+    consistency_security_items: planRes.data?.consistency_security?.items || [],
+    cost_performance: planRes.data?.cost_performance || null,
+    team_assignments: planRes.data?.team_mapping?.team_assignments || [],
+    assumptions: planRes.data?.assumptions || {}
+  };
+
+  const aiData = await proxyToAiService('POST', '/api/blueprints/generate', aiPayload, {}, { timeout: BLUEPRINT_TIMEOUT_MS });
+  return { blueprint, aiData };
+}
+
+/**
+ * GET /api/projects/:projectId/blueprints/:blueprintId/files
+ * Returns the generated files (path -> text) so the UI can preview them.
+ */
+const getBlueprintFiles = async (req, res) => {
+  try {
+    const result = await regenerateBlueprint(req, res);
+    if (!result) return;
+    return res.status(200).json({ success: true, data: { files: result.aiData.files || {} } });
+  } catch (error) {
+    console.error('Get Blueprint Files Error:', error.message);
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to load blueprint files' });
+  }
+};
+
+/**
  * GET /api/projects/:projectId/blueprints/:blueprintId/download
  * Downloads the ZIP archive or generates base64 export stream
  */
 const downloadBlueprint = async (req, res) => {
   try {
-    const { projectId, blueprintId } = req.params;
-    const supabase = getSupabaseClient(req);
+    const result = await regenerateBlueprint(req, res);
+    if (!result) return;
 
-    const { data: blueprint, error } = await supabase
-      .from('blueprints')
-      .select('*')
-      .eq('id', blueprintId)
-      .eq('project_id', projectId)
-      .single();
-
-    if (error || !blueprint) {
-      return res.status(404).json({ success: false, message: 'Blueprint not found' });
-    }
-
-    // Fetch scenario & plan to regenerate zip stream if not stored as raw file
-    const [scenarioRes, planRes, servicesRes] = await Promise.all([
-      supabase.from('scenario_revisions').select('*').eq('id', blueprint.scenario_revision_id).single(),
-      supabase.from('plan_revisions').select('*').eq('id', blueprint.plan_revision_id).single(),
-      supabase.from('proposed_services').select('*').eq('revision_id', blueprint.scenario_revision_id)
-    ]);
-
-    const aiPayload = {
-      project_id: projectId,
-      scenario_revision_id: blueprint.scenario_revision_id,
-      plan_revision_id: blueprint.plan_revision_id,
-      version_number: blueprint.version_number,
-      proposed_services: servicesRes.data || [],
-      roadmap_stages: planRes.data?.roadmap?.stages || [],
-      consistency_security_items: planRes.data?.consistency_security?.items || [],
-      cost_performance: planRes.data?.cost_performance || null,
-      team_assignments: planRes.data?.team_mapping?.team_assignments || [],
-      assumptions: planRes.data?.assumptions || {}
-    };
-
-    const aiRes = await axios.post(`${AI_SERVICE_URL}/api/blueprints/generate`, aiPayload);
-    const { blueprint_zip_base64 } = aiRes.data;
-
-    const zipBuffer = Buffer.from(blueprint_zip_base64, 'base64');
+    const zipBuffer = Buffer.from(result.aiData.blueprint_zip_base64, 'base64');
 
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="blueprint_v${blueprint.version_number}.zip"`);
+    res.setHeader('Content-Disposition', `attachment; filename="blueprint_v${result.blueprint.version_number}.zip"`);
     res.setHeader('Content-Length', zipBuffer.length);
 
     return res.send(zipBuffer);
-
   } catch (error) {
     console.error('Download Blueprint Error:', error.message);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to download blueprint package'
     });
@@ -281,5 +341,6 @@ module.exports = {
   createBlueprint,
   getBlueprints,
   getBlueprintById,
+  getBlueprintFiles,
   downloadBlueprint
 };

@@ -18,6 +18,11 @@ def generate_plan_report(payload: GeneratePlanRequest):
     """
     Generates a versioned planning report for a given scenario revision.
     """
+    if not payload.proposed_services:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No proposed services were provided; a plan needs at least one service."
+        )
     try:
         engine = PlanningEngine(
             proposed_services=payload.proposed_services,
@@ -38,6 +43,11 @@ def recalculate_plan_report(payload: GeneratePlanRequest):
     """
     Recalculates a planning report with updated user assumptions.
     """
+    if not payload.proposed_services:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No proposed services were provided; a plan needs at least one service."
+        )
     try:
         engine = PlanningEngine(
             proposed_services=payload.proposed_services,

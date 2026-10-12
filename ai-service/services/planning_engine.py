@@ -38,16 +38,27 @@ class PlanningEngine:
             team_mapping=team_mapping
         )
 
-    def _generate_roadmap(self) -> RoadmapPlan:
-        service_names = [s.get("name", f"Service-{i+1}") for i, s in enumerate(self.proposed_services)]
-        if not service_names:
-            service_names = ["User-Service", "Order-Service", "Payment-Service", "Notification-Service"]
+    def _service_names(self) -> list[str]:
+        return [s.get("name") or f"service-{i+1}" for i, s in enumerate(self.proposed_services)]
 
-        num_services = len(service_names)
-        
-        low_risk = service_names[math.ceil(num_services * 0.5):]
-        mid_risk = service_names[1:math.ceil(num_services * 0.5)]
-        high_risk = [service_names[0]] if service_names else []
+    def _generate_roadmap(self) -> RoadmapPlan:
+        # Order services by coupling (outgoing cross-service edges): the least coupled
+        # are extracted first, the most coupled last. Every service appears in exactly
+        # one stage and no placeholder names are ever invented.
+        def coupling(service: dict[str, Any]) -> int:
+            metrics = service.get("metrics") or {}
+            return int(metrics.get("external_edges_out") or 0) if isinstance(metrics, dict) else 0
+
+        indexed = list(enumerate(self.proposed_services))
+        indexed.sort(key=lambda pair: (coupling(pair[1]), pair[0]))
+        names = [pair[1].get("name") or f"service-{pair[0]+1}" for pair in indexed]
+        num_services = len(names)
+
+        high_count = max(1, math.ceil(num_services * 0.25)) if num_services else 0
+        high_risk = names[num_services - high_count:] if high_count else []
+        rest = names[:num_services - high_count]
+        low_risk = rest[:math.ceil(len(rest) / 2)]
+        mid_risk = rest[math.ceil(len(rest) / 2):]
 
         recommended_pattern = "strangler_fig"
         if self.assumptions.risk_tolerance == "low" and num_services > 6:
@@ -55,7 +66,7 @@ class PlanningEngine:
 
         stages = [
             MigrationStage(
-                stage_number=1,
+                stage_number=0,
                 name="Preparation & Foundation",
                 description="Establish API Gateway, core auth middleware, container registry, and CI/CD pipelines.",
                 target_services=["API-Gateway-Infrastructure"],
@@ -64,47 +75,52 @@ class PlanningEngine:
                 rollback_condition="Gateway infrastructure health checks fail",
                 success_metric="100% gateway route coverage and baseline telemetry operating"
             ),
-            MigrationStage(
-                stage_number=2,
+        ]
+        if low_risk:
+            stages.append(MigrationStage(
+                stage_number=0,
                 name="Low-Risk Service Extraction",
-                description="Extract edge and non-transactional services with minimal incoming dependencies.",
-                target_services=low_risk if low_risk else ["Notification-Service"],
+                description="Extract the least-coupled services first: few outgoing dependencies, so the lowest blast radius.",
+                target_services=low_risk,
                 effort_estimate_weeks=max(2, math.ceil(len(low_risk) * 1.5)),
                 rollout_method="strangler_fig",
                 rollback_condition="Latency spike > 200ms or HTTP 5xx error rate > 0.5%",
                 success_metric="Zero downtime cutover with full shadow-traffic validation"
-            ),
-            MigrationStage(
-                stage_number=3,
+            ))
+        if mid_risk:
+            stages.append(MigrationStage(
+                stage_number=0,
                 name="Core Domain Extraction",
-                description="Migrate primary business domain logic and introduce transactional outbox patterns.",
-                target_services=mid_risk if mid_risk else ["Order-Service"],
+                description="Migrate moderately coupled domain services and introduce transactional outbox patterns.",
+                target_services=mid_risk,
                 effort_estimate_weeks=max(3, math.ceil(len(mid_risk) * 2.0)),
                 rollout_method="strangler_fig",
                 rollback_condition="Distributed transaction mismatch or DB replication lag > 2s",
                 success_metric="99.99% data consistency verified across event boundary"
-            ),
-            MigrationStage(
-                stage_number=4,
+            ))
+        if high_risk:
+            stages.append(MigrationStage(
+                stage_number=0,
                 name="High-Coupling & Database Split",
-                description="Decouple shared monolith tables into isolated database schemas.",
-                target_services=high_risk if high_risk else ["User-Service"],
+                description="Extract the most coupled services last and decouple their shared monolith tables into isolated schemas.",
+                target_services=high_risk,
                 effort_estimate_weeks=max(4, math.ceil(len(high_risk) * 2.5)),
                 rollout_method="blue_green",
                 rollback_condition="Data integrity mismatch during dual-write verification",
                 success_metric="Complete removal of direct database joins across service boundaries"
-            ),
-            MigrationStage(
-                stage_number=5,
-                name="Stabilization & Monolith Retirement",
-                description="Decommission monolithic routes and optimize microservice resource allocations.",
-                target_services=["Legacy-Monolith-Decommission"],
-                effort_estimate_weeks=2,
-                rollout_method="direct",
-                rollback_condition="Unmapped legacy route invocations detected in logs",
-                success_metric="100% traffic served by microservices architecture"
-            )
-        ]
+            ))
+        stages.append(MigrationStage(
+            stage_number=0,
+            name="Stabilization & Monolith Retirement",
+            description="Decommission monolithic routes and optimize microservice resource allocations.",
+            target_services=["Legacy-Monolith-Decommission"],
+            effort_estimate_weeks=2,
+            rollout_method="direct",
+            rollback_condition="Unmapped legacy route invocations detected in logs",
+            success_metric="100% traffic served by microservices architecture"
+        ))
+        for number, stage in enumerate(stages, start=1):
+            stage.stage_number = number
 
         total_duration = sum(s.effort_estimate_weeks for s in stages)
 
@@ -115,9 +131,12 @@ class PlanningEngine:
         )
 
     def _generate_consistency_security(self) -> ConsistencySecurityMatrix:
-        service_names = [s.get("name", f"Service-{i+1}") for i, s in enumerate(self.proposed_services)]
+        service_names = self._service_names()
         if len(service_names) < 2:
-            service_names = ["Auth-Service", "Core-Service", "Payment-Service", "Analytics-Service"]
+            return ConsistencySecurityMatrix(
+                items=[],
+                risk_summary="Only one service was proposed, so there are no cross-service boundaries to analyse."
+            )
 
         items: list[ConsistencySecurityItem] = []
 
@@ -185,9 +204,7 @@ class PlanningEngine:
         )
 
     def _generate_team_mapping(self) -> TeamMappingPlan:
-        service_names = [s.get("name", f"Service-{i+1}") for i, s in enumerate(self.proposed_services)]
-        if not service_names:
-            service_names = ["Auth-Service", "Order-Service", "Payment-Service", "Inventory-Service"]
+        service_names = self._service_names()
 
         num_teams = max(1, self.assumptions.team_count)
         team_names = [f"Team {chr(65 + i)}" for i in range(num_teams)]

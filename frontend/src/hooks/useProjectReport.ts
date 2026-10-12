@@ -5,7 +5,8 @@ export const useProjectReport = (projectId: string) => {
   return useQuery({
     queryKey: ['report', projectId],
     queryFn: async () => {
-      const response = await api.get(`/api/reports/${projectId}`);
+      // The gateway mounts the reports router under the project, not under /api/reports.
+      const response = await api.get(`/api/projects/${projectId}/reports`);
       return response.data;
     },
     refetchInterval: (query) => {

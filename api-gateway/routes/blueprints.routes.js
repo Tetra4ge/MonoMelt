@@ -5,6 +5,7 @@ const {
   createBlueprint,
   getBlueprints,
   getBlueprintById,
+  getBlueprintFiles,
   downloadBlueprint
 } = require('../controllers/blueprints.controller');
 
@@ -14,6 +15,7 @@ router.use(requireAuth);
 router.post('/', createBlueprint);
 router.get('/', getBlueprints);
 router.get('/:blueprintId', getBlueprintById);
+router.get('/:blueprintId/files', getBlueprintFiles);
 router.get('/:blueprintId/download', downloadBlueprint);
 
 module.exports = router;

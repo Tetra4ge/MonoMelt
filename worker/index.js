@@ -11,10 +11,15 @@ const redisConnection = new IORedis(process.env.REDIS_URL, { maxRetriesPerReques
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 const reportQueue = new Queue('report-generation', { connection: redisConnection });
+const internalHeaders = process.env.INTERNAL_API_KEY ? { 'X-Internal-Key': process.env.INTERNAL_API_KEY } : {};
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const MAX_FILES = Number(process.env.MAX_SOURCE_FILES || 10_000);
 const MAX_EXTRACTED_BYTES = Number(process.env.MAX_EXTRACTED_BYTES || 200 * 1024 * 1024);
 const MAX_FILE_BYTES = Number(process.env.MAX_SOURCE_FILE_BYTES || 5 * 1024 * 1024);
+const MAX_DOWNLOAD_BYTES = Number(process.env.MAX_GITHUB_ZIP_BYTES || 100 * 1024 * 1024);
+const UPLOAD_CONCURRENCY = Number(process.env.UPLOAD_CONCURRENCY || 8);
+const MANIFEST_BATCH_SIZE = 500;
+const GITHUB_NAME_RE = /^[A-Za-z0-9_.-]+$/;
 const SOURCE_EXTENSIONS = new Set(['.py', '.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.java', '.go', '.cs', '.c', '.cpp', '.h', '.rb', '.php']);
 
 const normaliseEntryPath = (entryName) => entryName.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -26,6 +31,18 @@ const describeError = (error) => {
     return `HTTP ${error.response.status}: ${detail}`;
   }
   return error.message || String(error);
+};
+
+// Runs `worker` over `items` with at most `limit` in flight; rejects on the first failure.
+const runWithConcurrency = async (items, limit, worker) => {
+  let next = 0;
+  const lane = async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      await worker(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
 };
 
 const processSourceZip = async (jobData) => {
@@ -44,8 +61,10 @@ const processSourceZip = async (jobData) => {
   // For safety and avoiding huge temp folders, we can use adm-zip to iterate entries
   const zip = new AdmZip(buffer);
   const zipEntries = zip.getEntries();
-  
+  if (zipEntries.length > MAX_FILES) throw new Error(`Archive exceeds ${MAX_FILES} file limit`);
+
   const manifest = [];
+  const uploads = [];
   let extractedBytes = 0;
   let includedCount = 0;
   
@@ -56,7 +75,6 @@ const processSourceZip = async (jobData) => {
     if (!filePath || filePath.split('/').some(segment => segment === '..') || /^[A-Za-z]:/.test(filePath) || entry.header.attr === 0xA000) continue;
     if (filePath.split('/').length > 32) throw new Error('Archive path depth exceeds 32 segments');
 
-    if (zipEntries.length > MAX_FILES) throw new Error(`Archive exceeds ${MAX_FILES} file limit`);
     if (entry.header.size > MAX_FILE_BYTES || extractedBytes + entry.header.size > MAX_EXTRACTED_BYTES) throw new Error('Archive exceeds configured extraction limits');
     
     // Extract info
@@ -70,9 +88,7 @@ const processSourceZip = async (jobData) => {
     const language = getLanguage(ext);
 
     if (isSource) {
-      const sourcePath = `projects/${projectId}/${sourceVersionId}/files/${filePath}`;
-      const { error: sourceUploadError } = await supabase.storage.from('openai').upload(sourcePath, content, { upsert: true, contentType: 'text/plain' });
-      if (sourceUploadError) throw new Error(`Failed to store ${filePath}: ${sourceUploadError.message}`);
+      uploads.push({ sourcePath: `projects/${projectId}/${sourceVersionId}/files/${filePath}`, content, filePath });
       includedCount += 1;
     }
     
@@ -87,11 +103,18 @@ const processSourceZip = async (jobData) => {
     });
   }
 
-  // 4. Batch insert into source_files
+  // 4. Store source files (bounded concurrency) and the manifest (batched inserts)
   if (includedCount === 0) throw new Error('Archive contains no supported source files');
-  if (manifest.length > 0) {
-    await supabase.from('source_files').delete().eq('source_version_id', sourceVersionId);
-    const { error: insertError } = await supabase.from('source_files').insert(manifest);
+
+  await runWithConcurrency(uploads, UPLOAD_CONCURRENCY, async ({ sourcePath, content, filePath }) => {
+    const { error: sourceUploadError } = await supabase.storage.from('openai').upload(sourcePath, content, { upsert: true, contentType: 'text/plain' });
+    if (sourceUploadError) throw new Error(`Failed to store ${filePath}: ${sourceUploadError.message}`);
+  });
+
+  const { error: clearError } = await supabase.from('source_files').delete().eq('source_version_id', sourceVersionId);
+  if (clearError) throw new Error(`Failed to reset manifest: ${clearError.message}`);
+  for (let i = 0; i < manifest.length; i += MANIFEST_BATCH_SIZE) {
+    const { error: insertError } = await supabase.from('source_files').insert(manifest.slice(i, i + MANIFEST_BATCH_SIZE));
     if (insertError) throw new Error(`Failed to save manifest: ${insertError.message}`);
   }
 
@@ -101,7 +124,7 @@ const processSourceZip = async (jobData) => {
   const triggerResult = await axios.post(
     `${aiUrl}/analysis/trigger`,
     { source_version_id: sourceVersionId },
-    { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000 },
+    { params: { project_id: projectId, owner_id: ownerId }, timeout: 30_000, headers: internalHeaders },
   );
   console.log(`Analysis run queued: ${triggerResult.data.analysis_run_id}`);
 };
@@ -121,19 +144,29 @@ const processGithubSource = async (jobData) => {
   const parts = url.split('/');
   const repo = parts.pop();
   const owner = parts.pop();
+  if (!GITHUB_NAME_RE.test(owner || '') || !GITHUB_NAME_RE.test(repo || '')) {
+    throw new Error(`Invalid GitHub repository URL: ${repoUrl}`);
+  }
   
   const targetBranch = branch || 'main';
-  const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${targetBranch}.zip`;
+  const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${encodeURI(targetBranch)}`;
   
   console.log(`Downloading zipball from ${zipUrl}...`);
   
-  // 2. Fetch the zipball using native fetch
-  const response = await fetch(zipUrl);
+  // 2. Fetch the zipball with a timeout and a size cap (it is buffered in memory)
+  const response = await fetch(zipUrl, { signal: AbortSignal.timeout(120_000) });
   if (!response.ok) {
-    throw new Error(`Failed to fetch repo from GitHub: ${response.statusText} (Make sure the repo is public and branch exists)`);
+    throw new Error(`Failed to fetch repo from GitHub: ${response.status} ${response.statusText} (Make sure the repo is public and the branch exists)`);
+  }
+  const declaredSize = Number(response.headers.get('content-length') || 0);
+  if (declaredSize > MAX_DOWNLOAD_BYTES) {
+    throw new Error(`Repository archive is ${Math.round(declaredSize / 1048576)}MB, over the ${Math.round(MAX_DOWNLOAD_BYTES / 1048576)}MB limit`);
   }
   
   const arrayBuffer = await response.arrayBuffer();
+  if (arrayBuffer.byteLength > MAX_DOWNLOAD_BYTES) {
+    throw new Error(`Repository archive exceeds the ${Math.round(MAX_DOWNLOAD_BYTES / 1048576)}MB limit`);
+  }
   
   // 3. Upload to Supabase Storage for consistency and archiving
   const storagePath = `projects/${projectId}/${sourceVersionId}/source.zip`;
@@ -196,7 +229,7 @@ const reportWorker = new Worker('report-generation', async (job) => {
     const response = await axios.post(`${AI_SERVICE_URL}/api/reports/generate`, {
       project_id: projectId,
       owner_id: ownerId
-    });
+    }, { timeout: 30_000, headers: internalHeaders });
     
     // Because Phase 3 returns a 202 instantly via BackgroundTasks,
     // this log will appear almost immediately.
@@ -217,19 +250,3 @@ reportWorker.on('failed', (job, err) => {
   console.error(`[BullMQ] Job ${job.id} failed: ${err.message}`);
 });
 console.log('Worker is listening for jobs on "report-generation" queue...');
-
-// 3.3 The Trigger Hook
-// Call this function at the end of your Decomposition/Planning pipeline
-const triggerReportGeneration = async (projectId, ownerId) => {
-  await reportQueue.add('generate-report', {
-    projectId: projectId,
-    ownerId: ownerId
-  }, {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 2000 }
-  });
-};
-
-module.exports = {
-  triggerReportGeneration
-};

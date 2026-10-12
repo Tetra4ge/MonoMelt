@@ -60,10 +60,12 @@ class ParsedImport:
     """One import/require statement extracted from a file."""
     source_file: str         # file that has the import
     target_module: str       # what is being imported (raw string)
-    resolved_path: Optional[str] = None   # absolute path if resolvable
-    is_external: bool = False             # True for node_modules / PyPI
+    resolved_path: Optional[str] = None   # first resolved local file, if any
+    is_external: bool = False             # True for stdlib / node_modules / PyPI
     extraction_method: ExtractionMethod = ExtractionMethod.STATIC
     line: int = 0
+    names: list[str] = field(default_factory=list)          # `from x import a, b` -> [a, b]
+    resolved_paths: list[str] = field(default_factory=list)  # every local file this import points to
 
 
 @dataclass

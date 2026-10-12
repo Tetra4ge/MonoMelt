@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Rocket, Download } from 'lucide-react';
 import { triggerDeployment, getDeploymentLogs, getServicesHealth } from '../features/deployment/deployment.api';
 import type { Deployment, ServiceHealth } from '../features/deployment/types';
 import api from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 import PipelineVisualizer from '../components/deployment/PipelineVisualizer';
 import LiveTerminal from '../components/deployment/LiveTerminal';
 import ServicesDashboard from '../components/deployment/ServicesDashboard';
@@ -19,6 +20,19 @@ export default function DeploymentPage() {
   const [services, setServices] = useState<ServiceHealth[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startedFor = useRef<string | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  // Never leave the poller running after the page unmounts.
+  useEffect(() => stopPolling, [stopPolling]);
 
   const startDeployment = useCallback(async () => {
     if (!projectId || !blueprintId) return;
@@ -32,36 +46,54 @@ export default function DeploymentPage() {
       setDeployment(currentDeployment);
 
       // 2. Poll for logs and status updates
-      const pollInterval = setInterval(async () => {
-        const updated = await getDeploymentLogs(projectId, currentDeployment.id);
-        // Status is controlled entirely by backend
-        setDeployment(updated);
+      stopPolling();
+      pollRef.current = setInterval(async () => {
+        try {
+          const updated = await getDeploymentLogs(projectId, currentDeployment.id);
+          // Status is controlled entirely by the backend
+          setDeployment(updated);
 
-        // 3. When deployed, fetch health metrics and stop polling
-        if (updated.status === 'deployed') {
-          clearInterval(pollInterval);
+          // 3. When deployed, fetch health metrics and stop polling
+          if (updated.status === 'deployed') {
+            stopPolling();
+            setIsDeploying(false);
+            setServices(await getServicesHealth(projectId, currentDeployment.id));
+          } else if (updated.status === 'failed') {
+            stopPolling();
+            setIsDeploying(false);
+            setError('Deployment failed. Check the logs above.');
+          }
+        } catch (pollError) {
+          stopPolling();
           setIsDeploying(false);
-          const healthData = await getServicesHealth(projectId, currentDeployment.id);
-          setServices(healthData);
+          setError(getErrorMessage(pollError, 'Lost connection to the deployment.'));
         }
       }, 2000);
 
-    } catch (err: any) {
-      setError(err?.message || 'Failed to start deployment.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to start deployment.'));
       setIsDeploying(false);
     }
-  }, [projectId, blueprintId]);
+  }, [projectId, blueprintId, stopPolling]);
 
+  // Start exactly once per blueprint (the ref also survives StrictMode's double-invoked effects). Without this guard a failed start (which
+  // leaves `deployment` null) would re-trigger this effect and retry forever.
   useEffect(() => {
-    if (!projectId || !blueprintId || isDeploying || deployment) return;
-    const timer = window.setTimeout(() => { void startDeployment(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [projectId, blueprintId, isDeploying, deployment, startDeployment]);
+    if (!projectId || !blueprintId || startedFor.current === blueprintId) return;
+    startedFor.current = blueprintId;
+    void startDeployment();
+  }, [projectId, blueprintId, startDeployment]);
+
+  const retryDeployment = () => {
+    setDeployment(null);
+    setServices([]);
+    void startDeployment();
+  };
 
   const handleDownload = async () => {
     if (!projectId || !blueprintId) return;
     try {
-      const response = await api.get(`/projects/${projectId}/blueprints/${blueprintId}/download`, {
+      const response = await api.get(`/api/projects/${projectId}/blueprints/${blueprintId}/download`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -72,8 +104,8 @@ export default function DeploymentPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch {
-      setError('Failed to download blueprint.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to download blueprint.'));
     }
   };
 
@@ -100,6 +132,14 @@ export default function DeploymentPage() {
         {error && (
           <div className="mb-6 bg-red-950/30 border border-red-900/50 p-4 rounded-sm">
             <p className="text-red-400 text-sm font-mono whitespace-pre-wrap">{error}</p>
+            {blueprintId && !isDeploying && (
+              <button
+                onClick={retryDeployment}
+                className="mt-3 border border-red-900/60 px-3 py-1 text-xs font-bold uppercase text-red-300 hover:bg-red-900/30"
+              >
+                Retry deployment
+              </button>
+            )}
           </div>
         )}
 

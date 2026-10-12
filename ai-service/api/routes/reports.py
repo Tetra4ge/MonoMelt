@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from supabase import Client, create_client
 from core.config import get_settings
 from services.report_generator import ReportAgent
+from services.realtime import publish_report_update
 from models.schemas import ReportGenerateRequest, ReportGenerateResponse
 import logging
 
@@ -46,9 +47,9 @@ async def generate_and_save_report(
         }).execute()
         
         # 4. Invoke the Phase 2 Generator Logic
-        agent = ReportAgent(project_id, supabase)
+        agent = ReportAgent(project_id, supabase, owner_id=owner_id)
         final_report = await agent.build_report()
-        
+
         # 5. Persist the generated JSONB payload and mark as completed
         supabase.table('project_reports').update({
             "payload": final_report.model_dump(),
@@ -56,19 +57,25 @@ async def generate_and_save_report(
         }).eq('project_id', project_id)\
           .eq('version_number', next_version)\
           .execute()
-          
+
         logger.info(f"Report v{next_version} successfully generated for {project_id}")
+
+        # 6. Notify the API Gateway (via Redis) so it can push a real-time
+        # `report_completed` WebSocket event to the React frontend.
+        await publish_report_update(project_id, "completed", next_version)
 
     except Exception as e:
         logger.error(f"Failed to generate report for {project_id}: {str(e)}")
-        # 6. Graceful Failure: Update database state so frontend knows it failed
+        # 7. Graceful Failure: Update database state so frontend knows it failed
         try:
             supabase.table('project_reports').update({
                 "status": "failed",
                 "payload": {"error": str(e)}
             }).eq('project_id', project_id)\
+              .eq('version_number', next_version)\
               .eq('status', 'generating')\
               .execute()
+            await publish_report_update(project_id, "failed", next_version)
         except Exception as inner_e:
             logger.critical(f"Failed to update error status: {str(inner_e)}")
 

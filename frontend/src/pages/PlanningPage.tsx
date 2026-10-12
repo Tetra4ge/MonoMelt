@@ -18,7 +18,7 @@ export default function PlanningPage() {
   const [activePlan, setActivePlan] = useState<MigrationPlan | null>(null);
   const [activeRevision, setActiveRevision] = useState<PlanRevision | null>(null);
   const [assumptions, setAssumptions] = useState<PlanAssumptions>(defaultAssumptions);
-  const [scenarioId, setScenarioId] = useState<string>(() => new URLSearchParams(window.location.search).get('scenarioRevisionId') ?? '');
+  const [scenarioId, setScenarioId] = useState<string>(() => (() => { const q = new URLSearchParams(window.location.search); return q.get('scenarioId') ?? q.get('scenarioRevisionId') ?? ''; })());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export default function PlanningPage() {
   const report = useMemo(() => activeRevision ? getLatestReport({ ...activePlan, latest_revision: activeRevision } as MigrationPlan) : null, [activePlan, activeRevision]);
 
   const handleGenerate = async () => {
-    if (!projectId || !scenarioId) { setError('Select a completed scenario revision before generating a plan.'); return; }
+    if (!projectId || !scenarioId) { setError('Select a completed scenario before generating a plan.'); return; }
     setSaving(true); setError(null);
     try {
       const plan = await createPlan(projectId, scenarioId, assumptions);
@@ -75,7 +75,7 @@ export default function PlanningPage() {
 
         {error && <div className="mb-5 border border-[#555] bg-[#111] p-4 text-xs text-gray-300">error: {error}</div>}
 
-        {!activePlan && <div className="mb-6"><div className="mb-4 border border-[#222] bg-[#111] p-4"><p className="mb-3 text-xs text-gray-500">existing plans: {plans.length}</p><label className="text-xs text-gray-400">Scenario revision ID<input value={scenarioId} onChange={event => setScenarioId(event.target.value)} placeholder="Paste completed scenario revision ID" className="mt-2 w-full border border-[#222] bg-[#0a0a0a] px-3 py-3 text-xs text-white outline-none focus:border-white" /></label></div><PlanSetup assumptions={assumptions} disabled={saving} submitLabel={saving ? 'Generating...' : 'Generate migration plan'} onChange={setAssumptions} onSubmit={handleGenerate} /></div>}
+        {!activePlan && <div className="mb-6"><div className="mb-4 border border-[#222] bg-[#111] p-4"><p className="mb-3 text-xs text-gray-500">existing plans: {plans.length}</p><label className="text-xs text-gray-400">Scenario ID<input value={scenarioId} onChange={event => setScenarioId(event.target.value)} placeholder="Paste completed scenario ID" className="mt-2 w-full border border-[#222] bg-[#0a0a0a] px-3 py-3 text-xs text-white outline-none focus:border-white" /></label></div><PlanSetup assumptions={assumptions} disabled={saving} submitLabel={saving ? 'Generating...' : 'Generate migration plan'} onChange={setAssumptions} onSubmit={handleGenerate} /></div>}
 
         {activePlan && report && activeRevision && (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[240px_1fr]">

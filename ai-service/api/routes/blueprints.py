@@ -22,6 +22,8 @@ def generate_blueprint(payload: GenerateBlueprintRequest):
         generator = BlueprintGenerator(request=payload)
         response = generator.generate()
         return response
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

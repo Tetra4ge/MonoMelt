@@ -11,9 +11,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const uploadSourceZip = async (fileBuffer, projectId, sourceVersionId) => {
   const fileName = `projects/${projectId}/${sourceVersionId}/source.zip`;
   
-  // Ensure bucket exists
+  // Ensure the bucket exists. It holds customers' source code, so it must be private.
   try {
-    await supabase.storage.createBucket('openai', { public: true });
+    await supabase.storage.createBucket('openai', { public: false });
   } catch (e) {
     // Bucket might already exist, continue
   }

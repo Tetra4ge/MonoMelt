@@ -30,8 +30,9 @@ def _file_node_id(source_version_id: str, file_path: str) -> str:
     return f"{source_version_id}::{file_path}"
 
 
-def _symbol_node_id(source_version_id: str, file_path: str, name: str) -> str:
-    return f"{source_version_id}::{file_path}::{name}"
+def _symbol_node_id(source_version_id: str, file_path: str, name: str, start_line: int) -> str:
+    # start_line keeps same-named symbols apart (every class has an __init__).
+    return f"{source_version_id}::{file_path}::{name}:{start_line}"
 
 
 def _ext_dep_node_id(source_version_id: str, module: str) -> str:
@@ -78,8 +79,7 @@ async def _merge_symbol_nodes(session, parsed_files: list[ParsedFile], ctx: dict
     """MERGE Function/Class/Method nodes and link them to their File."""
     cypher = """
     UNWIND $symbols AS s
-    MERGE (sym {node_id: s.node_id})
-    ON CREATE SET sym:Symbol
+    MERGE (sym:Symbol {node_id: s.node_id})
     SET sym += {
       source_version_id: $svid,
       project_id:        $pid,
@@ -99,7 +99,7 @@ async def _merge_symbol_nodes(session, parsed_files: list[ParsedFile], ctx: dict
         file_nid = _file_node_id(ctx["svid"], pf.file_path)
         for sym in pf.symbols:
             symbols_data.append({
-                "node_id": _symbol_node_id(ctx["svid"], pf.file_path, sym.name),
+                "node_id": _symbol_node_id(ctx["svid"], pf.file_path, sym.name, sym.start_line),
                 "file_node_id": file_nid,
                 "name": sym.name,
                 "symbol_type": sym.symbol_type,
@@ -111,60 +111,32 @@ async def _merge_symbol_nodes(session, parsed_files: list[ParsedFile], ctx: dict
         await session.run(cypher, {"symbols": symbols_data, **ctx})
 
 
-async def _merge_import_edges(session, parsed_files: list[ParsedFile], ctx: dict) -> None:
+async def _merge_import_edges(session, parsed_files: list[ParsedFile], ctx: dict) -> dict:
     """
-    MERGE IMPORTS edges between File nodes (internal) or
-    ExternalDependency nodes (external packages).
+    MERGE IMPORTS edges: File -> File for imports that resolved to an uploaded
+    file, File -> ExternalDependency for stdlib / third-party / unresolved ones.
+    Returns edge counts for the run summary.
     """
-    # Build a lookup: file_path → node_id for fast resolution
-    file_map = {
-        pf.file_path: _file_node_id(ctx["svid"], pf.file_path)
-        for pf in parsed_files
-    }
-
-    internal_edges = []
-    external_deps: dict[str, str] = {}  # module_name → ext node_id
+    internal_edges: dict[tuple[str, str], dict] = {}
+    external_edges: dict[tuple[str, str], dict] = {}
+    external_deps: dict[str, str] = {}  # module_name -> ext node_id
 
     for pf in parsed_files:
         source_nid = _file_node_id(ctx["svid"], pf.file_path)
         for imp in pf.imports:
-            if imp.is_external:
+            method = imp.extraction_method.value
+            if imp.resolved_paths:
+                for target_path in imp.resolved_paths:
+                    key = (source_nid, _file_node_id(ctx["svid"], target_path))
+                    if key[0] != key[1]:
+                        internal_edges.setdefault(key, {"method": method, "line": imp.line})
+            else:
                 ext_nid = _ext_dep_node_id(ctx["svid"], imp.target_module)
                 external_deps[imp.target_module] = ext_nid
-                internal_edges.append({
-                    "source_nid": source_nid,
-                    "target_nid": ext_nid,
-                    "confidence": 1.0,
-                    "method": imp.extraction_method.value,
-                    "line": imp.line,
-                    "is_external": True,
-                })
-            else:
-                # Try to resolve relative import to absolute path
-                resolved = imp.resolved_path or imp.target_module
-                # Check if target is in our file map
-                target_nid = file_map.get(resolved)
-                if target_nid is None:
-                    # Store as unresolved external
-                    ext_nid = _ext_dep_node_id(ctx["svid"], imp.target_module)
-                    external_deps[imp.target_module] = ext_nid
-                    target_nid = ext_nid
-                    is_ext = True
-                else:
-                    is_ext = False
+                external_edges.setdefault((source_nid, ext_nid), {"method": method, "line": imp.line})
 
-                internal_edges.append({
-                    "source_nid": source_nid,
-                    "target_nid": target_nid,
-                    "confidence": 1.0,
-                    "method": imp.extraction_method.value,
-                    "line": imp.line,
-                    "is_external": is_ext,
-                })
-
-    # 1. Create ExternalDependency nodes
     if external_deps:
-        ext_cypher = """
+        await session.run("""
         UNWIND $deps AS d
         MERGE (ext:ExternalDependency {node_id: d.node_id})
         SET ext += {
@@ -173,24 +145,45 @@ async def _merge_import_edges(session, parsed_files: list[ParsedFile], ctx: dict
           owner_id:          $oid,
           name:              d.name
         }
-        """
-        await session.run(ext_cypher, {
+        """, {
             "deps": [{"node_id": nid, "name": name} for name, nid in external_deps.items()],
             **ctx,
         })
 
-    # 2. Create IMPORTS edges
+    def _rows(edges: dict) -> list[dict]:
+        return [
+            {"source_nid": src, "target_nid": tgt, "method": v["method"], "line": v["line"]}
+            for (src, tgt), v in edges.items()
+        ]
+
+    # Labelled MATCH on both ends so the node_id indexes are used.
     if internal_edges:
-        edge_cypher = """
+        await session.run("""
         UNWIND $edges AS e
-        MATCH (src {node_id: e.source_nid})
-        MATCH (tgt {node_id: e.target_nid})
+        MATCH (src:File {node_id: e.source_nid})
+        MATCH (tgt:File {node_id: e.target_nid})
         MERGE (src)-[r:IMPORTS]->(tgt)
-        SET r.confidence = e.confidence,
-            r.extraction_method = e.method,
-            r.source_line = e.line
-        """
-        await session.run(edge_cypher, {"edges": internal_edges, **ctx})
+        SET r.confidence = 1.0, r.extraction_method = e.method, r.source_line = e.line
+        """, {"edges": _rows(internal_edges), **ctx})
+
+    if external_edges:
+        await session.run("""
+        UNWIND $edges AS e
+        MATCH (src:File {node_id: e.source_nid})
+        MATCH (tgt:ExternalDependency {node_id: e.target_nid})
+        MERGE (src)-[r:IMPORTS]->(tgt)
+        SET r.confidence = 1.0, r.extraction_method = e.method, r.source_line = e.line
+        """, {"edges": _rows(external_edges), **ctx})
+
+    return {"internal_edges": len(internal_edges), "external_edges": len(external_edges)}
+
+
+async def ensure_indexes(session) -> None:
+    """node_id lookups run for every MERGE/MATCH above; index them (idempotent)."""
+    for label in ("File", "Symbol", "ExternalDependency"):
+        await session.run(
+            f"CREATE INDEX {label.lower()}_node_id IF NOT EXISTS FOR (n:{label}) ON (n.node_id)"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -224,23 +217,25 @@ async def build_graph(
     )
 
     async with get_session() as session:
+        await ensure_indexes(session)
         await _merge_file_nodes(session, eligible, ctx)
         logger.info("  ✓ File nodes merged")
 
         await _merge_symbol_nodes(session, eligible, ctx)
         logger.info("  ✓ Symbol nodes merged")
 
-        await _merge_import_edges(session, eligible, ctx)
+        edge_counts = await _merge_import_edges(session, eligible, ctx)
         logger.info("  ✓ Import edges merged")
 
     total_symbols = sum(len(pf.symbols) for pf in eligible)
-    total_imports = sum(len(pf.imports) for pf in eligible)
 
     return {
         "files_written": len(eligible),
         "files_skipped": skipped,
         "symbols_written": total_symbols,
-        "edges_written": total_imports,
+        "edges_written": edge_counts["internal_edges"] + edge_counts["external_edges"],
+        "internal_edges": edge_counts["internal_edges"],
+        "external_edges": edge_counts["external_edges"],
     }
 
 

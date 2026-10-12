@@ -8,8 +8,12 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
 const { errorHandler } = require('./middlewares/error.middleware');
 
-// Load environment variables
+// Load environment variables (must run before any module that reads process.env at require time)
 dotenv.config();
+
+const { requireAuth } = require('./middlewares/auth.middleware');
+const { requireProjectOwner } = require('./middlewares/project.middleware');
+const { proxyToAiService } = require('./services/ai.service');
 
 // Validate Required Environment Variables
 const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_JWT_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL'];
@@ -57,6 +61,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
 app.use('/api/auth', require('./routes/auth.routes'));
+// Every project-scoped route below requires the caller to own the project.
+app.use('/api/projects/:projectId', requireAuth, requireProjectOwner);
 app.use('/api/projects', require('./routes/projects.routes'));
 app.use('/api/projects/:projectId/analysis', require('./routes/analysis.routes'));
 app.use('/api/projects/:projectId/intelligence', require('./routes/intelligence.routes'));
@@ -77,11 +83,23 @@ app.use('/api/projects/:projectId', require('./routes/planning.routes'));
  *       200:
  *         description: Gateway is up and running.
  */
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Report the real state of the AI service and its Neo4j connection.
+  let aiService = 'down';
+  let neo4j = 'unknown';
+  try {
+    const ai = await proxyToAiService('GET', '/health', null, {}, { timeout: 3000 });
+    aiService = 'up';
+    neo4j = ai.neo4j === 'connected' ? 'connected' : 'unavailable';
+  } catch (err) {
+    aiService = 'down';
+  }
+
   res.status(200).json({
     success: true,
     service: 'api-gateway',
     status: 'up',
+    services: { 'ai-service': aiService, neo4j },
     timestamp: new Date().toISOString()
   });
 });

@@ -10,7 +10,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel, Field, AliasChoices
 
-from db.pg_client import fetch, execute
+from db.pg_client import fetch, fetchrow, execute
 from services.enrichment import run_intelligence_pipeline
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,18 @@ async def trigger_intelligence(
     Start the intelligence pipeline in the background.
     """
     svid = str(request.source_version_id)
-    
+
+    source = await fetchrow(
+        """
+        SELECT sv.id FROM public.source_versions sv
+        JOIN public.projects p ON p.id = sv.project_id
+        WHERE sv.id = $1 AND sv.project_id = $2 AND p.owner_id = $3
+        """,
+        svid, project_id, owner_id,
+    )
+    if not source:
+        raise HTTPException(status_code=404, detail="Source version was not found for this project")
+
     background_tasks.add_task(
         run_intelligence_pipeline,
         project_id=project_id,
@@ -54,8 +65,8 @@ async def get_findings(
     Fetch all LLM findings for a given source version.
     """
     rows = await fetch(
-        "SELECT id, finding_type, subject_ids, explanation, confidence, evidence_ids, review_status, needs_review, created_at FROM public.ai_findings WHERE source_version_id = $1 ORDER BY confidence DESC",
-        source_version_id
+        "SELECT id, finding_type, subject_ids, explanation, confidence, evidence_ids, review_status, needs_review, created_at FROM public.ai_findings WHERE source_version_id = $1 AND project_id = $2 AND owner_id = $3 ORDER BY confidence DESC",
+        source_version_id, project_id, owner_id
     )
     
     return {"success": True, "data": rows}

@@ -1,145 +1,255 @@
+"""
+Decomposition Engine (Agent 3)
+==============================
+Splits the file-level import graph into proposed microservices.
+
+Only internal File -> File IMPORTS edges are clustered. External packages
+are excluded on purpose: a package like `react` is imported everywhere and
+would glue unrelated files into one giant community. Symbols are not
+clustered either; each symbol simply follows the file that contains it.
+
+Strategies:
+  conservative - Louvain, low resolution  (fewer, larger services)
+  aggressive   - Louvain, high resolution (more, smaller services)
+  domain       - group by package/directory structure (bounded contexts
+                 usually follow the folder layout)
+  default      - Louvain, balanced resolution
+"""
+
+import json
 import logging
+import posixpath
+import re
+import uuid
+from collections import Counter, defaultdict
+
 import networkx as nx
 from community import community_louvain
-import uuid
-import json
 
-from db.neo4j_client import get_driver
+from db.neo4j_client import run_query
 from db.pg_client import get_pg_connection
 
 logger = logging.getLogger(__name__)
 
+RESOLUTIONS = {"conservative": 0.5, "aggressive": 2.0}
+# Folder names that carry no domain meaning when naming/grouping services.
+GENERIC_DIRS = {"src", "app", "lib", "source", "main", "core", "pkg", "internal", "packages", "apps"}
+SHARED_SERVICE_NAME = "shared-utilities"
+
+
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "service"
+
+
 class DecompositionEngine:
-    def __init__(self, scenario_id: uuid.UUID, project_id: uuid.UUID, source_version_id: uuid.UUID, strategy_type: str):
+    def __init__(
+        self,
+        scenario_id: uuid.UUID,
+        project_id: uuid.UUID,
+        source_version_id: uuid.UUID,
+        strategy_type: str,
+        owner_id: uuid.UUID | str | None = None,
+    ):
         self.scenario_id = scenario_id
         self.project_id = project_id
         self.source_version_id = source_version_id
+        self.owner_id = owner_id
         self.strategy_type = strategy_type
         self.graph = nx.DiGraph()
+        self.file_paths: dict[str, str] = {}          # file node_id -> file_path
+        self.symbols_by_file: dict[str, list[str]] = defaultdict(list)
+        self._shared_group: set[str] = set()
 
     async def run(self):
         try:
             logger.info(f"Starting decomposition for scenario {self.scenario_id} using {self.strategy_type}")
-            
-            # 1. Fetch graph from Neo4j
             await self._build_graph()
-            
-            # 2. Run clustering strategy
-            clusters = await self._run_clustering()
-            
-            # 3. Calculate metrics and format output
+            clusters = self._cluster()
             proposed_services = self._generate_proposed_services(clusters)
-            
-            # 4. Save to PostgreSQL
             await self._save_results(proposed_services)
-            
             logger.info(f"Successfully completed decomposition for scenario {self.scenario_id}")
-            
         except Exception as e:
-            logger.error(f"Decomposition failed: {e}")
+            logger.error(f"Decomposition failed: {e}", exc_info=True)
             await self._mark_failed(str(e))
 
+    # ------------------------------------------------------------------
+    # Graph loading (tenant-scoped)
+    # ------------------------------------------------------------------
     async def _build_graph(self):
-        driver = get_driver()
-        query = """
-        MATCH (n {source_version_id: $svid})
-        OPTIONAL MATCH (n)-[r]->(m {source_version_id: $svid})
-        RETURN n.node_id AS source, labels(n)[0] AS source_label, n.name AS source_name,
-               m.node_id AS target, type(r) AS rel_type
-        """
-        async with driver.session() as session:
-            result = await session.run(query, svid=str(self.source_version_id))
-            records = await result.data()
-            
-            for record in records:
-                source = record["source"]
-                if not self.graph.has_node(source):
-                    self.graph.add_node(source, label=record["source_label"], name=record["source_name"])
-                
-                target = record["target"]
-                if target:
-                    # We add an edge. Weight can be adjusted based on rel_type if needed.
-                    self.graph.add_edge(source, target, type=record["rel_type"], weight=1.0)
-                    if not self.graph.has_node(target):
-                        # The target node should be picked up by the MATCH n, but just in case
-                        self.graph.add_node(target)
+        scope = {"svid": str(self.source_version_id), "pid": str(self.project_id), "oid": str(self.owner_id)}
 
-    async def _run_clustering(self):
-        # Louvain works on undirected graphs
-        undirected_graph = self.graph.to_undirected()
-        
-        # Determine resolution based on strategy
-        resolution = 1.0
-        if self.strategy_type == "conservative":
-            resolution = 0.5  # Fewer, larger clusters
-        elif self.strategy_type == "aggressive":
-            resolution = 2.0  # More, smaller clusters
-        elif self.strategy_type == "domain":
-            # For domain, we could ideally seed it with ai_findings.
-            # For simplicity in this engine pass, we will run standard louvain with a balanced resolution,
-            # but in a real enterprise app, we'd pre-assign nodes based on domain text matching.
-            resolution = 1.0
+        files = await run_query(
+            """
+            MATCH (f:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+            RETURN f.node_id AS id, f.file_path AS file_path
+            """,
+            scope,
+        )
+        if not files:
+            raise ValueError("No analysed files found for this source version. Run the analysis first.")
+
+        for row in files:
+            self.file_paths[row["id"]] = row["file_path"]
+            self.graph.add_node(row["id"])
+
+        edges = await run_query(
+            """
+            MATCH (a:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+                  -[:IMPORTS]->(b:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})
+            RETURN a.node_id AS source, b.node_id AS target
+            """,
+            scope,
+        )
+        for row in edges:
+            if row["source"] != row["target"]:
+                self.graph.add_edge(row["source"], row["target"], weight=1.0)
+
+        symbols = await run_query(
+            """
+            MATCH (f:File {source_version_id: $svid, project_id: $pid, owner_id: $oid})-[:CONTAINS]->(s:Symbol)
+            RETURN f.node_id AS file_id, s.node_id AS symbol_id
+            """,
+            scope,
+        )
+        for row in symbols:
+            self.symbols_by_file[row["file_id"]].append(row["symbol_id"])
+
+    # ------------------------------------------------------------------
+    # Clustering
+    # ------------------------------------------------------------------
+    def _cluster(self) -> list[list[str]]:
+        if self.strategy_type == "domain":
+            groups = self._cluster_by_directory()
         else:
-            resolution = 1.0
-            
-        # Run Louvain
-        # partition is a dict: { node_id: community_id }
-        partition = community_louvain.best_partition(undirected_graph, resolution=resolution, weight='weight')
-        
-        # Group by community
-        clusters = {}
-        for node, comm_id in partition.items():
-            if comm_id not in clusters:
-                clusters[comm_id] = []
-            clusters[comm_id].append(node)
-            
-        return clusters
+            resolution = RESOLUTIONS.get(self.strategy_type, 1.0)
+            partition = community_louvain.best_partition(
+                self.graph.to_undirected(), resolution=resolution, weight="weight", random_state=42
+            )
+            by_community: dict[int, list[str]] = defaultdict(list)
+            for node, community in partition.items():
+                by_community[community].append(node)
+            groups = list(by_community.values())
 
-    def _generate_proposed_services(self, clusters: dict) -> list:
+        return self._fold_isolated(groups)
+
+    def _cluster_by_directory(self) -> list[list[str]]:
+        """Group files by their first meaningful directory below the repo root."""
+        dirs = {nid: posixpath.dirname(path).split("/") if posixpath.dirname(path) else [] for nid, path in self.file_paths.items()}
+
+        # Strip the folder prefix shared by every file (e.g. the `repo-main/` wrapper).
+        common = 0
+        if dirs:
+            shortest = min(len(d) for d in dirs.values())
+            while common < shortest and len({d[common] for d in dirs.values()}) == 1:
+                common += 1
+
+        groups: dict[str, list[str]] = defaultdict(list)
+        for nid, parts in dirs.items():
+            meaningful = [p for p in parts[common:] if p.lower() not in GENERIC_DIRS]
+            groups[meaningful[0] if meaningful else SHARED_SERVICE_NAME].append(nid)
+        return list(groups.values())
+
+    def _fold_isolated(self, groups: list[list[str]]) -> list[list[str]]:
+        """
+        Louvain puts every file with no internal imports in its own community,
+        which would otherwise become hundreds of one-file 'services'. Gather
+        those into a single shared-utilities service.
+        """
+        kept: list[list[str]] = []
+        isolated: list[str] = []
+        for group in groups:
+            if len(group) == 1 and self.graph.degree(group[0]) == 0:
+                isolated.extend(group)
+            else:
+                kept.append(group)
+        if len(isolated) == 1:
+            kept.append(isolated)
+        elif isolated:
+            kept.append(isolated)
+            self._shared_group = set(isolated)
+        return kept
+
+    # ------------------------------------------------------------------
+    # Service generation
+    # ------------------------------------------------------------------
+    def _service_label(self, files: list[str]) -> str:
+        """Name a service after the most common meaningful folder (or file) in it."""
+        counts: Counter = Counter()
+        for nid in files:
+            parts = [p for p in posixpath.dirname(self.file_paths[nid]).split("/") if p and p.lower() not in GENERIC_DIRS]
+            if parts:
+                counts[parts[-1]] += 1
+        if counts:
+            return _slug(counts.most_common(1)[0][0])
+        return _slug(posixpath.splitext(posixpath.basename(self.file_paths[files[0]]))[0])
+
+    def _generate_proposed_services(self, clusters: list[list[str]]) -> list[dict]:
+        shared = self._shared_group
+
+        used_names: set[str] = set()
         services = []
-        for comm_id, nodes in clusters.items():
-            # Calculate simple metrics for this cluster
-            internal_edges = 0
-            external_edges = 0
-            
-            for u in nodes:
-                for _, v in self.graph.out_edges(u):
-                    if v in nodes:
-                        internal_edges += 1
+        for idx, files in enumerate(sorted(clusters, key=len, reverse=True)):
+            is_shared = bool(shared) and set(files) == shared
+            base = SHARED_SERVICE_NAME if is_shared else f"{self._service_label(files)}-service"
+            name, n = base, 2
+            while name in used_names:
+                name, n = f"{base}-{n}", n + 1
+            used_names.add(name)
+
+            file_set = set(files)
+            internal = external = 0
+            for u in files:
+                for v in self.graph.successors(u):
+                    if v in file_set:
+                        internal += 1
                     else:
-                        external_edges += 1
-            
-            # Cohesion: internal connections / total possible or total actual
-            # Coupling: external connections
-            
+                        external += 1
+
+            assigned = list(files)
+            for nid in files:
+                assigned.extend(self.symbols_by_file.get(nid, []))
+
             services.append({
-                "name": f"Service_{comm_id + 1}",
-                "description": f"Auto-generated cluster with {len(nodes)} components.",
-                "assigned_nodes": nodes,
+                "name": name,
+                "description": (
+                    f"Shared files with no internal dependencies ({len(files)} files)."
+                    if is_shared else
+                    f"{len(files)} files grouped by {'package structure' if self.strategy_type == 'domain' else 'import coupling'}."
+                ),
+                "assigned_nodes": assigned,
                 "metrics": {
-                    "node_count": len(nodes),
-                    "internal_edges": internal_edges,
-                    "external_edges_out": external_edges
-                }
+                    "node_count": len(assigned),
+                    "file_count": len(files),
+                    "internal_edges": internal,
+                    "external_edges_out": external,
+                },
             })
-            
         return services
 
+    # ------------------------------------------------------------------
+    # Persistence
+    # ------------------------------------------------------------------
     async def _save_results(self, proposed_services: list):
+        total_internal = sum(s["metrics"]["internal_edges"] for s in proposed_services)
+        total_cross = sum(s["metrics"]["external_edges_out"] for s in proposed_services)
         conn = await get_pg_connection()
         try:
             async with conn.transaction():
-                # 1. Create a revision
                 rev_id = uuid.uuid4()
                 await conn.execute(
                     """
                     INSERT INTO scenario_revisions (id, scenario_id, revision_number, metrics)
                     VALUES ($1, $2, 1, $3)
                     """,
-                    rev_id, self.scenario_id, json.dumps({"service_count": len(proposed_services)})
+                    rev_id, self.scenario_id,
+                    json.dumps({
+                        "service_count": len(proposed_services),
+                        "internal_edges": total_internal,
+                        "cross_service_edges": total_cross,
+                    }),
                 )
-                
-                # 2. Insert proposed services
+
                 for srv in proposed_services:
                     await conn.execute(
                         """
@@ -148,8 +258,7 @@ class DecompositionEngine:
                         """,
                         rev_id, srv["name"], srv["description"], json.dumps(srv["assigned_nodes"]), json.dumps(srv["metrics"])
                     )
-                
-                # 3. Update scenario status
+
                 await conn.execute(
                     "UPDATE decomposition_scenarios SET status = 'completed', updated_at = timezone('utc', now()) WHERE id = $1",
                     self.scenario_id
@@ -158,11 +267,15 @@ class DecompositionEngine:
             await conn.close()
 
     async def _mark_failed(self, error_msg: str):
-        conn = await get_pg_connection()
+        logger.error("Scenario %s failed: %s", self.scenario_id, error_msg)
         try:
-            await conn.execute(
-                "UPDATE decomposition_scenarios SET status = 'failed', updated_at = timezone('utc', now()) WHERE id = $1",
-                self.scenario_id
-            )
-        finally:
-            await conn.close()
+            conn = await get_pg_connection()
+            try:
+                await conn.execute(
+                    "UPDATE decomposition_scenarios SET status = 'failed', updated_at = timezone('utc', now()) WHERE id = $1",
+                    self.scenario_id
+                )
+            finally:
+                await conn.close()
+        except Exception:
+            logger.exception("Could not mark scenario %s as failed", self.scenario_id)

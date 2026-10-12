@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -15,12 +15,15 @@ from api.routes.planning import router as planning_router
 from api.routes.blueprints import router as blueprints_router
 from api.routes.reports import router as reports_router
 from db.neo4j_client import get_driver, close_driver, verify_connectivity
+from core.config import get_settings
+from core.security import verify_internal_key, warn_if_unprotected
 
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: warm Neo4j driver. Shutdown: close it cleanly."""
+    warn_if_unprotected()
     # Warm up driver connection pool
     get_driver()
     yield
@@ -35,22 +38,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow only the gateway in production
+# CORS - this service is called server-to-server; browsers should not need it.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Restrict to gateway URL in production
-    allow_credentials=True,
+    allow_origins=[o.strip() for o in get_settings().allowed_origins.split(",") if o.strip()],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount routers
-app.include_router(analysis_router)
-app.include_router(intelligence_router)
-app.include_router(decomposition_router, prefix="/decomposition", tags=["Decomposition"])
-app.include_router(planning_router)
-app.include_router(blueprints_router)
-app.include_router(reports_router, prefix="/api")
+# Mount routers (every router requires the internal key; /health stays public)
+protected = [Depends(verify_internal_key)]
+app.include_router(analysis_router, dependencies=protected)
+app.include_router(intelligence_router, dependencies=protected)
+app.include_router(decomposition_router, prefix="/decomposition", tags=["Decomposition"], dependencies=protected)
+app.include_router(planning_router, dependencies=protected)
+app.include_router(blueprints_router, dependencies=protected)
+app.include_router(reports_router, prefix="/api", dependencies=protected)
 
 
 @app.get("/health", tags=["Health"])

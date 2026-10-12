@@ -1,6 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middlewares/auth.middleware');
-const { getLatestReport } = require('../controllers/reports.controller');
+const { getLatestReport, generateReport } = require('../controllers/reports.controller');
 
 const router = express.Router({ mergeParams: true });
 
@@ -8,5 +8,6 @@ const router = express.Router({ mergeParams: true });
 router.use(requireAuth);
 
 router.get('/', getLatestReport);
+router.post('/generate', generateReport);
 
 module.exports = router;

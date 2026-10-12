@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AnalysisMetrics from '../components/projects/AnalysisMetrics';
 import DependencyGraph from '../components/projects/DependencyGraph';
@@ -6,6 +6,7 @@ import FindingsPanel from '../components/projects/FindingsPanel';
 import ScenarioScorecard from '../components/projects/ScenarioScorecard';
 import { useAuthStore } from '../stores/authStore';
 import api from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 import { AlertTriangle } from 'lucide-react';
 
 export default function AnalysisPage() {
@@ -29,6 +30,18 @@ export default function AnalysisPage() {
   const [scenarios, setScenarios] = useState<any[]>([]);
   const [activeScenario, setActiveScenario] = useState<any>(null);
   const [isDecomposing, setIsDecomposing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Timers started by button handlers (outside the load effect) are cleared on unmount.
+  const handlerTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  useEffect(() => {
+    const timers = handlerTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
+  }, []);
+  const schedule = (fn: () => void, ms: number) => {
+    const t = setTimeout(() => { handlerTimers.current.delete(t); fn(); }, ms);
+    handlerTimers.current.add(t);
+  };
 
   useEffect(() => {
     let pollTimeout: ReturnType<typeof setTimeout>;
@@ -160,12 +173,17 @@ export default function AnalysisPage() {
   const handleRunIntelligence = async () => {
     if (!activeJob) return;
     setIsEnriching(true);
+    setActionError(null);
     try {
       await api.post(`/api/projects/${projectId}/intelligence/trigger`, {
         source_version_id: activeJob.source_version_id
       });
 
+      // The LLM run can fail without ever producing findings, so give up after ~2 minutes
+      // instead of polling forever.
+      let attempts = 0;
       const pollFindings = async () => {
+        attempts += 1;
         try {
           const res = await api.get(`/api/projects/${projectId}/intelligence/${activeJob.source_version_id}/findings`);
           if (res.data.success && res.data.data && res.data.data.length > 0) {
@@ -176,18 +194,22 @@ export default function AnalysisPage() {
             }));
             setFindings(parsedFindings);
             setIsEnriching(false);
-          } else {
-            setTimeout(pollFindings, 3000);
+            return;
           }
         } catch (err) {
           console.error("Poll failed", err);
-          setTimeout(pollFindings, 3000);
         }
+        if (attempts >= 40) {
+          setIsEnriching(false);
+          setActionError('AI intelligence finished without findings. The language model may be unavailable - try again in a moment.');
+          return;
+        }
+        schedule(pollFindings, 3000);
       };
 
-      pollFindings();
+      schedule(pollFindings, 3000);
     } catch (e) {
-      console.error("Failed to start intelligence", e);
+      setActionError(getErrorMessage(e, 'Failed to start AI intelligence.'));
       setIsEnriching(false);
     }
   };
@@ -199,20 +221,21 @@ export default function AnalysisPage() {
       });
       setFindings(prev => prev.map(f => f.id === findingId ? { ...f, review_status: status, needs_review: false } : f));
     } catch (e) {
-      console.error("Failed to review finding", e);
+      setActionError(getErrorMessage(e, 'Failed to save the review.'));
     }
   };
 
   const handleTriggerDecomposition = async (strategy: string) => {
     if (!activeJob) return;
     setIsDecomposing(true);
+    setActionError(null);
     try {
       await api.post(`/api/projects/${projectId}/scenarios`, {
         source_version_id: activeJob.source_version_id,
         strategy_type: strategy
       });
 
-      // Start polling scenarios
+      // Poll until nothing is generating any more.
       const pollScenarios = async () => {
         try {
           const res = await api.get(`/api/projects/${projectId}/scenarios`);
@@ -220,19 +243,22 @@ export default function AnalysisPage() {
             setScenarios(res.data.data);
             const generating = res.data.data.some((s: any) => s.status === 'generating');
             if (generating) {
-              setTimeout(pollScenarios, 3000);
+              schedule(pollScenarios, 3000);
             } else {
               setIsDecomposing(false);
+              if (res.data.data.some((s: any) => s.status === 'failed')) {
+                setActionError('A decomposition run failed. Make sure the analysis found imports between files, then try again.');
+              }
             }
           }
         } catch {
-          setTimeout(pollScenarios, 3000);
+          schedule(pollScenarios, 3000);
         }
       };
 
       pollScenarios();
     } catch (e) {
-      console.error("Failed to trigger decomposition", e);
+      setActionError(getErrorMessage(e, 'Failed to start decomposition.'));
       setIsDecomposing(false);
     }
   };
@@ -244,7 +270,7 @@ export default function AnalysisPage() {
         setActiveScenario(res.data.data);
       }
     } catch (e) {
-      console.error("Failed to load scenario details", e);
+      setActionError(getErrorMessage(e, 'Failed to load the scenario.'));
     }
   };
 
@@ -317,13 +343,20 @@ export default function AnalysisPage() {
           )}
 
           <button
-            onClick={() => navigate(`/app/projects/${projectId}`)}
+            onClick={() => navigate('/dashboard')}
             className="px-4 py-2 border border-[#222] text-gray-400 font-bold text-xs uppercase hover:text-white hover:bg-[#111]"
           >
-            Back to Project
+            Back to Dashboard
           </button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="mb-4 flex items-start justify-between gap-4 border border-red-900/50 bg-red-950/30 p-3 text-xs text-red-300">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="font-bold uppercase text-red-400 hover:text-white">Dismiss</button>
+        </div>
+      )}
 
       <AnalysisMetrics metrics={metrics} />
 
@@ -344,6 +377,13 @@ export default function AnalysisPage() {
             className="px-3 py-2 bg-[#111] border border-[#333] text-gray-300 text-xs font-bold uppercase hover:bg-[#222] hover:text-white disabled:opacity-50"
           >
             Generate Conservative
+          </button>
+          <button
+            onClick={() => handleTriggerDecomposition('domain')}
+            disabled={isDecomposing}
+            className="px-3 py-2 bg-[#111] border border-[#333] text-gray-300 text-xs font-bold uppercase hover:bg-[#222] hover:text-white disabled:opacity-50"
+          >
+            Generate Domain-Driven
           </button>
           <button
             onClick={() => handleTriggerDecomposition('aggressive')}
@@ -368,6 +408,7 @@ export default function AnalysisPage() {
             >
               {scen.strategy_type}
               {scen.status === 'generating' && ' (Running...)'}
+              {scen.status === 'failed' && ' (Failed)'}
             </button>
           ))}
         </div>
@@ -381,7 +422,7 @@ export default function AnalysisPage() {
           />
           <div className="flex justify-end">
             <button
-              onClick={() => navigate(`/dashboard/projects/${projectId}/planning?scenarioRevisionId=${activeScenario.id}`)}
+              onClick={() => navigate(`/dashboard/projects/${projectId}/planning?scenarioId=${activeScenario.id}`)}
               className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 font-bold uppercase tracking-widest text-sm transition-colors shadow-[0_0_15px_rgba(37,99,235,0.3)]"
             >
               Proceed to Planning&rarr;
