@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { uploadSourceZip } = require('../services/storage.service');
 const { enqueueIngestionJob } = require('../services/queue.service');
-const { proxyToAiService } = require('../services/ai.service');
+const { parseGithubImport } = require('../utils/github.util');
 
 const ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 
@@ -10,6 +10,15 @@ const getSupabaseClient = (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: req.headers.authorization } }
   });
+};
+
+// If anything after the job row is created fails, mark the job failed so the UI
+// does not poll a 'queued' job forever.
+const failJob = async (supabase, jobId, error) => {
+  await supabase
+    .from('analysis_jobs')
+    .update({ status: 'failed', error_code: String(error.message || error).slice(0, 500) })
+    .eq('id', jobId);
 };
 
 const uploadZipSource = async (req, res, next) => {
@@ -62,15 +71,20 @@ const uploadZipSource = async (req, res, next) => {
 
     if (jobError) throw jobError;
 
-    const storagePath = await uploadSourceZip(req.file.buffer, projectId, sourceVersion.id);
-    await enqueueIngestionJob({
-      projectId, 
-      jobId: job.id, 
-      sourceVersionId: sourceVersion.id, 
-      storagePath,
-      ownerId: req.user.sub,
-      sourceType: 'zip'
-    });
+    try {
+      const storagePath = await uploadSourceZip(req.file.buffer, projectId, sourceVersion.id);
+      await enqueueIngestionJob({
+        projectId, 
+        jobId: job.id, 
+        sourceVersionId: sourceVersion.id, 
+        storagePath,
+        ownerId: req.user.sub,
+        sourceType: 'zip'
+      });
+    } catch (queueError) {
+      await failJob(supabase, job.id, queueError);
+      throw queueError;
+    }
 
     return res.status(202).json({ 
       success: true, 
@@ -84,11 +98,11 @@ const uploadZipSource = async (req, res, next) => {
 const importGithubSource = async (req, res, next) => {
   try {
     const { projectId } = req.params;
-    const { repoUrl, branch } = req.body;
-    
-    if (!repoUrl) { 
-      return res.status(400).json({ success: false, message: 'Repository URL is required' }); 
+    const github = parseGithubImport(req.body.repoUrl, req.body.branch);
+    if (github.error) {
+      return res.status(400).json({ success: false, message: github.error });
     }
+    const { repoUrl, branch } = github;
 
     const supabase = getSupabaseClient(req);
 
@@ -110,7 +124,7 @@ const importGithubSource = async (req, res, next) => {
       .insert({ 
         project_id: projectId, 
         source_type: 'github', 
-        metadata: { repoUrl, branch: branch || 'main' } 
+        metadata: { repoUrl, branch } 
       })
       .select()
       .single();
@@ -130,15 +144,20 @@ const importGithubSource = async (req, res, next) => {
 
     if (jobError) throw jobError;
 
-    await enqueueIngestionJob({
-      projectId, 
-      jobId: job.id, 
-      sourceVersionId: sourceVersion.id, 
-      repoUrl, 
-      branch: branch || 'main', 
-      ownerId: req.user.sub,
-      sourceType: 'github' 
-    });
+    try {
+      await enqueueIngestionJob({
+        projectId, 
+        jobId: job.id, 
+        sourceVersionId: sourceVersion.id, 
+        repoUrl, 
+        branch, 
+        ownerId: req.user.sub,
+        sourceType: 'github' 
+      });
+    } catch (queueError) {
+      await failJob(supabase, job.id, queueError);
+      throw queueError;
+    }
 
     return res.status(202).json({ 
       success: true, 
