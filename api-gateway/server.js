@@ -117,3 +117,11 @@ initializeSockets(server);
 server.listen(PORT, () => {
   console.log(`🚀 API Gateway is running on http://localhost:${PORT}`);
 });
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Unhandled Rejection]', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]', err);
+});
