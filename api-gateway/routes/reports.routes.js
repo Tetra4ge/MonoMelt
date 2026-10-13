@@ -1,6 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middlewares/auth.middleware');
-const { getLatestReport, generateReport } = require('../controllers/reports.controller');
+const { getLatestReport, generateReport, exportReportToNotion } = require('../controllers/reports.controller');
 
 const router = express.Router({ mergeParams: true });
 
@@ -9,5 +9,7 @@ router.use(requireAuth);
 
 router.get('/', getLatestReport);
 router.post('/generate', generateReport);
+router.post('/export/notion', exportReportToNotion);
 
 module.exports = router;
+

@@ -7,7 +7,7 @@ import { ExecutiveSummary } from '../components/report/ExecutiveSummary';
 import { CostProjectionsChart } from '../components/report/CostProjectionsChart';
 import { DecompositionGrid } from '../components/report/DecompositionGrid';
 import { RiskMatrix } from '../components/report/RiskMatrix';
-import { Loader2, Terminal, LogOut } from 'lucide-react';
+import { Loader2, Terminal, LogOut, ExternalLink } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getErrorMessage } from '../lib/errors';
@@ -20,6 +20,9 @@ export default function ReportPage() {
   const queryClient = useQueryClient();
   const [isQueueing, setIsQueueing] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [notionUrl, setNotionUrl] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -38,6 +41,22 @@ export default function ReportPage() {
   }
 
   const report = data?.data;
+
+  const handleExportToNotion = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const res = await api.post(`/api/projects/${projectId}/reports/export/notion`);
+      if (res.data?.notion_url) {
+        setNotionUrl(res.data.notion_url);
+        await queryClient.invalidateQueries({ queryKey: ['report', projectId] });
+      }
+    } catch (err) {
+      setExportError(getErrorMessage(err, 'Failed to export to Notion. The MCP server may be unavailable.'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleGenerate = async () => {
     setIsQueueing(true);
@@ -133,14 +152,31 @@ export default function ReportPage() {
             <span>Version: {report?.version_number || 1}</span>
           </div>
           
-          <div className="flex gap-4">
-            <button
-              disabled
-              title="Notion export is not available yet"
-              className="px-6 py-2 bg-[#222] text-gray-500 font-bold rounded-sm cursor-not-allowed text-xs tracking-wide uppercase"
-            >
-              Export to Notion (coming soon)
-            </button>
+          <div className="flex items-center gap-4">
+            {notionUrl || report?.notion_url ? (
+              <a
+                href={notionUrl || report?.notion_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-6 py-2 border border-[#333] text-gray-300 hover:text-white font-bold rounded-sm text-xs tracking-wide uppercase transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Open in Notion
+              </a>
+            ) : (
+              <button
+                onClick={handleExportToNotion}
+                disabled={isExporting}
+                className="px-6 py-2 bg-white text-black font-bold rounded-sm hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-wait text-xs tracking-wide uppercase"
+              >
+                {isExporting ? 'Exporting...' : 'Export to Notion'}
+              </button>
+            )}
+            {exportError && (
+              <span className="text-red-400 text-xs max-w-xs truncate" title={exportError}>
+                {exportError}
+              </span>
+            )}
           </div>
         </div>
 

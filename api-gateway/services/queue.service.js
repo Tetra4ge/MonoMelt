@@ -1,14 +1,16 @@
 const { Queue } = require('bullmq');
+const IORedis = require('ioredis');
 
-const connection = {
-  url: process.env.REDIS_URL,
-};
+const redisConnection = new IORedis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+});
+redisConnection.on('error', (err) => console.error('[Redis:QueueConnection]', err.message));
 
 // Queue for ingestion tasks
-const ingestionQueue = new Queue('ingestion', { connection });
+const ingestionQueue = new Queue('ingestion', { connection: redisConnection });
 
 // Queue for report generation tasks
-const reportQueue = new Queue('report-generation', { connection });
+const reportQueue = new Queue('report-generation', { connection: redisConnection });
 
 // Without listeners a Redis outage surfaces as an unhandled 'error' event.
 for (const queue of [ingestionQueue, reportQueue]) {
