@@ -1,5 +1,10 @@
 const { createClient } = require('@supabase/supabase-js');
+const axios = require('axios');
 const { enqueueReportJob } = require('../services/queue.service');
+const { buildNotionPayload } = require('../utils/notion.util');
+const { retryWithBackoff } = require('../utils/retry.util');
+
+const MCP_SERVER_URL = process.env.MCP_NOTION_SERVER_URL || 'http://localhost:3001/mcp/notion';
 
 const getSupabaseClient = (req) => {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -68,7 +73,94 @@ const generateReport = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/projects/:projectId/reports/export/notion
+ * Exports the latest completed report to a Notion workspace via the MCP server.
+ *
+ * Idempotent: if the report already has a `notion_url`, returns it immediately
+ * without creating a duplicate page.
+ */
+const exportReportToNotion = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const supabase = getSupabaseClient(req);
+
+        // 1. Fetch the latest completed report for this project + owner.
+        const { data: report, error } = await supabase
+            .from('project_reports')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('owner_id', req.user.id)
+            .eq('status', 'completed')
+            .order('version_number', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error || !report) {
+            return res.status(404).json({
+                success: false,
+                message: 'No completed report found for this project.',
+            });
+        }
+
+        // 2. Idempotency guard — already exported.
+        if (report.notion_url) {
+            return res.status(200).json({
+                success: true,
+                message: 'Already exported.',
+                notion_url: report.notion_url,
+            });
+        }
+
+        // 3. Translate JSON payload to Notion MCP blocks.
+        const mcpPayload = buildNotionPayload(report.payload, projectId);
+
+        // 4. Dispatch to Notion MCP server with exponential backoff on 429.
+        console.log(`[API Gateway] Dispatching report ${report.id} to Notion MCP at ${MCP_SERVER_URL}...`);
+
+        const mcpResponse = await retryWithBackoff(
+            () => axios.post(`${MCP_SERVER_URL}/pages`, {
+                database_id: process.env.NOTION_DATABASE_ID,
+                ...mcpPayload,
+            }),
+            { maxRetries: 3, baseDelayMs: 500, retryOn: [429] }
+        );
+
+        const newNotionUrl = mcpResponse.data.page_url;
+
+        // 5. Persist the Notion URL back into Supabase.
+        await supabase
+            .from('project_reports')
+            .update({ notion_url: newNotionUrl })
+            .eq('id', report.id);
+
+        console.log(`[API Gateway] Report ${report.id} exported to Notion: ${newNotionUrl}`);
+
+        return res.status(200).json({
+            success: true,
+            notion_url: newNotionUrl,
+        });
+    } catch (err) {
+        console.error('[API Gateway] Notion Export Failed:', err.message);
+
+        // Surface the MCP status if it was a rate-limit or known HTTP error.
+        const status = err?.response?.status;
+        if (status === 429) {
+            return res.status(429).json({
+                success: false,
+                message: 'Notion API rate limit exceeded. Please try again later.',
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to export report to Notion. The MCP server may be unavailable.',
+        });
+    }
+};
+
 module.exports = {
     getLatestReport,
-    generateReport
+    generateReport,
+    exportReportToNotion,
 };
