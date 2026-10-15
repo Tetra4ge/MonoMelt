@@ -9,6 +9,7 @@ import PlanningPage from './pages/PlanningPage';
 import ExportPage from './pages/ExportPage';
 import DeploymentPage from './pages/DeploymentPage';
 import ReportPage from './pages/ReportPage';
+import TwinPage from './pages/TwinPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 
@@ -70,6 +71,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/projects/:projectId/twin"
+          element={
+            <ProtectedRoute>
+              <TwinPage />
             </ProtectedRoute>
           }
         />
