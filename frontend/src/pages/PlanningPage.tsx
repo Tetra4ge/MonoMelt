@@ -70,7 +70,10 @@ export default function PlanningPage() {
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-6 flex flex-col gap-4 border-b border-[#222] pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="text-xs uppercase tracking-[0.2em] text-gray-600">monomelt / transformation_intelligence</p><h1 className="mt-2 text-2xl font-bold text-white">&gt; migration_planning</h1><p className="mt-2 text-xs text-gray-500">Convert a selected decomposition scenario into an evidence-backed execution plan.</p></div>
-          <button type="button" onClick={() => navigate(`/dashboard/projects/${projectId}/analysis`)} className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white">Back to analysis</button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => navigate(`/dashboard/projects/${projectId}/twin`)} className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white">Observatory</button>
+            <button type="button" onClick={() => navigate(`/dashboard/projects/${projectId}/analysis`)} className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white">Back to analysis</button>
+          </div>
         </header>
 
         {error && <div className="mb-5 border border-[#555] bg-[#111] p-4 text-xs text-gray-300">error: {error}</div>}

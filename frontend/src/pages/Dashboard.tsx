@@ -123,6 +123,12 @@ const Dashboard: React.FC = () => {
             >
               HOME
             </Link>
+            <Link 
+              to="/dashboard/projects/sandbox/twin"
+              className="text-gray-400 hover:text-white transition-colors text-sm font-bold hidden sm:block"
+            >
+              OBSERVATORY
+            </Link>
             <div className="hidden md:flex items-center gap-3 text-sm text-gray-500">
               <span className="text-gray-400">user:</span>
               <span>{user?.user_metadata?.user_name || user?.email}</span>
@@ -184,11 +190,22 @@ const Dashboard: React.FC = () => {
                        <p className="text-[10px] text-gray-500 mb-3">
                          Created: {new Date(project.created_at).toLocaleDateString()}
                        </p>
-                       <div className="inline-flex items-center gap-1.5 bg-[#111] border border-[#222] px-2 py-1 rounded">
-                         <div className={`w-1.5 h-1.5 rounded-full ${project.statusColor.replace('text-', 'bg-')}`}></div>
-                         <span className={`text-[9px] uppercase tracking-wider font-bold ${project.statusColor}`}>
-                           {project.displayStatus}
-                         </span>
+                       <div className="flex items-center justify-between gap-2">
+                         <div className="inline-flex items-center gap-1.5 bg-[#111] border border-[#222] px-2 py-1 rounded">
+                           <div className={`w-1.5 h-1.5 rounded-full ${project.statusColor.replace('text-', 'bg-')}`}></div>
+                           <span className={`text-[9px] uppercase tracking-wider font-bold ${project.statusColor}`}>
+                             {project.displayStatus}
+                           </span>
+                         </div>
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             navigate(`/dashboard/projects/${project.id}/twin`);
+                           }}
+                           className="text-[9px] border border-[#333] hover:border-white px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors"
+                         >
+                           TWIN
+                         </button>
                        </div>
                      </div>
                    ))}
