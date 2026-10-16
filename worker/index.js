@@ -5,6 +5,7 @@ const AdmZip = require('adm-zip');
 const path = require('path');
 const crypto = require('crypto');
 const axios = require('axios');
+const { normaliseEntryPath, shouldSkipEntry } = require('./zip-safety');
 require('dotenv').config();
 
 const redisConnection = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
@@ -22,7 +23,6 @@ const MANIFEST_BATCH_SIZE = 500;
 const GITHUB_NAME_RE = /^[A-Za-z0-9_.-]+$/;
 const SOURCE_EXTENSIONS = new Set(['.py', '.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.java', '.go', '.cs', '.c', '.cpp', '.h', '.rb', '.php']);
 
-const normaliseEntryPath = (entryName) => entryName.replace(/\\/g, '/').replace(/^\/+/, '');
 
 const getLanguage = (extension) => ({ '.js': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript', '.jsx': 'javascript', '.ts': 'typescript', '.tsx': 'typescript', '.py': 'python', '.go': 'go', '.java': 'java', '.cs': 'csharp', '.rb': 'ruby', '.php': 'php', '.c': 'c', '.cpp': 'cpp', '.h': 'c' }[extension] || 'unknown');
 const describeError = (error) => {
@@ -70,9 +70,8 @@ const processSourceZip = async (jobData) => {
   
   for (const entry of zipEntries) {
     // Never extract directories, symlinks, absolute paths, or traversal paths.
-    if (entry.isDirectory) continue;
     const filePath = normaliseEntryPath(entry.entryName);
-    if (!filePath || filePath.split('/').some(segment => segment === '..') || /^[A-Za-z]:/.test(filePath) || entry.header.attr === 0xA000) continue;
+    if (shouldSkipEntry(entry, filePath)) continue;
     if (filePath.split('/').length > 32) throw new Error('Archive path depth exceeds 32 segments');
 
     if (entry.header.size > MAX_FILE_BYTES || extractedBytes + entry.header.size > MAX_EXTRACTED_BYTES) throw new Error('Archive exceeds configured extraction limits');
