@@ -8,7 +8,7 @@
 
 <p>
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat" />
-  <img src="https://img.shields.io/badge/status-active%20development-orange?style=flat" />
+  <img src="https://img.shields.io/badge/status-production-brightgreen?style=flat" />
   <img src="https://img.shields.io/badge/frontend-React%2019-61DAFB?style=flat&logo=react&logoColor=white" />
   <img src="https://img.shields.io/badge/gateway-Node%2022%20%2B%20Express%205-43853D?style=flat&logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/ai--service-FastAPI-009688?style=flat&logo=fastapi&logoColor=white" />
@@ -105,17 +105,17 @@ The interface is a dark, terminal-inspired workspace that walks a project throug
 
 **Frontend**
 
-<img src="https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" /> <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" /> <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" /> <img src="https://img.shields.io/badge/Tailwind%20CSS%20v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" /> <img src="https://img.shields.io/badge/React%20Router%207-CA4245?style=for-the-badge&logo=react-router&logoColor=white" /> <img src="https://img.shields.io/badge/TanStack%20Query-FF4154?style=for-the-badge&logo=react-query&logoColor=white" /> <img src="https://img.shields.io/badge/Zustand-433E38?style=for-the-badge" /> <img src="https://img.shields.io/badge/Recharts-22B5BF?style=for-the-badge" /> <img src="https://img.shields.io/badge/Framer%20Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white" /> <img src="https://img.shields.io/badge/Socket.IO%20Client-010101?style=for-the-badge&logo=socket.io&logoColor=white" /> <img src="https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=axios&logoColor=white" /> <img src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" />
+<img src="https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" /> <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" /> <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" /> <img src="https://img.shields.io/badge/Tailwind%20CSS%20v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" /> <img src="https://img.shields.io/badge/React%20Router%207-CA4245?style=for-the-badge&logo=react-router&logoColor=white" /> <img src="https://img.shields.io/badge/TanStack%20Query-FF4154?style=for-the-badge&logo=react-query&logoColor=white" /> <img src="https://img.shields.io/badge/Zustand-433E38?style=for-the-badge" /> <img src="https://img.shields.io/badge/Recharts-22B5BF?style=for-the-badge" /> <img src="https://img.shields.io/badge/Framer%20Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white" /> <img src="https://img.shields.io/badge/Socket.IO%20Client-010101?style=for-the-badge&logo=socket.io&logoColor=white" /> <img src="https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=axios&logoColor=white" /> <img src="https://img.shields.io/badge/hello--pangea%2Fdnd-EC4899?style=for-the-badge" /> <img src="https://img.shields.io/badge/Lenis-111111?style=for-the-badge" /> <img src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" />
 
 Graph rendering uses `react-force-graph-2d`; icons come from `lucide-react`; smooth scrolling from `lenis`.
 
 **API gateway and worker**
 
-<img src="https://img.shields.io/badge/Node.js%2022-43853D?style=for-the-badge&logo=node.js&logoColor=white" /> <img src="https://img.shields.io/badge/Express%205-404D59?style=for-the-badge&logo=express&logoColor=white" /> <img src="https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white" /> <img src="https://img.shields.io/badge/BullMQ-FF4B4B?style=for-the-badge" /> <img src="https://img.shields.io/badge/ioredis-DC382D?style=for-the-badge&logo=redis&logoColor=white" /> <img src="https://img.shields.io/badge/Swagger%20%2F%20OpenAPI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" /> <img src="https://img.shields.io/badge/Multer-FF6F00?style=for-the-badge" /> <img src="https://img.shields.io/badge/Archiver-2C3E50?style=for-the-badge" /> <img src="https://img.shields.io/badge/AdmZip-6C757D?style=for-the-badge" /> <img src="https://img.shields.io/badge/node%3Atest-339933?style=for-the-badge&logo=node.js&logoColor=white" />
+<img src="https://img.shields.io/badge/Node.js%2022-43853D?style=for-the-badge&logo=node.js&logoColor=white" /> <img src="https://img.shields.io/badge/Express%205-404D59?style=for-the-badge&logo=express&logoColor=white" /> <img src="https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white" /> <img src="https://img.shields.io/badge/BullMQ-FF4B4B?style=for-the-badge" /> <img src="https://img.shields.io/badge/ioredis-DC382D?style=for-the-badge&logo=redis&logoColor=white" /> <img src="https://img.shields.io/badge/Swagger%20%2F%20OpenAPI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" /> <img src="https://img.shields.io/badge/Multer-FF6F00?style=for-the-badge" /> <img src="https://img.shields.io/badge/jsonwebtoken-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" /> <img src="https://img.shields.io/badge/Morgan-404D59?style=for-the-badge" /> <img src="https://img.shields.io/badge/Archiver-2C3E50?style=for-the-badge" /> <img src="https://img.shields.io/badge/AdmZip-6C757D?style=for-the-badge" /> <img src="https://img.shields.io/badge/node%3Atest-339933?style=for-the-badge&logo=node.js&logoColor=white" />
 
 **AI service**
 
-<img src="https://img.shields.io/badge/Python%203.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" /> <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /> <img src="https://img.shields.io/badge/Pydantic%20v2-E92063?style=for-the-badge&logo=pydantic&logoColor=white" /> <img src="https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white" /> <img src="https://img.shields.io/badge/NetworkX-4B8BBE?style=for-the-badge" /> <img src="https://img.shields.io/badge/python--louvain-FFD43B?style=for-the-badge&logo=python&logoColor=black" /> <img src="https://img.shields.io/badge/asyncpg-336791?style=for-the-badge&logo=postgresql&logoColor=white" /> <img src="https://img.shields.io/badge/neo4j%20driver-018bff?style=for-the-badge&logo=neo4j&logoColor=white" /> <img src="https://img.shields.io/badge/redis--py-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+<img src="https://img.shields.io/badge/Python%203.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" /> <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /> <img src="https://img.shields.io/badge/Pydantic%20v2-E92063?style=for-the-badge&logo=pydantic&logoColor=white" /> <img src="https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white" /> <img src="https://img.shields.io/badge/OpenAI%20SDK%20(OpenRouter)-412991?style=for-the-badge&logo=openai&logoColor=white" /> <img src="https://img.shields.io/badge/Google%20Generative%20AI-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" /> <img src="https://img.shields.io/badge/NetworkX-4B8BBE?style=for-the-badge" /> <img src="https://img.shields.io/badge/python--louvain-FFD43B?style=for-the-badge&logo=python&logoColor=black" /> <img src="https://img.shields.io/badge/asyncpg-336791?style=for-the-badge&logo=postgresql&logoColor=white" /> <img src="https://img.shields.io/badge/neo4j%20driver-018bff?style=for-the-badge&logo=neo4j&logoColor=white" /> <img src="https://img.shields.io/badge/redis--py-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
 
 **Data, auth and storage**
 
@@ -949,6 +949,7 @@ flowchart LR
     LG --> CB["/auth/callback"]
     CB --> D["/dashboard<br/>upload, recent workspaces,<br/>service status"]
     D --> AN["/dashboard/projects/:id/analysis<br/>metrics, graph, findings,<br/>decomposition"]
+    AN --> TW["/dashboard/projects/:id/twin<br/>simulated pipeline, stage<br/>and node details"]
     AN --> PL["/dashboard/projects/:id/planning<br/>assumptions, roadmap, cost,<br/>teams, consistency"]
     PL --> EX["/dashboard/projects/:id/export<br/>file preview, download"]
     EX --> DP["/dashboard/projects/:id/deployment<br/>pipeline simulation, services"]
@@ -956,6 +957,8 @@ flowchart LR
 ```
 
 All `/dashboard` routes sit behind `ProtectedRoute`.
+
+The **Digital Twin** page (`TwinPage.tsx`) replays the pipeline stage by stage: ingestion, the Redis queue, the worker, AST parsing, Neo4j, decomposition and MCP export. It is a simulation that runs in the browser to show how the system fits together; it does not call the backend pipeline.
 
 | Concern | Approach |
 | :--- | :--- |
@@ -1303,30 +1306,3 @@ Licensed under the **Apache License 2.0**. See [LICENSE](LICENSE).
   <br/>
   <b>Built by Team <a href="https://github.com/Tetra4ge">TetraFourge</a></b>
 </div>
-
-## Team TetraFourge
-
-<table align="center">
-  <tr>
-    <td align="center" width="25%">
-      <a href="https://github.com/prajwal-priyadarshan"><img src="https://github.com/prajwal-priyadarshan.png?size=200" width="100" alt="Prajwal-priyadarshan"></a><br>
-      <b>G Prajwal Priyadarshan</b><br>
-      <a href="https://github.com/prajwal-priyadarshan">@prajwal-priyadarshan</a>
-    </td>
-    <td align="center" width="25%">
-      <a href="https://github.com/KKabilan07"><img src="https://github.com/KKabilan07.png?size=200" width="100" alt="K Kabilan"></a><br>
-      <b>Kabilan K</b><br>
-      <a href="https://github.com/KKabilan07">@KKabilan07</a>
-    </td>
-    <td align="center" width="25%">
-      <a href="https://github.com/KishoreB25"><img src="https://github.com/KishoreB25.png?size=200" width="100" alt="Kishore B"></a><br>
-      <b>Kishore B</b><br>
-      <a href="https://github.com/KishoreB25">@KishoreB25</a>
-    </td>
-    <td align="center" width="25%">
-      <a href="https://github.com/Rahul-8283"><img src="https://github.com/Rahul-8283.png?size=200" width="100" alt="Baranidharan S"></a><br>
-      <b>Rahul L S</b><br>
-      <a href="https://github.com/Rahul-8283">@Rahul-8283</a>
-    </td>
-  </tr>
-</table>
