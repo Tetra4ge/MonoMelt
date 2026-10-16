@@ -1,0 +1,9 @@
+# Development overrides. Docker Compose applies this file automatically with
+# docker-compose.yml. Production images never read it.
+services:
+  ai-service:
+    # Restart uvicorn when files change (the source folder is mounted into /app)
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      # Keep the container's own virtualenv; the Mac's .venv cannot run in Linux
+      - /app/.venv

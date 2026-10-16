@@ -1009,7 +1009,7 @@ MonoMelt/
 | Tool | Version | Notes |
 | :--- | :--- | :--- |
 | Node.js | 22 recommended (18+) | Gateway, worker, frontend |
-| Python | 3.11 or newer | AI service |
+| uv | 0.12 or newer | Python package and version manager for the AI service (it installs Python 3.12 for you) |
 | Docker | any recent | Only to run Redis locally |
 | Supabase project | n/a | Postgres, Auth and Storage |
 | Neo4j Aura (or Neo4j 5) | n/a | `neo4j+s://` or `bolt://` URI |
@@ -1057,9 +1057,8 @@ Open four terminals:
 ```bash
 # AI service  ->  http://localhost:8000   (docs at /docs)
 cd ai-service
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uv sync                                   # first time, and after dependency changes
+uv run uvicorn main:app --reload --port 8000
 
 # API gateway  ->  http://localhost:4000   (Swagger at /api-docs)
 cd api-gateway && npm install && npm run dev
@@ -1071,7 +1070,7 @@ cd worker && npm install && npm run dev
 cd frontend && npm install && npm run dev
 ```
 
-`docker-compose.yml` can also start the stack, but it is optional; the commands above are the supported development path.
+`docker-compose.yml` can also start the stack, but it is optional; the commands above are the supported development path. With Docker, `docker compose up` starts the AI service with `--reload` (from `docker-compose.override.yml`); the production image runs without it.
 
 ### 6. Verify
 
@@ -1150,10 +1149,10 @@ Then sign in, create a workspace, upload a ZIP or paste a public GitHub URL, and
 | Suite | Command | Needs services | Covers |
 | :--- | :--- | :---: | :--- |
 | Gateway unit tests | `cd api-gateway && npm test` | no | Project guard, GitHub URL validation, WebSocket authentication and room access |
-| Import resolution | `cd ai-service && .venv/bin/python scripts/test_import_resolution.py` | no | Python and JS resolution, multi-line imports, duplicate symbol fix |
-| Decomposition | `.venv/bin/python scripts/test_decomposition_engine.py` | no | All four strategies, isolated-file folding, naming, full file coverage |
-| Planning | `.venv/bin/python scripts/test_planning_engine.py` | no | No invented services, coupling order, single-service case |
-| Blueprint | `.venv/bin/python scripts/test_blueprint_generator.py` | no | Name sanitisation, Terraform per cloud, validation, previews |
+| Import resolution | `cd ai-service && uv run python scripts/test_import_resolution.py` | no | Python and JS resolution, multi-line imports, duplicate symbol fix |
+| Decomposition | `uv run python scripts/test_decomposition_engine.py` | no | All four strategies, isolated-file folding, naming, full file coverage |
+| Planning | `uv run python scripts/test_planning_engine.py` | no | No invented services, coupling order, single-service case |
+| Blueprint | `uv run python scripts/test_blueprint_generator.py` | no | Name sanitisation, Terraform per cloud, validation, previews |
 | Frontend | `cd frontend && npx tsc -p tsconfig.app.json --noEmit && npm run lint && npm run build` | no | Types, lint, production build |
 | Live GitHub flow (API) | `E2E_USER_EMAIL=you@example.com node e2e/github-flow.js` | yes | A real repository through every stage: import, worker, analysis, intelligence, 3 strategies, plan, blueprint, deployment, report, websocket (77 checks) |
 | UI smoke (browser) | `cd e2e && npm install && npx playwright install chromium && E2E_USER_EMAIL=you@example.com node ui-smoke.js` | yes | Every page in headless Chromium: content rendered, no console errors, no failed API calls, screenshots (72 checks) |
