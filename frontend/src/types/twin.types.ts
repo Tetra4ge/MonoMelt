@@ -51,6 +51,21 @@ export interface TwinSimulationStep {
   };
 }
 
+export interface TwinProjectSummary {
+  projectId: string;
+  projectName: string;
+  sourceType: string;
+  fileCount: number;
+  classCount: number;
+  edgeCount: number;
+  astNodesCount: number;
+  primaryLanguages: string;
+  sampleFiles: string[];
+  candidateServices: string[];
+  modularityScore: string;
+  isRealData: boolean;
+}
+
 export interface TwinEngineState {
   nodes: Record<TwinStageId, TwinNode>;
   activeStage: TwinStageId | null;
@@ -62,4 +77,5 @@ export interface TwinEngineState {
   mode: 'live' | 'simulation';
   progress: number; // 0 - 100
   selectedNodeId: TwinStageId | null;
+  projectSummary?: TwinProjectSummary | null;
 }

@@ -12,6 +12,7 @@ export default function TwinPage() {
   const { signOut } = useAuthStore();
 
   const {
+    projectSummary,
     nodes,
     activeStage,
     activePacket,
@@ -114,6 +115,7 @@ export default function TwinPage() {
       {/* Control & HUD Status Subheader */}
       <TwinHeader
         projectId={projectId}
+        projectSummary={projectSummary}
         mode={mode}
         isSimulating={isSimulating}
         isPaused={isPaused}
