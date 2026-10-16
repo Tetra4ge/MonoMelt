@@ -4,3 +4,6 @@
 # Editor / IDE
 .vscode/
 .idea/
+
+# E2E run output
+e2e/results/
