@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/graph-Neo4j-018bff?style=flat&logo=neo4j&logoColor=white" />
   <img src="https://img.shields.io/badge/database-PostgreSQL%20(Supabase)-336791?style=flat&logo=postgresql&logoColor=white" />
   <img src="https://img.shields.io/badge/queue-Redis%20%2B%20BullMQ-DC382D?style=flat&logo=redis&logoColor=white" />
-  <img src="https://img.shields.io/badge/tests-10%20unit%20%7C%205%20AI%20suites%20%7C%2077%20API%20e2e%20%7C%2072%20UI%20e2e-brightgreen?style=flat&logo=testing-library&logoColor=white" />
+  <img src="https://img.shields.io/badge/tests-10%20unit%20%7C%205%20AI%20suites%20%7C%2077%20API%20e2e%20%7C%20108%20UI%20e2e-brightgreen?style=flat&logo=testing-library&logoColor=white" />
 </p>
 
 </div>
@@ -958,7 +958,7 @@ flowchart LR
 
 All `/dashboard` routes sit behind `ProtectedRoute`.
 
-The **Digital Twin** page (`TwinPage.tsx`) replays the pipeline stage by stage: ingestion, the Redis queue, the worker, AST parsing, Neo4j, decomposition and MCP export. It is a simulation that runs in the browser to show how the system fits together; it does not call the backend pipeline.
+The **Digital Twin** page (`TwinPage.tsx`) shows the seven pipeline stages (ingestion, Redis queue, worker, AST parser, Neo4j, decomposition, export). It loads the project's real values from the API (file and symbol counts, graph size, parser issues, the latest decomposition and its cohesion, blueprint count and Notion state) and can replay the pipeline stage by stage with run, pause, step and reset. The replay itself is a simulation that runs in the browser; the values it shows are real.
 
 | Concern | Approach |
 | :--- | :--- |
@@ -1155,7 +1155,7 @@ Then sign in, create a workspace, upload a ZIP or paste a public GitHub URL, and
 | Blueprint | `uv run python scripts/test_blueprint_generator.py` | no | Name sanitisation, Terraform per cloud, validation, previews |
 | Frontend | `cd frontend && npx tsc -p tsconfig.app.json --noEmit && npm run lint && npm run build` | no | Types, lint, production build |
 | Live GitHub flow (API) | `E2E_USER_EMAIL=you@example.com node e2e/github-flow.js` | yes | A real repository through every stage: import, worker, analysis, intelligence, 3 strategies, plan, blueprint, deployment, report, websocket (77 checks) |
-| UI smoke (browser) | `cd e2e && npm install && npx playwright install chromium && E2E_USER_EMAIL=you@example.com node ui-smoke.js` | yes | Every page in headless Chromium: content rendered, no console errors, no failed API calls, screenshots (72 checks) |
+| UI smoke (browser) | `cd e2e && npm install && npx playwright install chromium && E2E_USER_EMAIL=you@example.com node ui-smoke.js` | yes | Every page in headless Chromium, including the Digital Twin: content rendered, values match the database, controls work, no console errors, no failed API calls, screenshots (108 checks) |
 | Synthetic end to end | `node e2e/run.js` | yes | Fixture repository plus cross-tenant and authentication checks |
 
 The other files in `ai-service/scripts/` (`check_*.py`, `db_*.py`, `test_engine.py` and so on) are diagnostics that run against live databases.
@@ -1172,6 +1172,14 @@ The live flow imported [`Rahul-8283/chatverse-ai`](https://github.com/Rahul-8283
 | **Planning:** coupling-ordered roadmap, cost, teams | **Export:** 44 generated files, Terraform preview |
 | ![Deployment simulation](Images/testing/after-fixes/deployment.png) | ![Executive report](Images/testing/after-fixes/report.png) |
 | **Deployment:** the project's services, labelled Simulated | **Report:** summary, services, cost chart, risks |
+
+<div align="center">
+
+![Digital Twin observatory showing a live run with real project data](Images/testing/after-fixes/digital-twin.png)
+
+**Digital Twin:** the seven pipeline stages with the project's real values (26 files, 140 graph nodes, 208 edges, 8 candidate services, 1 blueprint), mid-run with the stage detail drawer open
+
+</div>
 
 ### End-to-end test
 
