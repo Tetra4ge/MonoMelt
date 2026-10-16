@@ -1346,6 +1346,8 @@ flowchart TD
 | Gateway exits with `supabaseUrl is required` | An `.env` is missing or incomplete in `api-gateway/` |
 | Upload returns `503 The job queue is unavailable` | Redis is not reachable at `REDIS_URL`. Start it (see step 3) |
 | Job stays `queued` or `ingesting` | Worker not running, or it uses a different Redis than the gateway |
+| Job fails: `Unable to connect to DATABASE_URL` | `DATABASE_URL` uses the direct `db.<ref>.supabase.co` host (IPv6 only). Use the **Session pooler** string (`postgres.<ref>@...pooler.supabase.com:5432`) in the gateway and AI service |
+| Services started before you edited `.env` still fail | nodemon and uvicorn do not watch `.env`. Restart the process after changing it |
 | Analysis fails: "No supported source files found" | The archive has no Python, JavaScript or TypeScript files |
 | `401 Invalid or missing internal API key` | `INTERNAL_API_KEY` differs between gateway, worker and AI service |
 | Dashboard shows `ai-service` OFFLINE | The gateway cannot reach `AI_SERVICE_URL`; check the URL, port and key |

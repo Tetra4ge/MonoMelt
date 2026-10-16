@@ -15,6 +15,7 @@ from api.routes.planning import router as planning_router
 from api.routes.blueprints import router as blueprints_router
 from api.routes.reports import router as reports_router
 from db.neo4j_client import get_driver, close_driver, verify_connectivity
+from db.pg_client import verify_postgres
 from core.config import get_settings
 from core.security import verify_internal_key, warn_if_unprotected
 
@@ -59,13 +60,15 @@ app.include_router(reports_router, prefix="/api", dependencies=protected)
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check including Neo4j connectivity."""
+    """Health check including Neo4j and Postgres connectivity."""
     neo4j_ok = await verify_connectivity()
+    postgres_ok = await verify_postgres()
     return {
         "success": True,
         "service": "ai-analysis-service",
-        "status": "up",
+        "status": "up" if (neo4j_ok and postgres_ok) else "degraded",
         "neo4j": "connected" if neo4j_ok else "unavailable",
+        "postgres": "connected" if postgres_ok else "unavailable",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
