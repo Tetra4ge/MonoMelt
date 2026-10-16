@@ -8,7 +8,8 @@
  *   cd e2e && npm install && npx playwright install chromium   (once)
  *   E2E_USER_EMAIL=you@example.com node ui-smoke.js
  *
- * Config: FRONTEND_URL (default http://localhost:5173), E2E_USER_EMAIL, PROJECT_ID (optional),
+ * Config: FRONTEND_URL (default http://localhost:5173), GATEWAY_URL (default http://localhost:4000),
+ * E2E_USER_EMAIL, PROJECT_ID (optional; defaults to the newest 'chatverse-ai (e2e...' project),
  * plus the same Supabase variables as github-flow.js (read from the service .env files).
  * The Notion export button is only checked for presence; it is never clicked.
  */
@@ -31,6 +32,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || gatewayEnv.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || gatewayEnv.SUPABASE_SERVICE_ROLE_KEY;
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || frontendEnv.VITE_SUPABASE_ANON_KEY;
 const FRONTEND = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+const GATEWAY = (process.env.GATEWAY_URL || 'http://localhost:4000').replace(/\/$/, '');
 const EMAIL = process.env.E2E_USER_EMAIL;
 if (!SUPABASE_URL || !SERVICE_KEY || !ANON_KEY || !EMAIL) {
   console.error('Need SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY and E2E_USER_EMAIL');
@@ -93,7 +95,7 @@ function check(name, ok, detail = '') {
   p.on('pageerror', (e) => consoleErrors.push(`pageerror: ${String(e.message).slice(0, 240)}`));
   p.on('response', (r) => {
     const u = r.url();
-    if ((u.includes(':4000/') || u.includes('supabase.co')) && r.status() >= 400) failedRequests.push(`${r.status()} ${r.request().method()} ${u.replace(/\?.*/, '').slice(0, 140)}`);
+    if ((u.startsWith(GATEWAY + '/') || u.includes('supabase.co')) && r.status() >= 400) failedRequests.push(`${r.status()} ${r.request().method()} ${u.replace(/\?.*/, '').slice(0, 140)}`);
   });
 
   async function visit(name, url, fn) {
@@ -127,7 +129,7 @@ function check(name, ok, detail = '') {
   await visit('Dashboard', '/dashboard', async () => {
     await visible('workspace heading renders', /ingest_repository/);
     await visible('recent workspaces list loads', /recent_workspaces/);
-    await visible('the e2e project appears as a workspace', /chatverse-ai \(e2e/);
+    await visible('the imported project appears as a workspace', /chatverse-ai/);
     await visible('system status panel renders', /SYSTEM_STATUS/);
     await p.waitForTimeout(2500);
     const online = await p.getByText('ONLINE', { exact: true }).count();
@@ -159,6 +161,7 @@ function check(name, ok, detail = '') {
     await visible('proceed to planning is offered', /Proceed to Planning/i);
     check('no "1 files" pluralisation slip', (await p.getByText(/\b1 files\b/).count()) === 0);
     check('services are named by content, not Service_N', (await p.getByText(/Service_\d+/).count()) === 0);
+    check('the Digital Twin is reachable from the analysis page', (await p.getByRole('button', { name: /^Digital Twin$/i }).count()) >= 1);
     check('"Back to Dashboard" replaces the dead project link', (await p.getByRole('button', { name: /Back to Dashboard/i }).count()) === 1);
   });
 
@@ -197,6 +200,74 @@ function check(name, ok, detail = '') {
     check('service cards are the real services, not a made-up gateway', (await p.getByText('generated-api-gateway').count()) === 0 && (await p.getByText(/-service$/).count()) >= 3);
     check('services are labelled Simulated, not Healthy', (await p.getByText('Simulated').count()) >= 3 && (await p.getByText('Healthy').count()) === 0);
     check('download works from the deployed view', (await p.getByRole('button', { name: /Download ZIP/i }).count()) === 1);
+  });
+
+  // The newest completed decomposition, blueprint count and report state the twin must reflect.
+  const rest = (route) => json('GET', `${SUPABASE_URL}/rest/v1/${route}`, admin).then((r) => r.data || []);
+  const scen = (await rest(`decomposition_scenarios?project_id=eq.${projectId}&status=eq.completed&select=id,strategy_type&order=created_at.desc&limit=1`))[0];
+  const rev = scen ? (await rest(`scenario_revisions?scenario_id=eq.${scen.id}&select=id&order=revision_number.desc&limit=1`))[0] : null;
+  const realServices = rev ? (await rest(`proposed_services?revision_id=eq.${rev.id}&select=name`)).length : 0;
+  const realBlueprints = (await rest(`blueprints?project_id=eq.${projectId}&select=id`)).length;
+  const lastReport = (await rest(`project_reports?project_id=eq.${projectId}&select=notion_url&order=version_number.desc&limit=1`))[0];
+
+  await visit('Digital Twin', `/dashboard/projects/${projectId}/twin`, async () => {
+    const num = async (re) => Number(((await p.locator('body').innerText()).match(re) || [])[1] ?? NaN);
+    const progress = () => num(/STAGE PROGRESS:\s*\n?(\d+)%/);
+    const body = () => p.locator('body').innerText();
+
+    await visible('observatory heading renders', /DIGITAL TWIN OBSERVATORY/);
+    await visible('the real project name is shown', /PROJECT:\s*\n?chatverse-ai/i);
+    await visible('real file count is shown (26)', /26 FILES/);
+    await visible('real language breakdown is shown', /TYPESCRIPT \(26\)/);
+    for (const label of ['INGESTION_GATEWAY', 'MESSAGE_BUS_REDIS', 'WORKER_COORDINATOR', 'AST_PARSER', 'NEO4J_TOPOLOGY', 'DECOMPOSITION_AI', 'MCP_SYNCHRONIZER']) {
+      await visible(`stage ${label} renders`, new RegExp(label), 5000);
+    }
+
+    // Values must come from the project, not from invented defaults.
+    check(`candidate services equals the real decomposition (${realServices})`, (await num(/candidate services:\s*\n?(\d+)/i)) === realServices, `shown ${await num(/candidate services:\s*\n?(\d+)/i)}`);
+    check('graph nodes is the real graph size, not a class count', (await num(/graph nodes:\s*\n?(\d+)/i)) >= 100, `shown ${await num(/graph nodes:\s*\n?(\d+)/i)}`);
+    check(`blueprints ready equals the real blueprint count (${realBlueprints})`, (await num(/blueprints ready:\s*\n?(\d+)/i)) === realBlueprints);
+    const notionShown = /notion synced:\s*\n?synced/i.test(await body());
+    check('Notion state matches the report', notionShown === !!lastReport?.notion_url, `shown synced=${notionShown}, report notion_url=${!!lastReport?.notion_url}`);
+    check('cohesion comes from the scenario (a ratio, not a placeholder)', /cohesion:\s*\n?0\.\d\d/i.test(await body()));
+
+    // Nothing the system does not do should be claimed.
+    const text = await body();
+    for (const bad of [/TREE[_-]SITTER/i, /Girvan/i, /:5000/, /:6379/, /proc_worker/i, /modularity q/i, /decoupled ratio/i, /worker\/task/i]) {
+      check(`no invented detail: ${bad}`, !bad.test(text));
+    }
+
+    // Controls.
+    await p.getByText('MESSAGE_BUS_REDIS').first().click();
+    await visible('clicking a stage opens its detail drawer', /\[02\] MESSAGE_BUS_REDIS/, 5000);
+    await p.getByText('DECOMPOSITION_AI').first().click();
+    await visible('the decomposition drawer shows the scenario strategy', new RegExp(`strategy:?\\s*\\n?${scen?.strategy_type}`, 'i'), 5000);
+
+    await p.locator('button[title="Reset Pipeline"]').click();
+    await p.waitForTimeout(500);
+    check('Reset returns progress to 0 and clears completed stages', (await progress()) === 0 && ((await body()).match(/✓ DONE/g) || []).length === 0);
+
+    await p.locator('button[title="Step Forward One Stage"]').click();
+    await p.waitForTimeout(700);
+    check('the first Step runs stage 01 (progress 14%)', (await progress()) === 14, `progress ${await progress()}`);
+    check('the first Step logs the ingestion stage', /\[GATEWAY\] Ingesting "chatverse-ai"/.test(await body()));
+    await p.locator('button[title="Step Forward One Stage"]').click();
+    await p.waitForTimeout(700);
+    check('the second Step advances to 29%', (await progress()) === 29, `progress ${await progress()}`);
+
+    await p.locator('button[title="Reset Pipeline"]').click();
+    await p.locator('button[title="Run Simulation"]').click();
+    await p.waitForTimeout(2500);
+    const running = await progress();
+    check('Run advances the pipeline', running > 0 && running < 100, `progress ${running}`);
+    await p.locator('button[title="Pause Simulation"]').click();
+    await p.waitForTimeout(600);
+    const atPause = await progress();
+    await p.waitForTimeout(2000);
+    check('Pause holds the progress still', (await progress()) === atPause, `${atPause} -> ${await progress()}`);
+    await p.locator('button[title="Run Simulation"]').click(); // resume, so the screenshot shows a live run
+    await p.waitForTimeout(2500);
+    check('the log stream records the run', /\[(INGESTION|GATEWAY|REDIS|WORKER|AST|NEO4J)\]/.test(await body()));
   });
 
   await visit('Report', `/dashboard/projects/${projectId}/report`, async () => {

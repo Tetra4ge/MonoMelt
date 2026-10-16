@@ -121,9 +121,9 @@ cd api-gateway && npm install && npm run dev        # nodemon server.js
 cd worker && npm install && npm run dev             # nodemon index.js
 
 # AI service (port 8000)
-cd ai-service && python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+cd ai-service && uv sync              # creates .venv from uv.lock (Python 3.12 from .python-version)
+uv run uvicorn main:app --reload --port 8000
+uv run python scripts/test_import_resolution.py   # offline suites
 
 # Frontend (port 5173)
 cd frontend && npm install && npm run dev

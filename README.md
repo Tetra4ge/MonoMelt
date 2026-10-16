@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/graph-Neo4j-018bff?style=flat&logo=neo4j&logoColor=white" />
   <img src="https://img.shields.io/badge/database-PostgreSQL%20(Supabase)-336791?style=flat&logo=postgresql&logoColor=white" />
   <img src="https://img.shields.io/badge/queue-Redis%20%2B%20BullMQ-DC382D?style=flat&logo=redis&logoColor=white" />
-  <img src="https://img.shields.io/badge/tests-10%20unit%20%7C%205%20AI%20suites%20%7C%2077%20API%20e2e%20%7C%2072%20UI%20e2e-brightgreen?style=flat&logo=testing-library&logoColor=white" />
+  <img src="https://img.shields.io/badge/tests-10%20unit%20%7C%205%20AI%20suites%20%7C%2077%20API%20e2e%20%7C%20108%20UI%20e2e-brightgreen?style=flat&logo=testing-library&logoColor=white" />
 </p>
 
 </div>
@@ -85,6 +85,14 @@ It suits any team planning a move from a monolith to microservices, and students
 ---
 
 ## 2. Product tour
+
+<div align="center">
+
+![Landing page](Images/landing-page.png)
+
+*The landing page: what MonoMELT does, how the workflow runs, and how to start it locally*
+
+</div>
 
 The interface is a dark, terminal-inspired workspace that walks a project through the pipeline.
 
@@ -174,10 +182,10 @@ flowchart TB
         GM["Google Gemini<br/>fallback"]
     end
 
+    NT["Notion API<br/>(report export)"]
+
     subgraph Planned["Planned integrations"]
         VDB[("Pinecone<br/>vector retrieval")]
-        MCP["Notion MCP server"]
-        NT["Notion workspace"]
         GHO["GitHub OAuth<br/>private repositories"]
     end
 
@@ -204,8 +212,7 @@ flowchart TB
     AG -->|"publish report-updates"| Q
     Q -->|"subscribe"| WS
     AG -.->|"embeddings, pattern search"| VDB
-    GW -.->|"export report"| MCP
-    MCP -.-> NT
+    GW -->|"export report"| NT
     WK -.->|"private clone"| GHO
 ```
 
@@ -221,7 +228,7 @@ Dashed edges and the **Planned integrations** group are specified but not yet bu
 | **ai-service** | 8000 | Parsing, graph, metrics, LLM calls, clustering, planning, blueprints, reports | Authenticate end users (the gateway does) |
 | **redis** | 6380 (host) | BullMQ queues `ingestion` and `report-generation`, pub/sub channel `report-updates` | Store durable state |
 | **Pinecone** (planned) | managed | Tenant-filtered embeddings for retrieval and pattern comparison | Act as a source of truth, the graph stays authoritative |
-| **Notion MCP server** (planned) | 3001 | Translating report blocks into Notion pages | Hold user data beyond the export |
+| **Notion API** (external) | api.notion.com | Receives exported reports as Notion pages | Hold user data beyond the export |
 
 ### Backend data flow
 
@@ -592,9 +599,9 @@ sequenceDiagram
     Note over FE: 3 second polling stays as a fallback
 ```
 
-### 7.8 Notion export through MCP (planned)
+### 7.8 Notion export
 
-Specified in `phase-v2/Phase6_v2.md`. The gateway translates the finished report into Notion blocks and hands them to a Notion Model Context Protocol server, which owns the Notion API details.
+The gateway exports the latest completed report to a Notion database. It sends the report straight to the Notion API, and it can use an external Notion MCP server instead when one is configured.
 
 ```mermaid
 sequenceDiagram
@@ -602,24 +609,26 @@ sequenceDiagram
     participant FE as Report page
     participant GW as API Gateway
     participant PG as Postgres
-    participant MCP as Notion MCP server
     participant NT as Notion API
+    participant MCP as Notion MCP server (optional)
 
     U->>FE: Export to Notion
-    FE->>GW: POST /reports/:projectId/export-to-notion
+    FE->>GW: POST /api/projects/:projectId/reports/export/notion
     GW->>PG: Load latest completed report (owner scoped)
     alt notion_url already set
         GW-->>FE: 200 existing notion_url (idempotent)
     else first export
         GW->>GW: notion.util builds blocks
-        GW->>MCP: Create page under NOTION_DATABASE_ID
-        MCP->>NT: Append blocks
-        NT-->>MCP: Page URL
-        MCP-->>GW: Page URL
+        alt NOTION_API_KEY and NOTION_DATABASE_ID are set
+            GW->>NT: Create page in the database (retries on 429)
+            NT-->>GW: Page URL
+        else no Notion key is set
+            GW->>MCP: POST /pages (retries on 429)
+            MCP-->>GW: page_url
+        end
         GW->>PG: Save notion_url on the report row
         GW-->>FE: 200 notion_url
     end
-    Note over GW,MCP: 429 responses retry with exponential backoff, MCP outage returns a handled error and the dashboard keeps working
 ```
 
 | Report content | Notion block |
@@ -632,7 +641,13 @@ sequenceDiagram
 | Risk assessment | Headings and lists |
 | Interactive dependency graph | Hyperlinked callout back to the MonoMelt analysis page (graphs cannot render in Notion) |
 
-The `notion_url` column already exists on `project_reports` and the frontend already holds the button; the gateway route, translation utility and MCP configuration (`MCP_NOTION_SERVER_URL`, `NOTION_DATABASE_ID`, `NOTION_API_KEY`) are the remaining work.
+**Setup**
+
+1. Create an internal integration at `notion.so/profile/integrations` and copy its token into `NOTION_API_KEY`.
+2. Create a database in Notion with these properties: **Report** (title), **Revision** (text) and **Generated at** (date).
+3. Share the database with the integration (**...** → **Connections** → add the integration), then copy the database ID into `NOTION_DATABASE_ID`.
+
+No separate MCP server is needed when the two variables above are set. Without them, the gateway falls back to an MCP proxy at `MCP_NOTION_SERVER_URL` (default `http://localhost:3001/mcp/notion`) that must accept `POST /pages` and return `page_url`.
 
 ### 7.9 Semantic retrieval with Pinecone (planned)
 
@@ -920,13 +935,13 @@ All routes except `/health` and `/api-docs` require `Authorization: Bearer <supa
 | | `GET .../blueprints/:id/download` | ZIP download |
 | Deployments | `POST .../deployments`, `GET .../deployments/:id`, `GET .../deployments/:id/services` | Simulated pipeline and health |
 | Reports | `GET .../reports` | Latest report |
+| | `POST .../reports/export/notion` | Export the latest report to Notion (returns `notion_url`, idempotent) |
 | | `POST .../reports/generate` | Queue a new version (409 while one is generating) |
 
 **Planned endpoints**
 
 | Method and path | Purpose |
 | :--- | :--- |
-| `POST /api/reports/:projectId/export-to-notion` | Idempotent Notion export through MCP (returns `notion_url`) |
 | `POST .../scenarios` with `strategy_type: "team"` | Team-driven decomposition |
 | `GET .../scenarios/:id/validations` | Scenario validation results |
 | `GET .../blueprints/:id/signed-url` | Short-lived private download URL |
@@ -958,7 +973,7 @@ flowchart LR
 
 All `/dashboard` routes sit behind `ProtectedRoute`.
 
-The **Digital Twin** page (`TwinPage.tsx`) replays the pipeline stage by stage: ingestion, the Redis queue, the worker, AST parsing, Neo4j, decomposition and MCP export. It is a simulation that runs in the browser to show how the system fits together; it does not call the backend pipeline.
+The **Digital Twin** page (`TwinPage.tsx`) shows the seven pipeline stages (ingestion, Redis queue, worker, AST parser, Neo4j, decomposition, export). It loads the project's real values from the API (file and symbol counts, graph size, parser issues, the latest decomposition and its cohesion, blueprint count and Notion state) and can replay the pipeline stage by stage with run, pause, step and reset. The replay itself is a simulation that runs in the browser; the values it shows are real.
 
 | Concern | Approach |
 | :--- | :--- |
@@ -1009,7 +1024,7 @@ MonoMelt/
 | Tool | Version | Notes |
 | :--- | :--- | :--- |
 | Node.js | 22 recommended (18+) | Gateway, worker, frontend |
-| Python | 3.11 or newer | AI service |
+| uv | 0.12 or newer | Python package and version manager for the AI service (it installs Python 3.12 for you) |
 | Docker | any recent | Only to run Redis locally |
 | Supabase project | n/a | Postgres, Auth and Storage |
 | Neo4j Aura (or Neo4j 5) | n/a | `neo4j+s://` or `bolt://` URI |
@@ -1057,9 +1072,8 @@ Open four terminals:
 ```bash
 # AI service  ->  http://localhost:8000   (docs at /docs)
 cd ai-service
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uv sync                                   # first time, and after dependency changes
+uv run uvicorn main:app --reload --port 8000
 
 # API gateway  ->  http://localhost:4000   (Swagger at /api-docs)
 cd api-gateway && npm install && npm run dev
@@ -1071,7 +1085,7 @@ cd worker && npm install && npm run dev
 cd frontend && npm install && npm run dev
 ```
 
-`docker-compose.yml` can also start the stack, but it is optional; the commands above are the supported development path.
+`docker-compose.yml` can also start the stack, but it is optional; the commands above are the supported development path. With Docker, `docker compose up` starts the AI service with `--reload` (from `docker-compose.override.yml`); the production image runs without it.
 
 ### 6. Verify
 
@@ -1131,11 +1145,12 @@ Then sign in, create a workspace, upload a ZIP or paste a public GitHub URL, and
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Public Supabase settings |
 | `VITE_MODE` | `development` or `production` |
 
-**Planned variables**
+**Planned and optional variables**
 
 | Variable | Service | Purpose |
 | :--- | :--- | :--- |
-| `MCP_NOTION_SERVER_URL`, `NOTION_DATABASE_ID`, `NOTION_API_KEY` | api-gateway | Notion export through MCP |
+| `NOTION_API_KEY`, `NOTION_DATABASE_ID` | api-gateway | Notion export (implemented, see section 7.8) |
+| `MCP_NOTION_SERVER_URL` | api-gateway | Fallback used only when `NOTION_API_KEY` or `NOTION_DATABASE_ID` is missing |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | api-gateway | GitHub OAuth for private repositories |
 | `PINECONE_API_KEY`, `PINECONE_ENVIRONMENT` | ai-service | Vector retrieval (already templated) |
 
@@ -1150,13 +1165,13 @@ Then sign in, create a workspace, upload a ZIP or paste a public GitHub URL, and
 | Suite | Command | Needs services | Covers |
 | :--- | :--- | :---: | :--- |
 | Gateway unit tests | `cd api-gateway && npm test` | no | Project guard, GitHub URL validation, WebSocket authentication and room access |
-| Import resolution | `cd ai-service && .venv/bin/python scripts/test_import_resolution.py` | no | Python and JS resolution, multi-line imports, duplicate symbol fix |
-| Decomposition | `.venv/bin/python scripts/test_decomposition_engine.py` | no | All four strategies, isolated-file folding, naming, full file coverage |
-| Planning | `.venv/bin/python scripts/test_planning_engine.py` | no | No invented services, coupling order, single-service case |
-| Blueprint | `.venv/bin/python scripts/test_blueprint_generator.py` | no | Name sanitisation, Terraform per cloud, validation, previews |
+| Import resolution | `cd ai-service && uv run python scripts/test_import_resolution.py` | no | Python and JS resolution, multi-line imports, duplicate symbol fix |
+| Decomposition | `uv run python scripts/test_decomposition_engine.py` | no | All four strategies, isolated-file folding, naming, full file coverage |
+| Planning | `uv run python scripts/test_planning_engine.py` | no | No invented services, coupling order, single-service case |
+| Blueprint | `uv run python scripts/test_blueprint_generator.py` | no | Name sanitisation, Terraform per cloud, validation, previews |
 | Frontend | `cd frontend && npx tsc -p tsconfig.app.json --noEmit && npm run lint && npm run build` | no | Types, lint, production build |
 | Live GitHub flow (API) | `E2E_USER_EMAIL=you@example.com node e2e/github-flow.js` | yes | A real repository through every stage: import, worker, analysis, intelligence, 3 strategies, plan, blueprint, deployment, report, websocket (77 checks) |
-| UI smoke (browser) | `cd e2e && npm install && npx playwright install chromium && E2E_USER_EMAIL=you@example.com node ui-smoke.js` | yes | Every page in headless Chromium: content rendered, no console errors, no failed API calls, screenshots (72 checks) |
+| UI smoke (browser) | `cd e2e && npm install && npx playwright install chromium && E2E_USER_EMAIL=you@example.com node ui-smoke.js` | yes | Every page in headless Chromium, including the Digital Twin: content rendered, values match the database, controls work, no console errors, no failed API calls, screenshots (108 checks) |
 | Synthetic end to end | `node e2e/run.js` | yes | Fixture repository plus cross-tenant and authentication checks |
 
 The other files in `ai-service/scripts/` (`check_*.py`, `db_*.py`, `test_engine.py` and so on) are diagnostics that run against live databases.
@@ -1173,6 +1188,14 @@ The live flow imported [`Rahul-8283/chatverse-ai`](https://github.com/Rahul-8283
 | **Planning:** coupling-ordered roadmap, cost, teams | **Export:** 44 generated files, Terraform preview |
 | ![Deployment simulation](Images/testing/after-fixes/deployment.png) | ![Executive report](Images/testing/after-fixes/report.png) |
 | **Deployment:** the project's services, labelled Simulated | **Report:** summary, services, cost chart, risks |
+
+<div align="center">
+
+![Digital Twin observatory showing a live run with real project data](Images/testing/after-fixes/digital-twin.png)
+
+**Digital Twin:** the seven pipeline stages with the project's real values (26 files, 140 graph nodes, 208 edges, 8 candidate services, 1 blueprint), mid-run with the stage detail drawer open
+
+</div>
 
 ### End-to-end test
 
@@ -1225,7 +1248,7 @@ flowchart LR
         R3["3 Report endpoint"]:::done
         R4["4 Queue, relay, sockets"]:::done
         R5["5 Dashboard"]:::done
-        R6["6 Notion MCP export"]:::todo
+        R6["6 Notion export"]:::done
         R1 --> R2 --> R3 --> R4 --> R5 --> R6
     end
     C8 --> R1
@@ -1240,15 +1263,13 @@ Green is complete, amber is implemented with some parts still open, grey is not 
 
 ```mermaid
 flowchart TD
-    NOW["Today<br/>ingest, analyse, understand,<br/>decompose, plan, export, report"] --> N1
+    NOW["Today<br/>ingest, analyse, understand,<br/>decompose, plan, export, report,<br/>Notion export"] --> N2
     subgraph Next["Next"]
-        N1["Notion MCP export<br/>(Phase 6)"]
         N2["Interactive boundary editing<br/>drag and drop + validations"]
         N3["Team-driven strategy"]
         N4["Rate limiting, quotas,<br/>job cancellation, dead-letter queue"]
         N5["CI/CD with GitHub Actions"]
     end
-    N1 --> L1
     N2 --> L1
     N3 --> L1
     N4 --> L1
@@ -1273,7 +1294,7 @@ flowchart TD
 - Cost and latency figures come from a transparent parametric model driven by your assumptions, not from live cloud pricing.
 - "Deployment" simulates pipeline stages. Nothing is provisioned, and the Terraform output is a scaffold to review before use.
 - GitHub import supports public repositories only.
-- The Notion button is present but disabled until the export route ships.
+- Notion export requires an integration token and a database shared with that integration, with the properties listed in section 7.8.
 
 ---
 
