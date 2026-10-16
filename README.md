@@ -42,120 +42,45 @@
 16. [Deployment notes](#16-deployment-notes)
 17. [Status, roadmap and vision](#17-status-roadmap-and-vision)
 18. [Troubleshooting](#18-troubleshooting)
-19. [Contributing](#19-contributing)
-20. [License and team](#20-license-and-team)
+19. [License and team](#19-license-and-team)
 
 ---
 
 ## 1. Overview
 
-Splitting a monolith by gut feeling produces cascading failures, data inconsistency and latency cliffs. MonoMELT replaces guesswork with measurement. It reads a legacy codebase, builds a real dependency graph of its files, symbols and imports, clusters that graph into candidate services, and turns the chosen split into a migration plan, a cost and risk model, an infrastructure blueprint and an executive report.
+### The problem
 
-**What you get from one upload** (full scope; see the capability matrix below for the status of each part)
+Many companies run a large, old application built as a single codebase, a monolith. Over time it gets harder to change: one small edit can break something unrelated, the whole thing must be deployed together, and teams step on each other's work. Splitting it into smaller independent services (microservices) is the usual answer.
 
-| Stage | Output |
+The split is risky, and it is mostly decided by gut feeling. Teams cut along the wrong lines and end up with services that call each other constantly, share the same data, cost more to run than the monolith did, and have no clear owner or order of migration. Nobody can easily see how the code is really connected, so the decision turns into an argument about opinions instead of evidence.
+
+### What MonoMELT is
+
+MonoMELT is a web platform that takes a monolith (a ZIP upload or a public GitHub repository) and works out how to break it up. It:
+
+1. reads the code and maps how its files depend on each other;
+2. suggests where the service boundaries could go, with several options to compare;
+3. for the option you choose, produces a migration plan: the order of steps, a cost estimate, which team owns which service, and where data consistency needs care;
+4. generates starter files for the new services (Dockerfiles, Kubernetes manifests, API contracts, a draft Terraform setup);
+5. writes a short report that a non-engineer can read.
+
+### Why we built it
+
+- **To replace guesswork with evidence.** Boundaries come from the real dependency graph of the code, not from opinion.
+- **To cover the whole decision, not just the split.** Where to cut is only part of it; the order of work, the cost, the risk and the ownership matter just as much.
+- **To make the result easy to share.** Managers and technical leaders get a plain report, and engineers get files they can start from.
+- **To keep people in control.** Every assumption is visible and can be changed, and AI suggestions need a person to approve or reject them.
+
+### Who can use it
+
+| Role | What they use it for |
 | :--- | :--- |
-| **Ingest** | A ZIP upload or a public GitHub repository, filtered to source files, hashed and catalogued. |
-| **Analyse** | AST-level parsing of Python, JavaScript and TypeScript, a Neo4j dependency graph with resolved File→File imports, and metrics: fan-in/out, import cycles, independent components, unresolved imports, parser diagnostics. |
-| **Understand** | LLM findings: bounded contexts, architectural risks and data-sensitivity hot spots, each with a confidence score and a human approve/reject step. |
-| **Decompose** | Competing service-boundary scenarios (conservative, aggressive, domain-driven) computed with graph clustering, with cohesion and coupling per service. |
-| **Plan** | A coupling-ordered migration roadmap, a consistency/security matrix, a cost and latency model, and team ownership, all recalculable from visible assumptions and kept as immutable revisions. |
-| **Export** | A downloadable blueprint ZIP: service scaffolds, Dockerfiles, Kubernetes manifests, OpenAPI and event contracts, gateway routes, ADRs, a draft Terraform scaffold for AWS, Azure or GCP, and a SHA-256 manifest. |
-| **Report** | A versioned executive report (cost multiplier, timeline, risk score, per-service dependencies) delivered to the dashboard in real time. |
+| **Software architects** | See how the code is really connected and compare ways to split it |
+| **Engineering managers** | Plan the order of the migration and decide which team owns which service |
+| **DevOps and SRE engineers** | Get deployment starting points and an estimate of infrastructure cost |
+| **CTOs and technical leaders** | Read the cost, timeline and risk summary before committing to a migration |
 
-**Design principles**
-
-- **Evidence over opinion.** Every number comes from the graph or from an assumption you can see and change.
-- **Tenant isolation everywhere.** Row Level Security, an ownership guard on every project route, tenant-scoped graph queries, authenticated WebSockets and a shared secret between internal services.
-- **Asynchronous by default.** Heavy work runs in a BullMQ worker or an AI-service background task, and progress reaches the UI by polling plus WebSockets.
-- **Graceful degradation.** The LLM falls back from OpenRouter to Gemini, report sections degrade to "unavailable" instead of failing, and Neo4j hiccups never fail a report.
-
-### Vision, personas and scope
-
-MonoMELT is designed as an end-to-end transformation workbench rather than a one-off code splitter. This README describes the **whole platform**: what is built today and what is specified for the roadmap. Each capability carries a status.
-
-| Status | Meaning |
-| :---: | :--- |
-| **Implemented** | Working in this repository |
-| **Partial** | Core is built; named parts remain |
-| **Planned** | Specified in the PRD, TRD or phase documents; not built yet |
-
-**Who it is for**
-
-| Persona | What they need | Where MonoMELT helps |
-| :--- | :--- | :--- |
-| **Software architects** | A bird's-eye view of dependencies, bounded contexts and design decisions | Dependency graph, findings, competing scenarios, ADRs |
-| **Engineering managers** | Team assignments, delivery risk, velocity impact | Team ownership map, capacity warnings, staged roadmap |
-| **DevOps / SRE engineers** | Deployment topology, infrastructure cost, reliability | Kubernetes and Docker templates, Terraform scaffold, cost and latency model |
-| **CTOs and technical leadership** | ROI, cost projection, strategic alignment | Executive report, cost multiplier, timeline, risk score, Notion export |
-
-**Capability matrix (PRD and TRD scope)**
-
-| Capability | Status | Notes |
-| :--- | :---: | :--- |
-| ZIP and public GitHub ingestion with archive hardening | **Implemented** | Zip-slip, symlink, bomb and size protections |
-| Private GitHub repositories via OAuth, pinned to a commit SHA | **Planned** | Short-lived encrypted server-side credential, shallow clone without hooks |
-| AST parsing of Python, JavaScript, TypeScript | **Implemented** | JS/TS use tolerant regex extraction rather than a full compiler |
-| More languages (Java, Go, C#) | **Planned** | Catalogued today, parsed once fixtures and parser pinning exist |
-| Dependency graph in Neo4j with resolved File to File edges | **Implemented** | Tenant-scoped, indexed, idempotent |
-| Call graph and data-flow tracking across functions | **Planned** | Edge types `CALLS`, `READS`, `WRITES`, `QUERIES` are already modelled |
-| Transactional-boundary and database-schema coupling detection | **Planned** | Shared-table writers become distributed-transaction candidates |
-| Code metrics: fan-in/out, cycles, components, unresolved imports | **Implemented** | Plus parser diagnostics |
-| LLM findings (domain, risk, sensitivity) with human review | **Implemented** | OpenRouter with Gemini fallback |
-| Prompt versioning, evaluation fixtures, secret redaction before prompts | **Planned** | Phase 4 safety and evaluation requirements |
-| Vector retrieval and pattern comparison (Pinecone) | **Planned** | Client scaffolded, embeddings not wired |
-| Conservative, aggressive and domain-driven decomposition | **Implemented** | Louvain and package-structure grouping |
-| Team-driven decomposition | **Planned** | Boundaries shaped by team capacity and ownership |
-| Scenario validations: cycles, call-chain depth, shared tables, PII flows | **Planned** | Cohesion and coupling per service are implemented |
-| Interactive boundary editing (drag and drop) | **Partial** | Revision API implemented, drag-and-drop UI planned |
-| Migration roadmap, consistency matrix, team ownership | **Implemented** | Coupling-ordered stages, recalculable revisions |
-| Saga, outbox and CQRS recommendations | **Partial** | Saga, outbox and direct today; event sourcing and CQRS selection per workload planned |
-| Cost projection and ROI report | **Partial** | Parametric model implemented; versioned provider price catalogs and a full ROI statement planned |
-| Performance simulator and caching recommendations | **Partial** | Hop-based latency delta implemented; per-workflow simulation planned |
-| Blueprint export: services, Docker, Kubernetes, OpenAPI, events, gateway routes, ADR, Terraform | **Implemented** | Draft templates with secret placeholders |
-| Database schema artifacts per service | **Planned** | Listed in the PRD export set |
-| Signed, short-lived export URLs | **Planned** | Packages are regenerated on demand today |
-| Deployment simulation | **Implemented** | Simulated stages; nothing is provisioned |
-| Versioned executive report with real-time delivery | **Implemented** | Postgres, Redis pub/sub, WebSockets |
-| Notion export through the Model Context Protocol | **Planned** | Fully specified in `phase-v2/Phase6_v2.md` |
-| Authentication, project ownership, RLS, authenticated sockets | **Implemented** | Supabase Auth with GitHub as the first provider |
-| Role-based access and shared workspaces | **Planned** | Ownership is single-user today |
-| Rate limiting and per-tenant quotas | **Planned** | Required by the TRD gateway responsibilities |
-| Job cancellation, dead-letter queue, queue metrics | **Planned** | Retries with exponential backoff are implemented |
-| CI/CD with GitHub Actions | **Planned** | Lint, test and deploy pipeline |
-| WCAG 2.2 AA pass, route-level code splitting, graph collapsing above 10,000 entities | **Planned** | Phase 8 experience requirements |
-
-**Success targets (from the PRD)**
-
-| Metric | Target |
-| :--- | :--- |
-| Time to blueprint | Under 15 minutes from upload to a complete package |
-| Dependency accuracy | More than 95% of codebase dependencies reflected in the graph |
-| Engagement | Users can adjust boundaries and export without friction |
-
-**The transformation journey**
-
-```mermaid
-journey
-    title From monolith to blueprint
-    section Ingest
-      Upload ZIP or GitHub URL: 5: Architect
-      Track ingestion and analysis: 4: Architect
-    section Understand
-      Review metrics and dependency graph: 5: Architect
-      Approve or reject AI findings: 4: Architect
-    section Decide
-      Compare decomposition scenarios: 5: Architect, Manager
-      Fine-tune service boundaries: 3: Architect
-    section Plan
-      Set assumptions and recalculate: 4: Manager, SRE
-      Review roadmap, cost and ownership: 5: Manager, CTO
-    section Deliver
-      Export blueprint and preview files: 5: SRE
-      Simulate deployment: 4: SRE
-      Read the executive report: 5: CTO
-      Share to Notion: 3: CTO
-```
+It suits any team planning a move from a monolith to microservices, and students or teams who want to understand the structure of an unfamiliar codebase.
 
 ---
 
@@ -1306,7 +1231,7 @@ flowchart LR
     classDef todo fill:#1f2937,stroke:#6b7280,color:#d1d5db
 ```
 
-Green is complete, amber is implemented with named parts still open (see the capability matrix in section 1), grey is not started.
+Green is complete, amber is implemented with some parts still open, grey is not started.
 
 ### Roadmap
 
@@ -1370,20 +1295,7 @@ flowchart TD
 
 ---
 
-## 19. Contributing
-
-Read `CLAUDE.md` and `.agents/AGENTS.md` first. In short:
-
-- **Gateway:** flat layout, files named `feature.type.js`, Swagger docs in `docs/<feature>.docs.js`, every project route behind the ownership guard.
-- **AI service:** thin routers in `api/routes`, logic in `services`, connections in `db`, `snake_case` files, every Neo4j query scoped by owner, project and source version.
-- **Frontend:** pages aggregate, components live in feature folders, API calls go through `lib/api.ts`.
-- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`, `test:`), short and specific. Push every commit, and open a pull request only when asked.
-
-Before opening a pull request, run the suites in [Testing](#15-testing).
-
----
-
-## 20. License and team
+## 19. License and team
 
 Licensed under the **Apache License 2.0**. See [LICENSE](LICENSE).
 
