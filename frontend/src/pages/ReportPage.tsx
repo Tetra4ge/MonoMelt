@@ -131,6 +131,9 @@ export default function ReportPage() {
           </div>
           
           <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+            <Link to={`/dashboard/projects/${projectId}/twin`} className="text-gray-400 hover:text-white transition-colors text-sm font-bold hidden sm:block">
+              OBSERVATORY
+            </Link>
             <Link to="/dashboard" className="text-gray-400 hover:text-white transition-colors text-sm font-bold hidden sm:block">
               DASHBOARD
             </Link>

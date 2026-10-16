@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 const { enqueueReportJob } = require('../services/queue.service');
-const { buildNotionPayload } = require('../utils/notion.util');
+const { buildNotionPayload, convertToNativeNotionBlocks } = require('../utils/notion.util');
 const { retryWithBackoff } = require('../utils/retry.util');
 
 const MCP_SERVER_URL = process.env.MCP_NOTION_SERVER_URL || 'http://localhost:3001/mcp/notion';
@@ -112,21 +112,50 @@ const exportReportToNotion = async (req, res) => {
             });
         }
 
-        // 3. Translate JSON payload to Notion MCP blocks.
+        // 3. Translate JSON payload to Notion blocks.
         const mcpPayload = buildNotionPayload(report.payload, projectId);
+        let newNotionUrl = null;
 
-        // 4. Dispatch to Notion MCP server with exponential backoff on 429.
-        console.log(`[API Gateway] Dispatching report ${report.id} to Notion MCP at ${MCP_SERVER_URL}...`);
-
-        const mcpResponse = await retryWithBackoff(
-            () => axios.post(`${MCP_SERVER_URL}/pages`, {
-                database_id: process.env.NOTION_DATABASE_ID,
-                ...mcpPayload,
-            }),
-            { maxRetries: 3, baseDelayMs: 500, retryOn: [429] }
-        );
-
-        const newNotionUrl = mcpResponse.data.page_url;
+        // 4. Dispatch directly to Notion API if credentials are present, else fallback to MCP server.
+        if (process.env.NOTION_API_KEY && process.env.NOTION_DATABASE_ID) {
+            console.log(`[API Gateway] Exporting report ${report.id} directly to Notion API...`);
+            const nativeBlocks = convertToNativeNotionBlocks(mcpPayload.blocks);
+            const notionRes = await retryWithBackoff(
+                () => axios.post('https://api.notion.com/v1/pages', {
+                    parent: { database_id: process.env.NOTION_DATABASE_ID },
+                    properties: {
+                        Report: {
+                            title: [{ type: 'text', text: { content: mcpPayload.title || `MonoMelt Report: ${projectId.slice(0, 8)}` } }],
+                        },
+                        Revision: {
+                            rich_text: [{ type: 'text', text: { content: `v${report.version_number || 1}` } }],
+                        },
+                        'Generated at': {
+                            date: { start: report.created_at || new Date().toISOString() },
+                        },
+                    },
+                    children: nativeBlocks,
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.NOTION_API_KEY}`,
+                        'Notion-Version': '2022-06-28',
+                        'Content-Type': 'application/json',
+                    },
+                }),
+                { maxRetries: 3, baseDelayMs: 500, retryOn: [429] }
+            );
+            newNotionUrl = notionRes.data?.url;
+        } else {
+            console.log(`[API Gateway] Dispatching report ${report.id} to Notion MCP at ${MCP_SERVER_URL}...`);
+            const mcpResponse = await retryWithBackoff(
+                () => axios.post(`${MCP_SERVER_URL}/pages`, {
+                    database_id: process.env.NOTION_DATABASE_ID,
+                    ...mcpPayload,
+                }),
+                { maxRetries: 3, baseDelayMs: 500, retryOn: [429] }
+            );
+            newNotionUrl = mcpResponse.data?.page_url;
+        }
 
         // 5. Persist the Notion URL back into Supabase.
         await supabase

@@ -170,7 +170,63 @@ const buildNotionPayload = (reportData, projectId) => {
   };
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+/**
+ * Converts simplified MonoMelt block structures into official Notion API block objects.
+ */
+function convertToNativeNotionBlocks(blocks) {
+  const notionBlocks = [];
+
+  for (const b of (blocks || [])) {
+    if (b.type === 'heading_1') {
+      notionBlocks.push({
+        object: 'block',
+        type: 'heading_1',
+        heading_1: { rich_text: [{ type: 'text', text: { content: (b.text || '').slice(0, 2000) } }] },
+      });
+    } else if (b.type === 'heading_2') {
+      notionBlocks.push({
+        object: 'block',
+        type: 'heading_2',
+        heading_2: { rich_text: [{ type: 'text', text: { content: (b.text || '').slice(0, 2000) } }] },
+      });
+    } else if (b.type === 'paragraph') {
+      notionBlocks.push({
+        object: 'block',
+        type: 'paragraph',
+        paragraph: { rich_text: [{ type: 'text', text: { content: (b.text || '').slice(0, 2000) } }] },
+      });
+    } else if (b.type === 'bulleted_list_item') {
+      notionBlocks.push({
+        object: 'block',
+        type: 'bulleted_list_item',
+        bulleted_list_item: { rich_text: [{ type: 'text', text: { content: (b.text || '').slice(0, 2000) } }] },
+      });
+    } else if (b.type === 'callout') {
+      notionBlocks.push({
+        object: 'block',
+        type: 'callout',
+        callout: {
+          icon: { type: 'emoji', emoji: b.icon || '📌' },
+          rich_text: [{ type: 'text', text: { content: (b.text || '').slice(0, 2000) } }],
+        },
+      });
+    } else if (b.type === 'table') {
+      notionBlocks.push({
+        object: 'block',
+        type: 'paragraph',
+        paragraph: { rich_text: [{ type: 'text', text: { content: '📊 Financial Summary Matrix:' } }] },
+      });
+      (b.rows || []).forEach((row) => {
+        notionBlocks.push({
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: { rich_text: [{ type: 'text', text: { content: `${row[0]}: ${row[1]}` } }] },
+        });
+      });
+    }
+  }
+  return notionBlocks;
+}
 
 /**
  * Formats a numeric value as a currency string (no symbol, comma-separated).
@@ -184,4 +240,4 @@ function formatCurrency(value) {
   });
 }
 
-module.exports = { buildNotionPayload };
+module.exports = { buildNotionPayload, convertToNativeNotionBlocks, formatCurrency };

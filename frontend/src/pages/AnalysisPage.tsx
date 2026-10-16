@@ -343,6 +343,13 @@ export default function AnalysisPage() {
           )}
 
           <button
+            onClick={() => navigate(`/dashboard/projects/${projectId}/twin`)}
+            className="px-4 py-2 border border-[#222] text-gray-300 font-bold text-xs uppercase hover:border-white hover:text-white transition-colors"
+          >
+            DIGITAL TWIN
+          </button>
+
+          <button
             onClick={() => navigate('/dashboard')}
             className="px-4 py-2 border border-[#222] text-gray-400 font-bold text-xs uppercase hover:text-white hover:bg-[#111]"
           >
