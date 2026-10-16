@@ -8,7 +8,8 @@
  *   cd e2e && npm install && npx playwright install chromium   (once)
  *   E2E_USER_EMAIL=you@example.com node ui-smoke.js
  *
- * Config: FRONTEND_URL (default http://localhost:5173), E2E_USER_EMAIL, PROJECT_ID (optional),
+ * Config: FRONTEND_URL (default http://localhost:5173), GATEWAY_URL (default http://localhost:4000),
+ * E2E_USER_EMAIL, PROJECT_ID (optional; defaults to the newest 'chatverse-ai (e2e...' project),
  * plus the same Supabase variables as github-flow.js (read from the service .env files).
  * The Notion export button is only checked for presence; it is never clicked.
  */
@@ -31,6 +32,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || gatewayEnv.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || gatewayEnv.SUPABASE_SERVICE_ROLE_KEY;
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || frontendEnv.VITE_SUPABASE_ANON_KEY;
 const FRONTEND = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+const GATEWAY = (process.env.GATEWAY_URL || 'http://localhost:4000').replace(/\/$/, '');
 const EMAIL = process.env.E2E_USER_EMAIL;
 if (!SUPABASE_URL || !SERVICE_KEY || !ANON_KEY || !EMAIL) {
   console.error('Need SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY and E2E_USER_EMAIL');
@@ -93,7 +95,7 @@ function check(name, ok, detail = '') {
   p.on('pageerror', (e) => consoleErrors.push(`pageerror: ${String(e.message).slice(0, 240)}`));
   p.on('response', (r) => {
     const u = r.url();
-    if ((u.includes(':4000/') || u.includes('supabase.co')) && r.status() >= 400) failedRequests.push(`${r.status()} ${r.request().method()} ${u.replace(/\?.*/, '').slice(0, 140)}`);
+    if ((u.startsWith(GATEWAY + '/') || u.includes('supabase.co')) && r.status() >= 400) failedRequests.push(`${r.status()} ${r.request().method()} ${u.replace(/\?.*/, '').slice(0, 140)}`);
   });
 
   async function visit(name, url, fn) {
@@ -127,7 +129,7 @@ function check(name, ok, detail = '') {
   await visit('Dashboard', '/dashboard', async () => {
     await visible('workspace heading renders', /ingest_repository/);
     await visible('recent workspaces list loads', /recent_workspaces/);
-    await visible('the e2e project appears as a workspace', /chatverse-ai \(e2e/);
+    await visible('the imported project appears as a workspace', /chatverse-ai/);
     await visible('system status panel renders', /SYSTEM_STATUS/);
     await p.waitForTimeout(2500);
     const online = await p.getByText('ONLINE', { exact: true }).count();
