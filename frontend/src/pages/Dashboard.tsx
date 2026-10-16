@@ -13,7 +13,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
-  const [health, setHealth] = useState<{ gateway: string; ai: string; neo4j: string }>({ gateway: 'checking', ai: 'checking', neo4j: 'checking' });
+  const [health, setHealth] = useState<{ gateway: string; ai: string; neo4j: string; postgres: string; redis: string }>({ gateway: 'checking', ai: 'checking', neo4j: 'checking', postgres: 'checking', redis: 'checking' });
 
   const handleSignOut = async () => {
     navigate('/');
@@ -27,8 +27,10 @@ const Dashboard: React.FC = () => {
         gateway: 'up',
         ai: res.data.services?.['ai-service'] ?? 'down',
         neo4j: res.data.services?.neo4j ?? 'unknown',
+        postgres: res.data.services?.postgres ?? 'unknown',
+        redis: res.data.services?.redis ?? 'unknown',
       }))
-      .catch(() => setHealth({ gateway: 'down', ai: 'unknown', neo4j: 'unknown' }));
+      .catch(() => setHealth({ gateway: 'down', ai: 'unknown', neo4j: 'unknown', postgres: 'unknown', redis: 'unknown' }));
   }, []);
 
   useEffect(() => {
@@ -209,6 +211,8 @@ const Dashboard: React.FC = () => {
                   ['api-gateway', health.gateway],
                   ['ai-service', health.ai],
                   ['neo4j_graph', health.neo4j],
+                  ['postgres', health.postgres],
+                  ['redis_queue', health.redis],
                 ] as const).map(([name, state]) => {
                   const ok = state === 'up' || state === 'connected';
                   const pending = state === 'checking' || state === 'unknown';

@@ -88,11 +88,13 @@ app.get('/health', async (req, res) => {
   let aiService = 'down';
   let neo4j = 'unknown';
   let postgres = 'unknown';
+  let redis = 'unknown';
   try {
     const ai = await proxyToAiService('GET', '/health', null, {}, { timeout: 3000 });
     aiService = 'up';
     neo4j = ai.neo4j === 'connected' ? 'connected' : 'unavailable';
     postgres = ai.postgres === 'connected' ? 'connected' : 'unavailable';
+    redis = ai.redis === 'connected' ? 'connected' : 'unavailable';
   } catch (err) {
     aiService = 'down';
   }
@@ -101,7 +103,7 @@ app.get('/health', async (req, res) => {
     success: true,
     service: 'api-gateway',
     status: 'up',
-    services: { 'ai-service': aiService, neo4j, postgres },
+    services: { 'ai-service': aiService, neo4j, postgres, redis },
     timestamp: new Date().toISOString()
   });
 });
