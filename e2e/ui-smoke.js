@@ -108,7 +108,13 @@ function check(name, ok, detail = '') {
     } catch (err) {
       check('page interaction completed', false, err.message.split('\n')[0]);
     }
-    await p.screenshot({ path: path.join(shots, `${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`), fullPage: true }).catch(() => {});
+    // fullPage capture resizes the viewport, which makes Recharts replay its grow animation and the
+    // shot lands on empty bars. Size the viewport to the page first, let it settle, then capture.
+    const height = await p.evaluate(() => Math.min(document.documentElement.scrollHeight, 5000)).catch(() => 900);
+    await p.setViewportSize({ width: 1440, height: Math.max(900, height) });
+    await p.waitForTimeout(2800);
+    await p.screenshot({ path: path.join(shots, `${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`) }).catch(() => {});
+    await p.setViewportSize({ width: 1440, height: 900 });
     // Ignore the benign dev-only React warnings; everything else is a defect.
     const real = consoleErrors.filter((e) => !/Download the React DevTools|favicon/i.test(e));
     check('no console errors', real.length === 0, real.slice(0, 3).join(' | '));
@@ -200,6 +206,8 @@ function check(name, ok, detail = '') {
     await visible('risk assessment renders', /risk_assessment/);
     const body = await p.locator('body').innerText();
     check('no raw markdown markers in the report', !/\*\*/.test(body));
+    await p.waitForSelector('.recharts-bar-rectangle', { timeout: 10000 }).catch(() => {});
+    await p.waitForTimeout(1800); // bar-grow animation
     const bars = await p.evaluate(() => [...document.querySelectorAll('.recharts-bar-rectangle path, .recharts-bar-rectangle rect')].map((e) => Math.round(e.getBoundingClientRect().height)));
     check('financial chart draws two non-empty bars', bars.length === 2 && bars.every((h) => h > 20), JSON.stringify(bars));
     check('summary shows total services and a risk score', (await p.getByText(/Total Services/i).count()) > 0 && (await p.getByText(/Risk Score/i).count()) > 0);
