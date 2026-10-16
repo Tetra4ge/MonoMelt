@@ -86,6 +86,14 @@ It suits any team planning a move from a monolith to microservices, and students
 
 ## 2. Product tour
 
+<div align="center">
+
+![Landing page](Images/landing-page.png)
+
+*The landing page: what MonoMELT does, how the workflow runs, and how to start it locally*
+
+</div>
+
 The interface is a dark, terminal-inspired workspace that walks a project through the pipeline.
 
 | | |

@@ -29,7 +29,7 @@ const LandingPage = () => {
       </main>
 
       <footer className="py-8 text-center text-gray-600 text-sm border-t border-gray-800">
-        <p>© 2026 MonoMELT Transformation Platform.</p>
+        <p>© 2026 MonoMELT Transformation Platform · Apache License 2.0 · <a href="https://github.com/Tetra4ge/MonoMelt" target="_blank" rel="noopener noreferrer" className="hover:text-white">GitHub</a></p>
       </footer>
     </div>
   );
