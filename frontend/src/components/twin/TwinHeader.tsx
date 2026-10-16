@@ -1,8 +1,10 @@
 import React from 'react';
 import { Play, Pause, RotateCcw, StepForward, Terminal, Radio } from 'lucide-react';
+import type { TwinProjectSummary } from '../../types/twin.types';
 
 interface TwinHeaderProps {
   projectId?: string;
+  projectSummary?: TwinProjectSummary | null;
   mode: 'live' | 'simulation';
   isSimulating: boolean;
   isPaused: boolean;
@@ -18,6 +20,7 @@ interface TwinHeaderProps {
 
 export const TwinHeader: React.FC<TwinHeaderProps> = ({
   projectId,
+  projectSummary,
   mode,
   isSimulating,
   isPaused,
@@ -34,7 +37,7 @@ export const TwinHeader: React.FC<TwinHeaderProps> = ({
     <div className="border-b border-[#222] bg-[#0a0a0a] p-4 text-xs font-mono text-gray-300">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         
-        {/* Title & Telemetry Status */}
+        {/* Title & Project Identification */}
         <div className="flex items-center gap-3">
           <Terminal className="h-5 w-5 text-white shrink-0" />
           <div>
@@ -43,8 +46,14 @@ export const TwinHeader: React.FC<TwinHeaderProps> = ({
               <span className="text-gray-600">/</span>
               <span className="text-gray-400">ARCHITECTURAL HUD</span>
             </div>
-            <div className="mt-1 flex items-center gap-3 text-[11px] text-gray-500">
-              <span>PROJECT: {projectId ? projectId.slice(0, 8) : 'SANDBOX_DEMO'}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
+              <span className="font-bold text-gray-300">
+                PROJECT: {projectSummary?.projectName || (projectId ? projectId.slice(0, 8) : 'SANDBOX_DEMO')}
+              </span>
+              <span>•</span>
+              <span className="text-gray-400">
+                SOURCE: {projectSummary?.sourceType?.toUpperCase() || 'CODEBASE'}
+              </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <span className={`inline-block h-1.5 w-1.5 ${isSimulating ? 'bg-white animate-pulse' : 'bg-gray-600'}`} />
@@ -53,6 +62,19 @@ export const TwinHeader: React.FC<TwinHeaderProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Real Codebase Scope Badge */}
+        {projectSummary && (
+          <div className="hidden xl:flex items-center gap-3 border border-[#222] bg-[#111] px-3 py-1.5 text-[11px] text-gray-400">
+            <span className="text-white font-bold">{projectSummary.fileCount} FILES</span>
+            <span className="text-gray-600">•</span>
+            <span className="text-white font-bold">{projectSummary.classCount} CLASSES</span>
+            <span className="text-gray-600">•</span>
+            <span className="text-white font-bold">{projectSummary.edgeCount} EDGES</span>
+            <span className="text-gray-600">•</span>
+            <span className="text-gray-300 truncate max-w-[160px]">{projectSummary.primaryLanguages}</span>
+          </div>
+        )}
 
         {/* Progress Bar Display */}
         <div className="flex items-center gap-2 border border-[#222] bg-[#111] px-3 py-1.5 text-[11px]">
