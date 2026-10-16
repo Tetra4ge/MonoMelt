@@ -14,6 +14,16 @@ interface FindingsPanelProps {
   onReview: (findingId: string, status: string) => void;
 }
 
+/** Node ids look like "<source-version>::src/App.tsx::name:12"; show the file (and symbol), not the shared prefix. */
+function nodeLabel(id: string): { short: string; full: string } {
+  const parts = id.split('::');
+  const full = parts.length > 1 ? parts.slice(1).join('::') : id;
+  const file = full.split('::')[0];
+  const symbol = full.includes('::') ? full.split('::').slice(1).join('::').replace(/:\d+$/, '') : '';
+  const base = file.split('/').slice(-2).join('/');
+  return { short: symbol ? `${base} > ${symbol}` : base, full };
+}
+
 export default function FindingsPanel({ findings, onReview }: FindingsPanelProps) {
   if (!findings || findings.length === 0) return null;
 
@@ -50,11 +60,14 @@ export default function FindingsPanel({ findings, onReview }: FindingsPanelProps
                 <div className="mb-4">
                   <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Impacted Nodes</p>
                   <div className="flex flex-wrap gap-1">
-                    {finding.subject_ids.map((id, idx) => (
-                      <span key={idx} className="text-xs text-gray-400 bg-black px-1.5 py-0.5 border border-[#222]">
-                        {id.substring(0, 8)}
-                      </span>
-                    ))}
+                    {[...new Set(finding.subject_ids.map((id) => nodeLabel(id).full))].map((full) => {
+                      const { short } = nodeLabel(full.includes('::') || full.includes('/') ? `x::${full}` : full);
+                      return (
+                        <span key={full} title={full} className="text-xs text-gray-400 bg-black px-1.5 py-0.5 border border-[#222] font-mono">
+                          {short}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}

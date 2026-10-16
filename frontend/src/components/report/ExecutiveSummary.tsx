@@ -1,5 +1,13 @@
 import { Activity, Clock, AlertTriangle } from 'lucide-react';
 
+/** The model replies in light markdown; render bold and paragraphs rather than showing raw ** markers. */
+const renderInline = (text: string) =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4
+      ? <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>
+      : <span key={i}>{part}</span>
+  );
+
 export const ExecutiveSummary = ({ data }: { data: any }) => {
   if (!data) return null;
 
@@ -39,9 +47,12 @@ export const ExecutiveSummary = ({ data }: { data: any }) => {
 
       <div className="bg-[#0a0a0a] border border-[#333] p-6 rounded-sm">
         <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">Business Impact</h3>
-        <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-          {data.business_impact}
-        </p>
+        <div className="space-y-3 text-gray-300 text-sm leading-relaxed font-sans">
+          {String(data.business_impact ?? '')
+            .replace(/^#{1,6}\s*/gm, '')
+            .split(/\n{2,}/)
+            .map((paragraph: string, i: number) => paragraph.trim() && <p key={i}>{renderInline(paragraph.trim())}</p>)}
+        </div>
       </div>
     </div>
   );

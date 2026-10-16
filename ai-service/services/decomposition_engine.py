@@ -236,9 +236,9 @@ class DecompositionEngine:
             services.append({
                 "name": name,
                 "description": (
-                    f"Shared files with no internal dependencies ({len(files)} files)."
+                    f"Shared files with no internal dependencies ({len(files)} {'file' if len(files) == 1 else 'files'})."
                     if is_shared else
-                    f"{len(files)} files grouped by {'package structure' if self.strategy_type == 'domain' else 'import coupling'}."
+                    f"{len(files)} {'file' if len(files) == 1 else 'files'} grouped by {'package structure' if self.strategy_type == 'domain' else 'import coupling'}."
                 ),
                 "assigned_nodes": assigned,
                 "metrics": {
