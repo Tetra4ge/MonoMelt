@@ -1,0 +1,147 @@
+name: Deploy
+
+# Manual only. Infrastructure is created separately with `terraform apply` (deploy/terraform).
+# This workflow builds the images and the frontend and rolls them out to that infrastructure.
+on:
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: Build and deploy the API gateway, AI service and worker
+        type: boolean
+        default: true
+      frontend:
+        description: Build and deploy the frontend
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # lets the job exchange its GitHub token for AWS credentials (OIDC)
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    if: ${{ inputs.backend }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api-gateway, ai-service, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          platforms: linux/amd64
+          provenance: false
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/monomelt/${{ matrix.service }}:latest
+            ${{ steps.ecr.outputs.registry }}/monomelt/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Roll out ${{ matrix.service }}
+        run: |
+          aws ecs update-service \
+            --cluster monomelt \
+            --service "monomelt-${{ matrix.service }}" \
+            --force-new-deployment > /dev/null
+          aws ecs wait services-stable \
+            --cluster monomelt \
+            --services "monomelt-${{ matrix.service }}"
+
+  frontend:
+    if: ${{ inputs.frontend }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Check the Supabase variables
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Add the $name repository variable (Settings > Secrets and variables > Actions > Variables)."
+              exit 1
+            fi
+          done
+
+      - name: Find the deployment
+        id: infra
+        run: |
+          out=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Comment=='monomelt'].[Id,DomainName]" \
+            --output text)
+          if [ -z "$out" ] || [ "$out" = "None" ]; then
+            echo "::error::CloudFront distribution not found. Run terraform apply first."
+            exit 1
+          fi
+          account=$(aws sts get-caller-identity --query Account --output text)
+          {
+            echo "distribution_id=$(echo "$out" | awk '{print $1}')"
+            echo "domain=$(echo "$out" | awk '{print $2}')"
+            echo "bucket=monomelt-frontend-${account}-${AWS_REGION}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://${{ steps.infra.outputs.domain }}
+          VITE_WS_URL: wss://${{ steps.infra.outputs.domain }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          npm ci
+          npm run build
+
+      # Hashed bundles are cached for a year; index.html is never cached so a new build shows up at once.
+      - name: Upload to S3
+        env:
+          BUCKET: ${{ steps.infra.outputs.bucket }}
+        run: |
+          aws s3 sync frontend/dist "s3://$BUCKET/" \
+            --exclude "*" --include "assets/*" --delete \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 sync frontend/dist "s3://$BUCKET/" \
+            --exclude "assets/*" --exclude "index.html" --delete \
+            --cache-control "public,max-age=300"
+          aws s3 cp frontend/dist/index.html "s3://$BUCKET/index.html" \
+            --cache-control "no-cache"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ steps.infra.outputs.distribution_id }}" \
+            --paths "/*" > /dev/null
+
+      - name: Summary
+        run: echo "Deployed to https://${{ steps.infra.outputs.domain }}" >> "$GITHUB_STEP_SUMMARY"

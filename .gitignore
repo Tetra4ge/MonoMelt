@@ -10,3 +10,10 @@ node_modules/
 
 # E2E run output
 e2e/results/
+
+# Terraform (keep .terraform.lock.hcl tracked)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
