@@ -62,7 +62,18 @@ export interface TwinProjectSummary {
   primaryLanguages: string;
   sampleFiles: string[];
   candidateServices: string[];
-  modularityScore: string;
+  /** Share of dependency edges that stay inside a service (internal / (internal + cross-service)). */
+  cohesion: string;
+  /** Decomposition strategy of the scenario the services come from. */
+  strategy: string;
+  /** Total nodes in the dependency graph (files, symbols and external packages). */
+  nodeCount: number;
+  /** Functions, methods and classes found by the parser. */
+  symbolCount: number;
+  blueprintCount: number;
+  notionSynced: boolean;
+  /** Parser errors and warnings recorded for the analysis run. */
+  parseIssues: number;
   isRealData: boolean;
 }
 
