@@ -13,6 +13,9 @@
   <img src="https://img.shields.io/badge/gateway-Node%2022%20%2B%20Express%205-43853D?style=flat&logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/ai--service-FastAPI-009688?style=flat&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/graph-Neo4j-018bff?style=flat&logo=neo4j&logoColor=white" />
+  <img src="https://img.shields.io/badge/database-PostgreSQL%20(Supabase)-336791?style=flat&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/queue-Redis%20%2B%20BullMQ-DC382D?style=flat&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/tests-10%20unit%20%7C%205%20AI%20suites%20%7C%2077%20e2e%20checks-brightgreen?style=flat&logo=testing-library&logoColor=white" />
 </p>
 
 </div>
@@ -157,14 +160,6 @@ journey
 ---
 
 ## 2. Product tour
-
-<div align="center">
-
-![Backend data flow](Images/MonoMelt%20Backend.png)
-
-*Backend data flow*
-
-</div>
 
 The interface is a dark, terminal-inspired workspace that walks a project through the pipeline.
 

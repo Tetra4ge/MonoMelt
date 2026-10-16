@@ -1,0 +1,12 @@
+{
+  "name": "monomelt-e2e",
+  "private": true,
+  "description": "End-to-end and UI smoke tests for MonoMelt",
+  "scripts": {
+    "api": "node github-flow.js",
+    "ui": "node ui-smoke.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
