@@ -199,8 +199,10 @@ class DecompositionEngine:
         if folder and (self.strategy_type == "domain" or folder.lower() not in CONTAINER_DIRS):
             return _slug(folder)
 
-        # Hub file: most import connections, ties broken by path for determinism.
-        hub = max(files, key=lambda nid: (self.graph.degree(nid), self.file_paths[nid]))
+        # Anchor file: the one that imports the most of its siblings (a feature's entry point),
+        # then the most imported, then path for determinism. A helper that many files import
+        # but that imports nothing makes a poor name for the service.
+        hub = max(files, key=lambda nid: (self.graph.out_degree(nid), self.graph.in_degree(nid), self.file_paths[nid]))
         stem = posixpath.splitext(posixpath.basename(self.file_paths[hub]))[0]
         return _slug(stem)
 

@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -59,12 +60,20 @@ app.include_router(blueprints_router, dependencies=protected)
 app.include_router(reports_router, prefix="/api", dependencies=protected)
 
 
+async def _check(probe, seconds: float = 4.0) -> bool:
+    """Run one dependency probe with its own timeout so a slow dependency cannot stall /health."""
+    try:
+        return bool(await asyncio.wait_for(probe(), timeout=seconds))
+    except Exception:
+        return False
+
+
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check including Neo4j, Postgres and Redis connectivity."""
-    neo4j_ok = await verify_connectivity()
-    postgres_ok = await verify_postgres()
-    redis_ok = await verify_redis()
+    """Health check including Neo4j, Postgres and Redis connectivity (probed concurrently)."""
+    neo4j_ok, postgres_ok, redis_ok = await asyncio.gather(
+        _check(verify_connectivity), _check(verify_postgres), _check(verify_redis)
+    )
     return {
         "success": True,
         "service": "ai-analysis-service",
