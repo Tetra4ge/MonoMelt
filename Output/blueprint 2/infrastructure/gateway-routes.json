@@ -1,0 +1,46 @@
+{
+  "routes": [
+    {
+      "path_prefix": "/api/v1/components-service",
+      "target_service": "http://components-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/app-service",
+      "target_service": "http://app-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/utils-service",
+      "target_service": "http://utils-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/config-service",
+      "target_service": "http://config-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/contexts-service",
+      "target_service": "http://contexts-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/firebase-service",
+      "target_service": "http://firebase-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    },
+    {
+      "path_prefix": "/api/v1/store-service",
+      "target_service": "http://store-service:8080",
+      "rate_limit_per_min": 1000,
+      "auth_required": true
+    }
+  ]
+}

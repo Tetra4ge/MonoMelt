@@ -13,6 +13,9 @@
   <img src="https://img.shields.io/badge/gateway-Node%2022%20%2B%20Express%205-43853D?style=flat&logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/ai--service-FastAPI-009688?style=flat&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/graph-Neo4j-018bff?style=flat&logo=neo4j&logoColor=white" />
+  <img src="https://img.shields.io/badge/database-PostgreSQL%20(Supabase)-336791?style=flat&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/queue-Redis%20%2B%20BullMQ-DC382D?style=flat&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/tests-10%20unit%20%7C%205%20AI%20suites%20%7C%2077%20API%20e2e%20%7C%2072%20UI%20e2e-brightgreen?style=flat&logo=testing-library&logoColor=white" />
 </p>
 
 </div>
@@ -157,14 +160,6 @@ journey
 ---
 
 ## 2. Product tour
-
-<div align="center">
-
-![Backend data flow](Images/MonoMelt%20Backend.png)
-
-*Backend data flow*
-
-</div>
 
 The interface is a dark, terminal-inspired workspace that walks a project through the pipeline.
 
@@ -1232,9 +1227,24 @@ Then sign in, create a workspace, upload a ZIP or paste a public GitHub URL, and
 | Planning | `.venv/bin/python scripts/test_planning_engine.py` | no | No invented services, coupling order, single-service case |
 | Blueprint | `.venv/bin/python scripts/test_blueprint_generator.py` | no | Name sanitisation, Terraform per cloud, validation, previews |
 | Frontend | `cd frontend && npx tsc -p tsconfig.app.json --noEmit && npm run lint && npm run build` | no | Types, lint, production build |
-| End to end | `node e2e/run.js` | yes | The whole pipeline plus tenant isolation |
+| Live GitHub flow (API) | `E2E_USER_EMAIL=you@example.com node e2e/github-flow.js` | yes | A real repository through every stage: import, worker, analysis, intelligence, 3 strategies, plan, blueprint, deployment, report, websocket (77 checks) |
+| UI smoke (browser) | `cd e2e && npm install && npx playwright install chromium && E2E_USER_EMAIL=you@example.com node ui-smoke.js` | yes | Every page in headless Chromium: content rendered, no console errors, no failed API calls, screenshots (72 checks) |
+| Synthetic end to end | `node e2e/run.js` | yes | Fixture repository plus cross-tenant and authentication checks |
 
 The other files in `ai-service/scripts/` (`check_*.py`, `db_*.py`, `test_engine.py` and so on) are diagnostics that run against live databases.
+
+### Test evidence
+
+The live flow imported [`Rahul-8283/chatverse-ai`](https://github.com/Rahul-8283/chatverse-ai) (26 TypeScript files, 3,759 lines) and followed it to the final report in about 90 seconds. These are the pages from the UI run; the same pages from before the fixes are in `Images/testing/before-fixes/`.
+
+| | |
+| :---: | :---: |
+| ![Dashboard with live service status](Images/testing/after-fixes/dashboard.png) | ![Analysis: metrics, findings, decomposition and graph](Images/testing/after-fixes/analysis.png) |
+| **Dashboard:** five dependencies ONLINE | **Analysis:** metrics, AI findings, scenarios, graph |
+| ![Migration plan](Images/testing/after-fixes/planning.png) | ![Blueprint export with file preview](Images/testing/after-fixes/export.png) |
+| **Planning:** coupling-ordered roadmap, cost, teams | **Export:** 44 generated files, Terraform preview |
+| ![Deployment simulation](Images/testing/after-fixes/deployment.png) | ![Executive report](Images/testing/after-fixes/report.png) |
+| **Deployment:** the project's services, labelled Simulated | **Report:** summary, services, cost chart, risks |
 
 ### End-to-end test
 
@@ -1346,6 +1356,8 @@ flowchart TD
 | Gateway exits with `supabaseUrl is required` | An `.env` is missing or incomplete in `api-gateway/` |
 | Upload returns `503 The job queue is unavailable` | Redis is not reachable at `REDIS_URL`. Start it (see step 3) |
 | Job stays `queued` or `ingesting` | Worker not running, or it uses a different Redis than the gateway |
+| Job fails: `Unable to connect to DATABASE_URL` | `DATABASE_URL` uses the direct `db.<ref>.supabase.co` host (IPv6 only). Use the **Session pooler** string (`postgres.<ref>@...pooler.supabase.com:5432`) in the gateway and AI service |
+| Services started before you edited `.env` still fail | nodemon and uvicorn do not watch `.env`. Restart the process after changing it |
 | Analysis fails: "No supported source files found" | The archive has no Python, JavaScript or TypeScript files |
 | `401 Invalid or missing internal API key` | `INTERNAL_API_KEY` differs between gateway, worker and AI service |
 | Dashboard shows `ai-service` OFFLINE | The gateway cannot reach `AI_SERVICE_URL`; check the URL, port and key |

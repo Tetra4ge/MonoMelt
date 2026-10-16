@@ -15,9 +15,15 @@ export default function ServicesDashboard({ services }: ServicesDashboardProps) 
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-white font-bold text-lg">{service.service_name}</h3>
-              <div className="flex items-center gap-1.5 mt-1 text-emerald-500 text-xs font-bold uppercase">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Healthy
-              </div>
+              {service.status === 'simulated' ? (
+                <div className="flex items-center gap-1.5 mt-1 text-amber-400 text-xs font-bold uppercase">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Simulated
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 mt-1 text-emerald-500 text-xs font-bold uppercase">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Healthy
+                </div>
+              )}
             </div>
             <div className="p-2 bg-emerald-500/10 rounded-full">
               <Activity className="w-5 h-5 text-emerald-400" />
@@ -42,15 +48,22 @@ export default function ServicesDashboard({ services }: ServicesDashboardProps) 
 
           {/* Endpoint */}
           <div className="mt-auto pt-4 border-t border-[#222]">
-            <a 
-              href={service.endpoint_url.startsWith('http') ? service.endpoint_url : `https://${service.endpoint_url}`} 
-              target="_blank" 
-              rel="noreferrer"
-              className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors font-mono"
-            >
-              <LinkIcon className="w-3.5 h-3.5" />
-              <span className="truncate">{service.endpoint_url}</span>
-            </a>
+            {service.status === 'simulated' ? (
+              <span className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span className="truncate">{service.endpoint_url}</span>
+              </span>
+            ) : (
+              <a
+                href={service.endpoint_url.startsWith('http') ? service.endpoint_url : `https://${service.endpoint_url}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors font-mono"
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span className="truncate">{service.endpoint_url}</span>
+              </a>
+            )}
           </div>
           
         </div>

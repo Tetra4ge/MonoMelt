@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:4000"
 
     # Redis (used to publish report-updates for the API Gateway's WebSocket relay)
-    redis_url: str = "redis://localhost:6379"
+    redis_url: str = "redis://localhost:6380"  # the compose-published dev port; override with REDIS_URL
 
     # LLM Keys (future)
     gemini_api_key: str = ""

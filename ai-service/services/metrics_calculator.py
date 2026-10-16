@@ -52,7 +52,7 @@ def compute_local_metrics(parsed_files: list[ParsedFile]) -> dict:
             # Count imports that could not be resolved to a local file
             unresolved_imports += sum(
                 1 for imp in pf.imports
-                if not imp.is_external and imp.resolved_path is None
+                if not imp.is_external and not imp.is_asset and imp.resolved_path is None
             )
 
     return {

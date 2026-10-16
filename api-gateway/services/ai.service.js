@@ -54,6 +54,15 @@ const proxyToAiService = async (method, path, body = null, queryParams = {}, opt
       const detail = Array.isArray(data?.detail)
         ? data.detail.map(d => `${(d.loc || []).slice(1).join('.')}: ${d.msg}`).join('; ')
         : data?.detail;
+      // A 401/403 from the AI service means the gateway's own internal key was rejected,
+      // not that the user's session is bad. Never forward it as a 401 (the UI would treat
+      // it as an expired login); report a gateway-side failure instead.
+      if (status === 401 || status === 403) {
+        const authErr = new Error('The AI service rejected the gateway credentials. Check that INTERNAL_API_KEY matches in the gateway, worker and AI service.');
+        authErr.statusCode = 502;
+        authErr.expose = true;
+        throw authErr;
+      }
       const err = new Error(detail || data?.message || 'AI service error');
       err.statusCode = status;
       err.expose = status === 409 || status === 503;

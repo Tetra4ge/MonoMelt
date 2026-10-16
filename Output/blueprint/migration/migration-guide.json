@@ -1,0 +1,124 @@
+{
+  "roadmap_stages": [
+    {
+      "name": "Preparation & Foundation",
+      "description": "Establish API Gateway, core auth middleware, container registry, and CI/CD pipelines.",
+      "stage_number": 1,
+      "rollout_method": "direct",
+      "success_metric": "100% gateway route coverage and baseline telemetry operating",
+      "target_services": [
+        "API-Gateway-Infrastructure"
+      ],
+      "rollback_condition": "Gateway infrastructure health checks fail",
+      "effort_estimate_weeks": 2
+    },
+    {
+      "name": "Low-Risk Service Extraction",
+      "description": "Extract the least-coupled services first: few outgoing dependencies, so the lowest blast radius.",
+      "stage_number": 2,
+      "rollout_method": "strangler_fig",
+      "success_metric": "Zero downtime cutover with full shadow-traffic validation",
+      "target_services": [
+        "utils-service",
+        "config-service",
+        "contexts-service"
+      ],
+      "rollback_condition": "Latency spike > 200ms or HTTP 5xx error rate > 0.5%",
+      "effort_estimate_weeks": 5
+    },
+    {
+      "name": "Core Domain Extraction",
+      "description": "Migrate moderately coupled domain services and introduce transactional outbox patterns.",
+      "stage_number": 3,
+      "rollout_method": "strangler_fig",
+      "success_metric": "99.99% data consistency verified across event boundary",
+      "target_services": [
+        "firebase-service",
+        "store-service"
+      ],
+      "rollback_condition": "Distributed transaction mismatch or DB replication lag > 2s",
+      "effort_estimate_weeks": 4
+    },
+    {
+      "name": "High-Coupling & Database Split",
+      "description": "Extract the most coupled services last and decouple their shared monolith tables into isolated schemas.",
+      "stage_number": 4,
+      "rollout_method": "blue_green",
+      "success_metric": "Complete removal of direct database joins across service boundaries",
+      "target_services": [
+        "app-service",
+        "components-service"
+      ],
+      "rollback_condition": "Data integrity mismatch during dual-write verification",
+      "effort_estimate_weeks": 5
+    },
+    {
+      "name": "Stabilization & Monolith Retirement",
+      "description": "Decommission monolithic routes and optimize microservice resource allocations.",
+      "stage_number": 5,
+      "rollout_method": "direct",
+      "success_metric": "100% traffic served by microservices architecture",
+      "target_services": [
+        "Legacy-Monolith-Decommission"
+      ],
+      "rollback_condition": "Unmapped legacy route invocations detected in logs",
+      "effort_estimate_weeks": 2
+    }
+  ],
+  "consistency_security": [
+    {
+      "data_category": "transactional",
+      "audit_required": true,
+      "operation_type": "write",
+      "source_service": "components-service",
+      "target_service": "app-service",
+      "encryption_required": false,
+      "recommended_pattern": "outbox"
+    },
+    {
+      "data_category": "transactional",
+      "audit_required": false,
+      "operation_type": "read",
+      "source_service": "app-service",
+      "target_service": "utils-service",
+      "encryption_required": false,
+      "recommended_pattern": "direct"
+    },
+    {
+      "data_category": "transactional",
+      "audit_required": true,
+      "operation_type": "write",
+      "source_service": "utils-service",
+      "target_service": "config-service",
+      "encryption_required": false,
+      "recommended_pattern": "outbox"
+    },
+    {
+      "data_category": "transactional",
+      "audit_required": false,
+      "operation_type": "read",
+      "source_service": "config-service",
+      "target_service": "contexts-service",
+      "encryption_required": false,
+      "recommended_pattern": "direct"
+    },
+    {
+      "data_category": "transactional",
+      "audit_required": true,
+      "operation_type": "write",
+      "source_service": "contexts-service",
+      "target_service": "firebase-service",
+      "encryption_required": false,
+      "recommended_pattern": "outbox"
+    },
+    {
+      "data_category": "transactional",
+      "audit_required": false,
+      "operation_type": "read",
+      "source_service": "firebase-service",
+      "target_service": "store-service",
+      "encryption_required": false,
+      "recommended_pattern": "direct"
+    }
+  ]
+}

@@ -39,6 +39,7 @@ REPO = {
     "web/src/lib/util.ts": "export const a = 1; export const b = 2;\n",
     "web/src/components/index.tsx": "export const C = () => null;\n",
     "web/src/pages/home.ts": "import { a } from '../lib/util';\n",
+    "web/src/main.tsx": "import './index.css';\nimport logo from './assets/logo.png';\nimport data from './data.json';\nimport { a } from './lib/util';\n",
 }
 
 
@@ -77,7 +78,13 @@ def main() -> None:
     assert names.count(("__init__", "method")) == 2 and ("__init__", "function") not in names, names
     assert len(models_pf.symbols) == 5, names  # 2 classes + 3 methods, no duplicates
 
-    unresolved = sum(1 for p in parsed for i in p.imports if not i.is_external and not i.resolved_paths)
+    # asset imports (css, images, json) are neither dependencies nor unresolved code imports
+    main_pf = next(p for p in parsed if p.file_path == "web/src/main.tsx")
+    assets = {i.target_module for i in main_pf.imports if i.is_asset}
+    assert assets == {"./index.css", "./assets/logo.png", "./data.json"}, assets
+    assert targets(parsed, "web/src/main.tsx") == {"web/src/lib/util.ts"}
+
+    unresolved = sum(1 for p in parsed for i in p.imports if not i.is_external and not i.is_asset and not i.resolved_paths)
     assert unresolved == 0, unresolved
 
     print("import resolution: all assertions passed")

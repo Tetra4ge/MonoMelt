@@ -1,0 +1,109 @@
+{
+  "event_contracts": [
+    {
+      "event_name": "components-service.created",
+      "publisher": "components-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_name": "app-service.created",
+      "publisher": "app-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_name": "utils-service.created",
+      "publisher": "utils-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_name": "config-service.created",
+      "publisher": "config-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_name": "contexts-service.created",
+      "publisher": "contexts-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_name": "firebase-service.created",
+      "publisher": "firebase-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "event_name": "store-service.created",
+      "publisher": "store-service",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

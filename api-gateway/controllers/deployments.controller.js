@@ -53,6 +53,28 @@ exports.getServiceHealth = async (req, res, next) => {
     const deployment = await loadDeployment(req, res);
     if (!deployment) return;
     if (deployment.status !== 'deployed') return res.status(409).json({ success: false, message: 'Deployment has not completed.' });
-    res.json({ success: true, data: [{ service_name: 'generated-api-gateway', uptime: 'simulation complete', cpu_usage: 'n/a', memory: 'n/a', endpoint_url: 'local blueprint artifact' }] });
+
+    // The deployment is a simulation, so report the blueprint's real services and say so
+    // plainly instead of inventing a single "healthy" gateway.
+    const client = getClient(req);
+    const { data: blueprint } = await client.from('blueprints').select('scenario_revision_id').eq('id', deployment.blueprint_id).maybeSingle();
+    let names = [];
+    if (blueprint?.scenario_revision_id) {
+      const { data: services } = await client.from('proposed_services').select('name').eq('revision_id', blueprint.scenario_revision_id);
+      names = (services || []).map((s) => s.name);
+    }
+    if (names.length === 0) names = ['blueprint-services'];
+
+    res.json({
+      success: true,
+      data: names.map((name) => ({
+        service_name: name,
+        status: 'simulated',
+        uptime: 'simulated',
+        cpu_usage: 'n/a',
+        memory: 'n/a',
+        endpoint_url: `${name}:8080 (not provisioned)`,
+      })),
+    });
   } catch (error) { next(error); }
 };

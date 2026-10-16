@@ -10,6 +10,8 @@ export interface Deployment {
 
 export interface ServiceHealth {
   service_name: string;
+  /** 'simulated' while the deployment is a simulation; a live status once real provisioning exists */
+  status?: 'simulated' | 'healthy' | 'unhealthy';
   uptime: string;
   cpu_usage: string;
   memory: string;

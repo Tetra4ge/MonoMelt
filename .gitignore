@@ -1,6 +1,12 @@
+# Dependencies
+node_modules/
+
 # macOS
 .DS_Store
 
 # Editor / IDE
 .vscode/
 .idea/
+
+# E2E run output
+e2e/results/

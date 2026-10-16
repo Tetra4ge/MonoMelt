@@ -30,6 +30,14 @@ def _get_redis_client() -> aioredis.Redis:
     return _redis_client
 
 
+async def verify_redis() -> bool:
+    """Used by /health: can we reach Redis? (Without it reports still save, but no live events.)"""
+    try:
+        return bool(await _get_redis_client().ping())
+    except Exception:
+        return False
+
+
 async def publish_report_update(project_id: str, status: str, version_number: int | None = None) -> None:
     """Publishes a `report-updates` event picked up by api-gateway/socket.js."""
     try:
@@ -37,6 +45,8 @@ async def publish_report_update(project_id: str, status: str, version_number: in
         payload = {"project_id": project_id, "status": status}
         if version_number is not None:
             payload["version_number"] = version_number
-        await client.publish(REPORT_UPDATES_CHANNEL, json.dumps(payload))
+        receivers = await client.publish(REPORT_UPDATES_CHANNEL, json.dumps(payload))
+        if receivers == 0:
+            logger.warning("Published report-updates for project %s but nothing is subscribed (is the gateway running and using the same Redis?)", project_id)
     except Exception as e:
-        logger.warning(f"Failed to publish report-updates event for project {project_id}: {e}")
+        logger.warning(f"Failed to publish report-updates event for project {project_id} to {get_settings().redis_url.split('@')[-1]}: {e}")

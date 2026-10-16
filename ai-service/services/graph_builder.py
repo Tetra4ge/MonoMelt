@@ -124,6 +124,8 @@ async def _merge_import_edges(session, parsed_files: list[ParsedFile], ctx: dict
     for pf in parsed_files:
         source_nid = _file_node_id(ctx["svid"], pf.file_path)
         for imp in pf.imports:
+            if imp.is_asset:
+                continue  # images, styles and data files are not dependencies
             method = imp.extraction_method.value
             if imp.resolved_paths:
                 for target_path in imp.resolved_paths:

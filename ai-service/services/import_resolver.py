@@ -15,10 +15,11 @@ Resolution is repo-root agnostic. GitHub archives are prefixed with
 `<repo>-<branch>/` and user ZIPs often have a wrapper folder, so absolute
 Python imports are matched by path *suffix* rather than from a fixed root.
 
-After resolution every ParsedImport falls into one of three states:
+After resolution every ParsedImport falls into one of four states:
   - resolved_paths non-empty      -> internal edge to local file(s)
   - is_external=True              -> stdlib / third-party package
-  - neither                       -> unresolved local import (counted in metrics)
+  - is_asset=True                 -> image, stylesheet, font or data file (ignored)
+  - none of the above             -> unresolved local import (counted in metrics)
 """
 
 from __future__ import annotations
@@ -43,6 +44,14 @@ _FALLBACK_STDLIB = {
 STDLIB_MODULES: set[str] = set(getattr(sys, "stdlib_module_names", ())) or _FALLBACK_STDLIB
 
 _JS_EXTS = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")
+# Relative imports of these are bundler asset imports (`import logo from './logo.png'`), not code.
+ASSET_EXTS = {
+    ".css", ".scss", ".sass", ".less", ".styl",
+    ".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".ico", ".bmp",
+    ".woff", ".woff2", ".ttf", ".otf", ".eot",
+    ".mp3", ".mp4", ".webm", ".wav", ".ogg",
+    ".json", ".md", ".mdx", ".txt", ".html", ".csv", ".yaml", ".yml", ".graphql", ".gql", ".wasm",
+}
 _JS_ESM_REWRITE = {".js": (".ts", ".tsx"), ".jsx": (".tsx",), ".mjs": (".mts",), ".cjs": (".cts",)}
 
 
@@ -139,6 +148,14 @@ def _resolve_js(file_path: str, imp: ParsedImport, paths: set[str]) -> None:
     spec = imp.target_module
     if not (spec.startswith(".") or spec.startswith("/")):
         imp.is_external = True   # bare specifier: npm package or node: builtin
+        imp.resolved_paths = []
+        imp.resolved_path = None
+        return
+
+    if posixpath.splitext(spec)[1].lower() in ASSET_EXTS:
+        # Not source code: not a graph edge and not an "unresolved import".
+        imp.is_asset = True
+        imp.is_external = False
         imp.resolved_paths = []
         imp.resolved_path = None
         return
