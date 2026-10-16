@@ -5,6 +5,12 @@ MonoMelt is deployed to AWS (`ap-south-1`) with Terraform. The design is for a s
 - **Infrastructure** is created from [`terraform/`](terraform) with `terraform apply`, run from your machine.
 - **Application** (container images and the frontend build) is deployed by the manual GitHub Actions workflow [`deploy.yml`](../.github/workflows/deploy.yml).
 
+## Service flow
+
+![MonoMelt on AWS: service flow](../Images/aws-service-flow.png)
+
+The picture shows the path a request takes from the browser through AWS, out to the external managed services, and how the deploy tools reach AWS. The Mermaid diagrams below show the same design in more detail.
+
 ## Architecture
 
 ```mermaid

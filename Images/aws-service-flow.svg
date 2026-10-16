@@ -1,0 +1,307 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1160" viewBox="0 0 1720 1160">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#232F3E"/>
+    </marker>
+    <marker id="arrt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0E9F8E"/>
+    </marker>
+    <marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748B"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      text { font-family: Inter, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1F2933; }
+      .title { font-size: 26px; font-weight: 700; }
+      .sub { font-size: 14px; fill: #5F6B7A; }
+      .grp { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; }
+      .name { font-size: 14.5px; font-weight: 700; }
+      .desc { font-size: 11.5px; fill: #5F6B7A; }
+      .ico { font-size: 12px; font-weight: 800; fill: #FFFFFF; text-anchor: middle; }
+      .num { font-size: 11.5px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; }
+      .halo { paint-order: stroke; stroke: #FFFFFF; stroke-width: 5px; stroke-linejoin: round; }
+      .lbl { font-size: 11.5px; fill: #475569; }
+      .box { fill: #FFFFFF; stroke: #D5DBE3; stroke-width: 1.2; }
+      .flow { stroke: #232F3E; stroke-width: 1.8; fill: none; marker-end: url(#arr); }
+      .live { stroke: #0E9F8E; stroke-width: 1.8; fill: none; marker-end: url(#arrt); }
+      .dash { stroke: #64748B; stroke-width: 1.6; fill: none; stroke-dasharray: 6 5; marker-end: url(#arrg); }
+      .item { font-size: 13px; fill: #334155; }
+      .head { font-size: 15px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1720" height="1160" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="40" y="48" class="title">MonoMelt on AWS: service flow</text>
+  <text x="40" y="72" class="sub">From the user's browser, through AWS (ap-south-1, Mumbai), out to the external managed services</text>
+
+  <!-- ============ Groups ============ -->
+  <!-- AWS Cloud -->
+  <rect x="245" y="118" width="1020" height="742" rx="12" fill="#FFFFFF" stroke="#232F3E" stroke-width="1.5"/>
+  <rect x="245" y="118" width="252" height="26" rx="6" fill="#232F3E"/>
+  <text x="257" y="136" class="grp" style="fill:#FFFFFF">AWS CLOUD · ap-south-1 (Mumbai)</text>
+
+  <!-- VPC -->
+  <rect x="520" y="155" width="730" height="535" rx="10" fill="#FBF8FF" stroke="#8C4FFF" stroke-width="1.4"/>
+  <text x="534" y="176" class="grp" style="fill:#6B35D9">VPC · 10.0.0.0/16</text>
+
+  <!-- Public subnets -->
+  <rect x="540" y="190" width="210" height="482" rx="8" fill="#F3F9EA" stroke="#7AA116" stroke-width="1.2"/>
+  <text x="552" y="210" class="grp" style="fill:#5B7A0F">PUBLIC SUBNETS</text>
+
+  <!-- Private subnets -->
+  <rect x="770" y="190" width="465" height="482" rx="8" fill="#EAF6F8" stroke="#00A4A6" stroke-width="1.2"/>
+  <text x="782" y="210" class="grp" style="fill:#007C7E">PRIVATE SUBNETS · ECS FARGATE</text>
+
+  <!-- External -->
+  <rect x="1300" y="150" width="390" height="620" rx="12" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.3" stroke-dasharray="7 5"/>
+  <text x="1316" y="172" class="grp" style="fill:#475569">EXTERNAL MANAGED SERVICES</text>
+
+  <!-- Supporting services label -->
+  <text x="270" y="740" class="grp" style="fill:#475569">SUPPORTING AWS SERVICES</text>
+
+  <!-- ============ Arrows (drawn under the boxes' badges) ============ -->
+  <!-- 1 Sign in: browser -> Supabase Auth -->
+  <path d="M125,243 L125,98 L1625,98 L1625,178" class="flow"/>
+  <!-- 2 Browser -> CloudFront -->
+  <path d="M210,298 L268,298" class="flow"/>
+  <!-- 3 CloudFront -> S3 -->
+  <path d="M367,346 L367,468" class="flow"/>
+  <!-- 4 CloudFront -> ALB -->
+  <path d="M465,298 L548,298" class="flow"/>
+  <!-- 5 ALB -> API gateway -->
+  <path d="M740,298 L783,298" class="flow"/>
+  <!-- 8 Gateway -> AI service -->
+  <path d="M975,268 L1028,268" class="flow"/>
+  <!-- 6 Gateway -> Redis -->
+  <path d="M835,331 L835,438" class="flow"/>
+  <!-- 9 Redis -> gateway (live updates) -->
+  <path d="M925,440 L925,333" class="live"/>
+  <!-- 9 AI service -> Redis publish -->
+  <path d="M1062,331 L963,438" class="live"/>
+  <!-- 7 Redis -> worker -->
+  <path d="M975,485 L1028,485" class="flow"/>
+  <!-- 7 Worker -> AI service -->
+  <path d="M1160,440 L1160,333" class="flow"/>
+  <!-- 10 Services -> NAT -->
+  <path d="M1215,600 L742,600" class="dash"/>
+  <text x="1215" y="588" class="lbl halo" text-anchor="end">from all three services</text>
+  <!-- NAT -> external services -->
+  <path d="M645,645 L645,706 L1298,706" class="dash"/>
+  <text x="1140" y="723" class="lbl halo" text-anchor="middle">HTTPS · Bolt, via the NAT Elastic IP</text>
+  <!-- Supporting services -> ECS tasks -->
+  <path d="M1000,748 L1000,674" class="dash"/>
+  <text x="990" y="733" class="lbl halo" text-anchor="end">pull image · read secrets · write logs</text>
+  <!-- Terraform -> AWS -->
+  <path d="M220,643 L243,643" class="dash"/>
+  <!-- GitHub Actions -> ECR -->
+  <path d="M220,791 L268,791" class="flow"/>
+
+  <!-- ============ Boxes ============ -->
+  <!-- Users -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="243" width="170" height="110" rx="12" class="box"/>
+  </g>
+  <rect x="54" y="262" width="42" height="42" rx="8" fill="#334155"/>
+  <circle cx="75" cy="276" r="6.5" fill="#FFFFFF"/>
+  <path d="M63,298 Q75,282 87,298 Z" fill="#FFFFFF"/>
+  <text x="106" y="281" class="name">Users</text>
+  <text x="106" y="299" class="desc">Web browser</text>
+  <text x="54" y="330" class="desc">React app · Socket.IO</text>
+
+  <!-- CloudFront -->
+  <g filter="url(#shadow)"><rect x="270" y="250" width="195" height="96" rx="10" class="box"/></g>
+  <rect x="282" y="264" width="42" height="42" rx="8" fill="#8C4FFF"/><text x="303" y="290" class="ico">CF</text>
+  <text x="334" y="281" class="name">CloudFront</text>
+  <text x="334" y="300" class="desc">HTTPS entry point</text>
+  <text x="334" y="316" class="desc">SPA rewrite function</text>
+
+  <!-- S3 -->
+  <g filter="url(#shadow)"><rect x="270" y="470" width="195" height="90" rx="10" class="box"/></g>
+  <rect x="282" y="484" width="42" height="42" rx="8" fill="#7AA116"/><text x="303" y="510" class="ico">S3</text>
+  <text x="334" y="501" class="name">Amazon S3</text>
+  <text x="334" y="520" class="desc">React build</text>
+  <text x="334" y="536" class="desc">private, via OAC</text>
+
+  <!-- ALB -->
+  <g filter="url(#shadow)"><rect x="550" y="253" width="190" height="90" rx="10" class="box"/></g>
+  <rect x="562" y="267" width="42" height="42" rx="8" fill="#8C4FFF"/><text x="583" y="293" class="ico">ALB</text>
+  <text x="614" y="284" class="name">Load Balancer</text>
+  <text x="614" y="303" class="desc">Application LB</text>
+  <text x="614" y="319" class="desc">CloudFront only</text>
+
+  <!-- NAT -->
+  <g filter="url(#shadow)"><rect x="550" y="555" width="190" height="90" rx="10" class="box"/></g>
+  <rect x="562" y="569" width="42" height="42" rx="8" fill="#8C4FFF"/><text x="583" y="595" class="ico">NAT</text>
+  <text x="614" y="586" class="name">NAT Gateway</text>
+  <text x="614" y="605" class="desc">Outbound internet</text>
+  <text x="614" y="621" class="desc">Elastic IP</text>
+
+  <!-- API gateway -->
+  <g filter="url(#shadow)"><rect x="785" y="235" width="190" height="96" rx="10" class="box"/></g>
+  <rect x="797" y="249" width="42" height="42" rx="8" fill="#ED7100"/><text x="818" y="275" class="ico">ECS</text>
+  <text x="849" y="266" class="name">API Gateway</text>
+  <text x="849" y="285" class="desc">Express, Socket.IO</text>
+  <text x="849" y="301" class="desc">Fargate · port 4000</text>
+
+  <!-- AI service -->
+  <g filter="url(#shadow)"><rect x="1030" y="235" width="190" height="96" rx="10" class="box"/></g>
+  <rect x="1042" y="249" width="42" height="42" rx="8" fill="#ED7100"/><text x="1063" y="275" class="ico">ECS</text>
+  <text x="1094" y="266" class="name">AI Service</text>
+  <text x="1094" y="285" class="desc">FastAPI · port 8000</text>
+  <text x="1094" y="301" class="desc">Fargate · Cloud Map</text>
+
+  <!-- Redis -->
+  <g filter="url(#shadow)"><rect x="785" y="440" width="190" height="90" rx="10" class="box"/></g>
+  <rect x="797" y="454" width="42" height="42" rx="8" fill="#C925D1"/><text x="818" y="480" class="ico">EC</text>
+  <text x="849" y="471" class="name">Redis</text>
+  <text x="849" y="490" class="desc">Amazon ElastiCache</text>
+  <text x="849" y="506" class="desc">queues + pub/sub</text>
+
+  <!-- Worker -->
+  <g filter="url(#shadow)"><rect x="1030" y="440" width="190" height="90" rx="10" class="box"/></g>
+  <rect x="1042" y="454" width="42" height="42" rx="8" fill="#ED7100"/><text x="1063" y="480" class="ico">ECS</text>
+  <text x="1094" y="471" class="name">Worker</text>
+  <text x="1094" y="490" class="desc">BullMQ consumer</text>
+  <text x="1094" y="506" class="desc">Fargate · no inbound</text>
+
+  <!-- Supporting services row -->
+  <g filter="url(#shadow)"><rect x="270" y="748" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="282" y="770" width="42" height="42" rx="8" fill="#ED7100"/><text x="303" y="796" class="ico">ECR</text>
+  <text x="334" y="783" class="name">Amazon ECR</text>
+  <text x="334" y="802" class="desc">3 image repos</text>
+
+  <g filter="url(#shadow)"><rect x="468" y="748" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="480" y="770" width="42" height="42" rx="8" fill="#E7157B"/><text x="501" y="796" class="ico">SSM</text>
+  <text x="532" y="783" class="name">SSM</text>
+  <text x="532" y="802" class="desc">Parameter Store</text>
+  <text x="532" y="818" class="desc">12 secrets</text>
+
+  <g filter="url(#shadow)"><rect x="666" y="748" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="678" y="770" width="42" height="42" rx="8" fill="#E7157B"/><text x="699" y="796" class="ico">CW</text>
+  <text x="730" y="783" class="name">CloudWatch</text>
+  <text x="730" y="802" class="desc">Logs, 7 days</text>
+
+  <g filter="url(#shadow)"><rect x="864" y="748" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="876" y="770" width="42" height="42" rx="8" fill="#DD344C"/><text x="897" y="796" class="ico">IAM</text>
+  <text x="928" y="783" class="name">IAM</text>
+  <text x="928" y="802" class="desc">Task roles</text>
+  <text x="928" y="818" class="desc">GitHub OIDC role</text>
+
+  <g filter="url(#shadow)"><rect x="1062" y="748" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="1074" y="770" width="42" height="42" rx="8" fill="#8C4FFF"/><text x="1095" y="796" class="ico">CM</text>
+  <text x="1126" y="783" class="name">Cloud Map</text>
+  <text x="1126" y="802" class="desc">Private DNS</text>
+  <text x="1126" y="818" class="desc">monomelt.local</text>
+
+  <!-- External services -->
+  <g filter="url(#shadow)"><rect x="1320" y="180" width="350" height="96" rx="10" class="box"/></g>
+  <rect x="1334" y="207" width="42" height="42" rx="8" fill="#3ECF8E"/><text x="1355" y="233" class="ico">SB</text>
+  <text x="1390" y="212" class="name">Supabase</text>
+  <text x="1390" y="231" class="desc">Postgres · Auth (GitHub OAuth) · Storage</text>
+  <text x="1390" y="247" class="desc">used by all three services and for sign-in</text>
+
+  <g filter="url(#shadow)"><rect x="1320" y="296" width="350" height="96" rx="10" class="box"/></g>
+  <rect x="1334" y="323" width="42" height="42" rx="8" fill="#018BFF"/><text x="1355" y="349" class="ico">N4j</text>
+  <text x="1390" y="328" class="name">Neo4j Aura</text>
+  <text x="1390" y="347" class="desc">Dependency graph, over Bolt (TLS)</text>
+  <text x="1390" y="363" class="desc">used by the AI service</text>
+
+  <g filter="url(#shadow)"><rect x="1320" y="412" width="350" height="96" rx="10" class="box"/></g>
+  <rect x="1334" y="439" width="42" height="42" rx="8" fill="#6B46C1"/><text x="1355" y="465" class="ico">LLM</text>
+  <text x="1390" y="444" class="name">OpenRouter · Gemini</text>
+  <text x="1390" y="463" class="desc">LLM analysis and reports (Gemini is the fallback)</text>
+  <text x="1390" y="479" class="desc">used by the AI service</text>
+
+  <g filter="url(#shadow)"><rect x="1320" y="528" width="350" height="96" rx="10" class="box"/></g>
+  <rect x="1334" y="555" width="42" height="42" rx="8" fill="#111111"/><text x="1355" y="581" class="ico">N</text>
+  <text x="1390" y="560" class="name">Notion API</text>
+  <text x="1390" y="579" class="desc">Report export</text>
+  <text x="1390" y="595" class="desc">used by the API gateway</text>
+
+  <g filter="url(#shadow)"><rect x="1320" y="644" width="350" height="96" rx="10" class="box"/></g>
+  <rect x="1334" y="671" width="42" height="42" rx="8" fill="#24292F"/><text x="1355" y="697" class="ico">GH</text>
+  <text x="1390" y="676" class="name">GitHub</text>
+  <text x="1390" y="695" class="desc">Public repository download (ZIP)</text>
+  <text x="1390" y="711" class="desc">used by the worker</text>
+
+  <!-- Deploy (outside AWS) -->
+  <g filter="url(#shadow)"><rect x="40" y="600" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="52" y="622" width="42" height="42" rx="8" fill="#7B42BC"/><text x="73" y="648" class="ico">TF</text>
+  <text x="104" y="635" class="name">Terraform</text>
+  <text x="104" y="654" class="desc">terraform apply</text>
+  <text x="104" y="670" class="desc">creates the infra</text>
+
+  <g filter="url(#shadow)"><rect x="40" y="748" width="180" height="86" rx="10" class="box"/></g>
+  <rect x="52" y="770" width="42" height="42" rx="8" fill="#2088FF"/><text x="73" y="796" class="ico">GA</text>
+  <text x="104" y="783" class="name">GitHub Actions</text>
+  <text x="104" y="802" class="desc">manual deploy</text>
+  <text x="104" y="818" class="desc">OIDC → IAM role</text>
+
+  <!-- ============ Step badges ============ -->
+  <g>
+    <circle cx="700" cy="98" r="11" fill="#232F3E"/><text x="700" y="102" class="num">1</text>
+    <circle cx="239" cy="298" r="11" fill="#232F3E"/><text x="239" y="302" class="num">2</text>
+    <circle cx="367" cy="407" r="11" fill="#232F3E"/><text x="367" y="411" class="num">3</text>
+    <circle cx="507" cy="298" r="11" fill="#232F3E"/><text x="507" y="302" class="num">4</text>
+    <circle cx="762" cy="298" r="11" fill="#232F3E"/><text x="762" y="302" class="num">5</text>
+    <circle cx="835" cy="385" r="11" fill="#232F3E"/><text x="835" y="389" class="num">6</text>
+    <circle cx="1002" cy="485" r="11" fill="#232F3E"/><text x="1002" y="489" class="num">7</text>
+    <circle cx="1160" cy="385" r="11" fill="#232F3E"/><text x="1160" y="389" class="num">7</text>
+    <circle cx="1002" cy="268" r="11" fill="#232F3E"/><text x="1002" y="272" class="num">8</text>
+    <circle cx="925" cy="385" r="11" fill="#0E9F8E"/><text x="925" y="389" class="num">9</text>
+    <circle cx="1012" cy="385" r="11" fill="#0E9F8E"/><text x="1012" y="389" class="num">9</text>
+    <circle cx="960" cy="600" r="12" fill="#64748B"/><text x="960" y="604" class="num">10</text>
+    <circle cx="232" cy="643" r="10" fill="#7B42BC"/><text x="232" y="647" class="num">T</text>
+    <circle cx="244" cy="791" r="11" fill="#2088FF"/><text x="244" y="795" class="num">D</text>
+  </g>
+
+  <!-- ============ Legend ============ -->
+  <rect x="40" y="880" width="1650" height="250" rx="12" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="64" y="914" class="head">How a request flows</text>
+  <text x="1176" y="914" class="head">How it gets deployed</text>
+
+  <g>
+    <circle cx="75" cy="946" r="11" fill="#232F3E"/><text x="75" y="950" class="num">1</text>
+    <text x="96" y="950" class="item">Sign-in goes straight from the browser to Supabase Auth (GitHub OAuth)</text>
+    <circle cx="75" cy="980" r="11" fill="#232F3E"/><text x="75" y="984" class="num">2</text>
+    <text x="96" y="984" class="item">The browser opens one HTTPS address: the CloudFront domain</text>
+    <circle cx="75" cy="1014" r="11" fill="#232F3E"/><text x="75" y="1018" class="num">3</text>
+    <text x="96" y="1018" class="item">Page files (/*) come from the private S3 bucket</text>
+    <circle cx="75" cy="1048" r="11" fill="#232F3E"/><text x="75" y="1052" class="num">4</text>
+    <text x="96" y="1052" class="item">/api, /socket.io and /health go to the load balancer with a secret header</text>
+    <circle cx="75" cy="1082" r="11" fill="#232F3E"/><text x="75" y="1086" class="num">5</text>
+    <text x="96" y="1086" class="item">The load balancer forwards them to the API gateway on port 4000</text>
+  </g>
+
+  <g>
+    <circle cx="631" cy="946" r="11" fill="#232F3E"/><text x="631" y="950" class="num">6</text>
+    <text x="652" y="950" class="item">The gateway queues ingestion and report jobs in Redis (BullMQ)</text>
+    <circle cx="631" cy="980" r="11" fill="#232F3E"/><text x="631" y="984" class="num">7</text>
+    <text x="652" y="984" class="item">The worker takes jobs from Redis and calls the AI service</text>
+    <circle cx="631" cy="1014" r="11" fill="#232F3E"/><text x="631" y="1018" class="num">8</text>
+    <text x="652" y="1018" class="item">The gateway calls ai-service.monomelt.local with an internal API key</text>
+    <circle cx="631" cy="1048" r="11" fill="#0E9F8E"/><text x="631" y="1052" class="num">9</text>
+    <text x="652" y="1052" class="item">Report updates return over Redis pub/sub, then Socket.IO to the browser</text>
+    <circle cx="631" cy="1082" r="12" fill="#64748B"/><text x="631" y="1086" class="num">10</text>
+    <text x="652" y="1086" class="item">All services reach the external APIs through the NAT gateway</text>
+  </g>
+
+  <g>
+    <circle cx="1187" cy="946" r="11" fill="#7B42BC"/><text x="1187" y="950" class="num">T</text>
+    <text x="1208" y="950" class="item">terraform apply, run locally, creates every AWS resource</text>
+    <circle cx="1187" cy="980" r="11" fill="#2088FF"/><text x="1187" y="984" class="num">D</text>
+    <text x="1208" y="984" class="item">GitHub Actions signs in through OIDC, pushes images to ECR,</text>
+    <text x="1208" y="1003" class="item">restarts the ECS services and uploads the frontend to S3</text>
+
+    <line x1="1176" y1="1046" x2="1216" y2="1046" stroke="#232F3E" stroke-width="1.8" marker-end="url(#arr)"/>
+    <text x="1226" y="1050" class="item">Request and data path</text>
+    <line x1="1176" y1="1072" x2="1216" y2="1072" stroke="#0E9F8E" stroke-width="1.8" marker-end="url(#arrt)"/>
+    <text x="1226" y="1076" class="item">Live report updates</text>
+    <line x1="1176" y1="1098" x2="1216" y2="1098" stroke="#64748B" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrg)"/>
+    <text x="1226" y="1102" class="item">Outbound traffic and setup</text>
+  </g>
+</svg>
