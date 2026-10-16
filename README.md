@@ -123,7 +123,7 @@ Graph rendering uses `react-force-graph-2d`; icons come from `lucide-react`; smo
 
 **AI service**
 
-<img src="https://img.shields.io/badge/Python%203.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" /> <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /> <img src="https://img.shields.io/badge/Pydantic%20v2-E92063?style=for-the-badge&logo=pydantic&logoColor=white" /> <img src="https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white" /> <img src="https://img.shields.io/badge/OpenAI%20SDK%20(OpenRouter)-412991?style=for-the-badge&logo=openai&logoColor=white" /> <img src="https://img.shields.io/badge/Google%20Generative%20AI-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" /> <img src="https://img.shields.io/badge/NetworkX-4B8BBE?style=for-the-badge" /> <img src="https://img.shields.io/badge/python--louvain-FFD43B?style=for-the-badge&logo=python&logoColor=black" /> <img src="https://img.shields.io/badge/asyncpg-336791?style=for-the-badge&logo=postgresql&logoColor=white" /> <img src="https://img.shields.io/badge/neo4j%20driver-018bff?style=for-the-badge&logo=neo4j&logoColor=white" /> <img src="https://img.shields.io/badge/redis--py-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+<img src="https://img.shields.io/badge/Python%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white" /> <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /> <img src="https://img.shields.io/badge/Pydantic%20v2-E92063?style=for-the-badge&logo=pydantic&logoColor=white" /> <img src="https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white" /> <img src="https://img.shields.io/badge/OpenAI%20SDK%20(OpenRouter)-412991?style=for-the-badge&logo=openai&logoColor=white" /> <img src="https://img.shields.io/badge/Google%20Generative%20AI-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" /> <img src="https://img.shields.io/badge/NetworkX-4B8BBE?style=for-the-badge" /> <img src="https://img.shields.io/badge/python--louvain-FFD43B?style=for-the-badge&logo=python&logoColor=black" /> <img src="https://img.shields.io/badge/asyncpg-336791?style=for-the-badge&logo=postgresql&logoColor=white" /> <img src="https://img.shields.io/badge/neo4j%20driver-018bff?style=for-the-badge&logo=neo4j&logoColor=white" /> <img src="https://img.shields.io/badge/redis--py-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
 
 **Data, auth and storage**
 
@@ -132,6 +132,10 @@ Graph rendering uses `react-force-graph-2d`; icons come from `lucide-react`; smo
 **AI providers**
 
 <img src="https://img.shields.io/badge/OpenRouter%20(primary)-000000?style=for-the-badge" /> <img src="https://img.shields.io/badge/Google%20Gemini%20(fallback)-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" />
+
+**Infrastructure and deployment**
+
+<img src="https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white" /> <img src="https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white" /> <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" /> <img src="https://img.shields.io/badge/CloudFront-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=white" /> <img src="https://img.shields.io/badge/ECS%20Fargate-FF9900?style=for-the-badge&logo=amazonecs&logoColor=white" /> <img src="https://img.shields.io/badge/ElastiCache-C925D1?style=for-the-badge&logo=amazonaws&logoColor=white" />
 
 **Generated artifacts and tooling**
 
@@ -145,6 +149,7 @@ Graph rendering uses `react-force-graph-2d`; icons come from `lucide-react`; smo
 | AI service | FastAPI, Pydantic, NetworkX, python-louvain, asyncpg | Parsing, graph building, clustering, planning, blueprints, reports |
 | Datastores | Supabase Postgres, Neo4j Aura, Redis | Relational state, dependency graph, queues and pub/sub |
 | LLM | OpenRouter, Google Gemini | Findings and executive summaries, with automatic fallback |
+| Infrastructure | Terraform, AWS (VPC, ALB, CloudFront, S3, ECS Fargate, ElastiCache, ECR, SSM, CloudWatch), GitHub Actions | Repeatable cloud deployment in `ap-south-1`. Terraform owns every AWS resource; a manual workflow ships images and the frontend |
 
 ---
 
@@ -233,6 +238,12 @@ Dashed edges and the **Planned integrations** group are specified but not yet bu
 ### Backend data flow
 
 ![Backend data flow](Images/MonoMelt%20Backend.png)
+
+### AWS deployment
+
+![MonoMelt on AWS: service flow](Images/aws-service-flow.png)
+
+The deployed system has one public address, the CloudFront domain. CloudFront serves the React build from a private S3 bucket and sends `/api`, `/socket.io` and `/health` through an Application Load Balancer to the API gateway. The gateway, AI service, worker and Redis run in private subnets on ECS Fargate and ElastiCache. Supabase, Neo4j Aura, the LLM providers and Notion stay external. Terraform creates all of it, and a manual GitHub Actions workflow builds the images and uploads the frontend. The full runbook is in [deploy/README.md](deploy/README.md).
 
 ---
 
@@ -1006,6 +1017,8 @@ MonoMelt/
 │   └── scripts/              offline tests and diagnostics
 ├── database/migrations/      01 to 09 SQL migrations
 ├── e2e/                      end-to-end test harness
+├── deploy/                   AWS deployment: deploy/terraform (infrastructure) and deploy/README.md (runbook)
+├── .github/workflows/        deploy.yml, manual build, ECS rollout and frontend upload
 ├── docs/                     original PRD, TRD and phase documents
 ├── phase-v2/                 Report Agent specification (phases 1 to 6)
 ├── Output/                   sample generated blueprint
@@ -1026,6 +1039,8 @@ MonoMelt/
 | Node.js | 22 recommended (18+) | Gateway, worker, frontend |
 | uv | 0.12 or newer | Python package and version manager for the AI service (it installs Python 3.12 for you) |
 | Docker | any recent | Only to run Redis locally |
+| Terraform | 1.9 or newer | Only to deploy to AWS (section 16) |
+| AWS CLI | v2 | Only to deploy to AWS (section 16) |
 | Supabase project | n/a | Postgres, Auth and Storage |
 | Neo4j Aura (or Neo4j 5) | n/a | `neo4j+s://` or `bolt://` URI |
 | LLM key | n/a | OpenRouter and/or Gemini |
@@ -1154,6 +1169,16 @@ Then sign in, create a workspace, upload a ZIP or paste a public GitHub URL, and
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | api-gateway | GitHub OAuth for private repositories |
 | `PINECONE_API_KEY`, `PINECONE_ENVIRONMENT` | ai-service | Vector retrieval (already templated) |
 
+**Deployment settings (AWS)**
+
+| Where | Names | Purpose |
+| :--- | :--- | :--- |
+| SSM Parameter Store, `/monomelt/*` (SecureString), region `ap-south-1` | `supabase-url`, `supabase-jwt-secret`, `supabase-service-role-key`, `database-url`, `neo4j-uri`, `neo4j-username`, `neo4j-password`, `openrouter-api-key`, `gemini-api-key`, `internal-api-key`, `notion-api-key`, `notion-database-id` | Read by ECS at task start and injected into the containers |
+| GitHub repository variables | `AWS_DEPLOY_ROLE_ARN`, `AWS_REGION` | Let the deploy workflow assume its OIDC role |
+| GitHub repository variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Baked into the frontend build |
+
+Terraform sets `FRONTEND_URL`, `ALLOWED_ORIGINS`, `AI_SERVICE_URL`, `REDIS_URL` and `NEO4J_DATABASE` in the task definitions, and the deploy workflow sets the frontend API and WebSocket URLs at build time. No deployed URL needs to be edited by hand.
+
 > Never commit `.env` files. They are git-ignored.
 
 **LLM policy.** OpenRouter is the primary provider and Google Gemini is the automatic fallback. Direct OpenAI keys are not used; the `openai` package is only the OpenRouter-compatible client.
@@ -1214,13 +1239,15 @@ Start the AI service, gateway, **worker** and Redis first. The script creates tw
 
 ## 16. Deployment notes
 
-- **Frontend:** `npm run build` produces static assets in `frontend/dist`. Set the `VITE_*` variables at build time.
-- **Gateway and AI service:** containerised or run directly. Put the AI service on a private network; only the gateway and worker need to reach it.
-- **Worker:** run at least one instance. Instances share the `ingestion` and `report-generation` queues.
-- **Redis:** use a managed instance with persistence if jobs must survive restarts. The gateway, worker and AI service must point at the same instance.
-- **Secrets:** inject through your platform's secret store. Rotate `INTERNAL_API_KEY` and the Supabase service-role key together with deployments.
+- **AWS (the current deployment path):** Terraform in [`deploy/terraform`](deploy/terraform) creates the VPC, Application Load Balancer, CloudFront, ECS Fargate services, ElastiCache Redis, ECR repositories, the frontend S3 bucket and CloudWatch log groups in `ap-south-1`. Run `terraform apply` from your machine, then the manual **Deploy** workflow in GitHub Actions. Step by step: [deploy/README.md](deploy/README.md).
+- **Frontend:** `vite build` produces static files that CloudFront serves from S3. The `VITE_*` variables are set at build time.
+- **Gateway and AI service:** containers on ECS Fargate. The AI service sits on a private network, and only the gateway and worker can reach it, through a security group and a private DNS name.
+- **Worker:** one task is enough for a demo. Tasks share the `ingestion` and `report-generation` queues, so more tasks can be added safely.
+- **Redis:** ElastiCache with the `noeviction` policy, which BullMQ requires. The gateway, worker and AI service must use the same endpoint.
+- **Secrets:** on AWS they live in SSM Parameter Store and are injected at task start. Rotate `INTERNAL_API_KEY` and the Supabase service-role key together with deployments.
+- **Gateway replicas:** keep one gateway task unless you add a Socket.IO Redis adapter. Socket events only reach clients connected to the same task.
 - **Neo4j Aura free tier** pauses when idle. Analysis and decomposition need it; reports degrade gracefully without it.
-- **Production switches:** set `NODE_ENV=production`, the `*_PRO_URL` variables, `FRONTEND_URL` and `ALLOWED_ORIGINS`, and always `INTERNAL_API_KEY`.
+- **Other hosts:** set `NODE_ENV=production`, the `*_PRO_URL` variables, `FRONTEND_URL` and `ALLOWED_ORIGINS`, and always `INTERNAL_API_KEY`.
 
 ---
 
@@ -1268,7 +1295,7 @@ flowchart TD
         N2["Interactive boundary editing<br/>drag and drop + validations"]
         N3["Team-driven strategy"]
         N4["Rate limiting, quotas,<br/>job cancellation, dead-letter queue"]
-        N5["CI/CD with GitHub Actions"]
+        N5["Automatic deploys on push,<br/>tests before deploy"]
     end
     N2 --> L1
     N3 --> L1
@@ -1292,7 +1319,7 @@ flowchart TD
 - JS/TS parsing is regex-based: accurate for imports and top-level symbols, not a full compiler. Other languages are catalogued but not analysed.
 - The consistency matrix pairs adjacent services by coupling order and flags sensitivity from service names; it does not yet use per-service data-access analysis.
 - Cost and latency figures come from a transparent parametric model driven by your assumptions, not from live cloud pricing.
-- "Deployment" simulates pipeline stages. Nothing is provisioned, and the Terraform output is a scaffold to review before use.
+- "Deployment" inside the app simulates pipeline stages for the analysed project, and nothing is provisioned for that project. MonoMelt itself is deployed to AWS with Terraform (section 16). The Terraform output for analysed projects is a scaffold to review before use.
 - GitHub import supports public repositories only.
 - Notion export requires an integration token and a database shared with that integration, with the properties listed in section 7.8.
 
@@ -1306,7 +1333,11 @@ flowchart TD
 | Upload returns `503 The job queue is unavailable` | Redis is not reachable at `REDIS_URL`. Start it (see step 3) |
 | Job stays `queued` or `ingesting` | Worker not running, or it uses a different Redis than the gateway |
 | Job fails: `Unable to connect to DATABASE_URL` | `DATABASE_URL` uses the direct `db.<ref>.supabase.co` host (IPv6 only). Use the **Session pooler** string (`postgres.<ref>@...pooler.supabase.com:5432`) in the gateway and AI service |
-| Services started before you edited `.env` still fail | nodemon and uvicorn do not watch `.env`. Restart the process after changing it |
+| Services started before you edited `.env` still fail | `node --watch` and uvicorn do not reload `.env`. Restart the process after changing it |
+| Deploy: `CloudFront ... AccessDenied: Your account must be verified` | New AWS accounts must be verified before CloudFront can be used. Open an AWS Support case under Account and billing |
+| Deploy workflow: "CloudFront distribution not found" | Run `terraform apply` before the workflow |
+| ECS task stops with `ResourceInitializationError` about secrets | A `/monomelt/*` SSM parameter is missing, or it was created in another region. Check the names and that they are in `ap-south-1` |
+| Frontend loads but API calls fail with CORS errors | `FRONTEND_URL` in the gateway task must match the CloudFront domain exactly |
 | Analysis fails: "No supported source files found" | The archive has no Python, JavaScript or TypeScript files |
 | `401 Invalid or missing internal API key` | `INTERNAL_API_KEY` differs between gateway, worker and AI service |
 | Dashboard shows `ai-service` OFFLINE | The gateway cannot reach `AI_SERVICE_URL`; check the URL, port and key |
