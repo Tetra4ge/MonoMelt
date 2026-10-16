@@ -1,0 +1,286 @@
+{
+  "generator_version": "1.0.0",
+  "project_id": "95100126-99e7-48ed-8892-6f254767c188",
+  "scenario_revision_id": "4efef806-a103-4d2f-93ed-a5685d2bf570",
+  "plan_revision_id": "1ee4bf30-cba3-437a-b4e6-74ea2a95d1fd",
+  "version_number": 1,
+  "artifacts": [
+    {
+      "path": "blueprint/README.md",
+      "sha256": "1299e1910e47d990ea09dcfe0795f4ce1f2c8a6b6259caca456cc2e31f0e16c5",
+      "size_bytes": 1141,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/decisions/ADR-001-microservices-decomposition.md",
+      "sha256": "b617702a3649700da16f7d6d149907907072ad487f158ade7fb57e2b6803f9e8",
+      "size_bytes": 557,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/components-service/package.json",
+      "sha256": "b6e5c8b1b6c686d1f22493a37d9000b91aa16e3fb131595c7de3a0ab73b19d01",
+      "size_bytes": 200,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/components-service/src/server.js",
+      "sha256": "5fa42c43279eb995dbdac1d0c4dba1fcd9ff5e582547441f27032177f9830215",
+      "size_bytes": 433,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/components-service/Dockerfile",
+      "sha256": "036d6552bd06d176c28873107e6bde2d629d7402e49f33837de43e396c706c22",
+      "size_bytes": 393,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/components-service/k8s/deployment.yaml",
+      "sha256": "dd8869448238f8f3d9bae6bc378992e622eab01cb9aa0076bc4156d1ccd76153",
+      "size_bytes": 951,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/components-service/k8s/service.yaml",
+      "sha256": "0112cd40133e494cde0f6e31675cc4b195f64538544b4b170dda1134035b3f8c",
+      "size_bytes": 191,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/app-service/package.json",
+      "sha256": "02c0c528c554b56ef4388feace25423a2eac3c801939bc543828cb4ebfee58af",
+      "size_bytes": 193,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/app-service/src/server.js",
+      "sha256": "7165b434f6116ab47defa5b2b304afc65649158c44ab4980f276e18fc5fd99ba",
+      "size_bytes": 405,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/app-service/Dockerfile",
+      "sha256": "7ebff377b06d0c07fd96fe0072edffe6e033e428b79c4285d793548feb551665",
+      "size_bytes": 386,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/app-service/k8s/deployment.yaml",
+      "sha256": "977876905104dd319bd90b3c12082aa263f1781fd642a605e3ea9b4036bdd401",
+      "size_bytes": 909,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/app-service/k8s/service.yaml",
+      "sha256": "3ef6830135bbe7025df273dafdf824fff2215dd6cd8bc77790950f2607e11680",
+      "size_bytes": 177,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/utils-service/package.json",
+      "sha256": "5f06f137b39fe05b7759417e5441569adeea06b03e1fd782181a05db0813a01a",
+      "size_bytes": 195,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/utils-service/src/server.js",
+      "sha256": "8baef560bfd2eeed2d439ec54da16f3f4c6c7f8799ed6de95c6f67c4d1ef0a0a",
+      "size_bytes": 413,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/utils-service/Dockerfile",
+      "sha256": "6f60a53b85556c13d603b9cb21cf61ae947fd053419776493056af59e04602a9",
+      "size_bytes": 388,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/utils-service/k8s/deployment.yaml",
+      "sha256": "ac19ba0c139d0862933b0a2e05d6f680445f7a364cb116f89faecf7f9be2e33b",
+      "size_bytes": 921,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/utils-service/k8s/service.yaml",
+      "sha256": "98521456e5c6d8d48efc654877dd808908048c5c975bed29f799cdc4b659da4a",
+      "size_bytes": 181,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/config-service/package.json",
+      "sha256": "daadcdb94cfa143b30c78e952c21d0e03c76fa7bdb43a3295869832a37327242",
+      "size_bytes": 196,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/config-service/src/server.js",
+      "sha256": "5b31ab41c900a3f8a9c5b8046b8502c9d093b1c7ed095e002ed53485d931470e",
+      "size_bytes": 417,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/config-service/Dockerfile",
+      "sha256": "ae1a53a2fee911465f814932aaae150df57986e2f49ea153a833c5602a55c1ba",
+      "size_bytes": 389,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/config-service/k8s/deployment.yaml",
+      "sha256": "47482c49c14b61c01dd05f6c496a950eb848d55c303b8d5e848c04d8f65e5259",
+      "size_bytes": 927,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/config-service/k8s/service.yaml",
+      "sha256": "3628097cda17e2bee2b6b6322629cfcc1fd8a3551bf46856a2457aafd7ebf601",
+      "size_bytes": 183,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/contexts-service/package.json",
+      "sha256": "1d22e7a5bcf15bfa7bdd7f7667f684e35108d448b37e0dec7daad056eda05ee2",
+      "size_bytes": 198,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/contexts-service/src/server.js",
+      "sha256": "6a480ffe1d36b241f75cbd1dcd4d85f614664c13029c0755011aeabba3f5ec1f",
+      "size_bytes": 425,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/contexts-service/Dockerfile",
+      "sha256": "5ff89d9dc3971d2b80d915d1304b752caf8cf09cfde46aa1b33ad934d691ec50",
+      "size_bytes": 391,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/contexts-service/k8s/deployment.yaml",
+      "sha256": "1b8f859d029c02132b31c0db5187af69e5765f2719d973a4365a09c864c74c65",
+      "size_bytes": 939,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/contexts-service/k8s/service.yaml",
+      "sha256": "efa6f82aa159d635551d23cf45d077b50c2be63b2c1377fa8de95db46b90f8ac",
+      "size_bytes": 187,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/firebase-service/package.json",
+      "sha256": "452e060965a5f0ed63a0f6a7656142a9944ac4ee395275e1e36ff4f1a5ec5ffb",
+      "size_bytes": 198,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/firebase-service/src/server.js",
+      "sha256": "c45c4b43dc2c220d3f4b289459be2e11f0be38abdb3ce9446654fa32f904939d",
+      "size_bytes": 425,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/firebase-service/Dockerfile",
+      "sha256": "0cf5078e5423ae8332d50347b3dc0786aa8ef141a59afdc4a8581820bd369bec",
+      "size_bytes": 391,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/firebase-service/k8s/deployment.yaml",
+      "sha256": "36f1b3dd160f4945fdce13515a11bbe31a29483b7f868b718aa63acab30c8598",
+      "size_bytes": 939,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/firebase-service/k8s/service.yaml",
+      "sha256": "6b27b7599672a4becda433d176c08728779d53c9d58e9feacdd6f52af79da0a8",
+      "size_bytes": 187,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/store-service/package.json",
+      "sha256": "9173151968043739ddd4203fb267a7384f6f67d0a6f7baeb11eabedc3bc5648e",
+      "size_bytes": 195,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/store-service/src/server.js",
+      "sha256": "3080d21fbd5603d965e79e280b6d7085443b01ff9a9c990e8499c1aa2f1c4f19",
+      "size_bytes": 413,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/services/store-service/Dockerfile",
+      "sha256": "6f500e4eac59824c26007e4100e7c854662160cd42d5a8fe8c9948335509cbf4",
+      "size_bytes": 388,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/store-service/k8s/deployment.yaml",
+      "sha256": "7a80ce8b65d54a0f34f9eb815948eb0f9ad2c9b25aa7051db939c6f2edb2fdfe",
+      "size_bytes": 921,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/services/store-service/k8s/service.yaml",
+      "sha256": "a0bec9d2075bde62cfaf499b13240ad144f0526233e68147aafa4c1515f7e00d",
+      "size_bytes": 181,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/contracts/openapi.json",
+      "sha256": "e17d5ae58c4f28b9c6729a9acd073971782b4daaf1d111b2a552a5b68d6c985a",
+      "size_bytes": 4250,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/contracts/events.json",
+      "sha256": "b93d327a95a1382b2655d61ef0aa8f455fce2de03d841309b6f549bb5771298a",
+      "size_bytes": 2191,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/infrastructure/gateway-routes.json",
+      "sha256": "21331b2a9885ddb0fe59a5715e84231eef7d6173b7c8371f7f624dc4acaa8c1e",
+      "size_bytes": 1258,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/infrastructure/secret-template.yaml",
+      "sha256": "ec84718fa350c4a41ec21f19148ac3d3486d6a94da2bbfc830bf889a4c2b6f45",
+      "size_bytes": 229,
+      "content_type": "text/plain"
+    },
+    {
+      "path": "blueprint/infrastructure/terraform/main.tf",
+      "sha256": "f65d6e40982d60df28936dcee1acbdb3233722a59a288df67533b3b812db183f",
+      "size_bytes": 694,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/migration/migration-guide.json",
+      "sha256": "5d26b92b97eb4cc30fbb7c3c5168df99e5faecaac0e0678fda0907048961319c",
+      "size_bytes": 4332,
+      "content_type": "application/json"
+    },
+    {
+      "path": "blueprint/reports/cost-performance-report.json",
+      "sha256": "8d51a2c94bd313d66754d84d55237056341d3095ab24963948309e310faade69",
+      "size_bytes": 399,
+      "content_type": "application/json"
+    }
+  ],
+  "input_provenance": {
+    "service_count": 7,
+    "roadmap_stage_count": 5
+  },
+  "warnings": [
+    "Generated artifacts contain draft templates and secret placeholders.",
+    "Mandatory engineering, security, and platform review is required prior to deployment."
+  ],
+  "validation_results": {
+    "openapi_valid": true,
+    "k8s_schema_valid": true,
+    "no_credentials_detected": true
+  }
+}

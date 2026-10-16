@@ -1,0 +1,13 @@
+{
+  "cost_range_max_usd": 3717.35,
+  "cost_range_min_usd": 2430.57,
+  "sensitivity_drivers": [
+    "Cloud Provider: GCP (europe-west1)",
+    "Service Count: 7 independent containers",
+    "Infrastructure Scaling Multiplier: 1.4x",
+    "Network Inter-Service Hop Latency: ~18.0ms"
+  ],
+  "avg_latency_increase_ms": 18,
+  "monolith_monthly_cost_usd": 1680,
+  "microservices_monthly_cost_usd": 2859.5
+}
