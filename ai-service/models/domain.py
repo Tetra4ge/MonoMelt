@@ -66,6 +66,7 @@ class ParsedImport:
     line: int = 0
     names: list[str] = field(default_factory=list)          # `from x import a, b` -> [a, b]
     resolved_paths: list[str] = field(default_factory=list)  # every local file this import points to
+    is_asset: bool = False                # relative import of a non-code file (image, css, font, json)
 
 
 @dataclass

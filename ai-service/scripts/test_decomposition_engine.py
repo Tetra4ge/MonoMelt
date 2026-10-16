@@ -60,4 +60,36 @@ async def main():
     print("decomposition engine: all assertions passed")
 
 
-asyncio.run(main())
+REACT_FILES = {
+    "r1": "chatverse-main/src/App.tsx", "r2": "chatverse-main/src/main.tsx",
+    "c1": "chatverse-main/src/components/Chatbox.tsx", "c2": "chatverse-main/src/components/Message.tsx", "c3": "chatverse-main/src/components/Composer.tsx",
+    "l1": "chatverse-main/src/components/Chatlist.tsx", "l2": "chatverse-main/src/components/ChatItem.tsx", "l3": "chatverse-main/src/components/Avatar.tsx",
+    "s1": "chatverse-main/src/components/SettingsModal.tsx", "s2": "chatverse-main/src/components/ThemeToggle.tsx", "s3": "chatverse-main/src/components/Profile.tsx",
+}
+REACT_EDGES = [("r2", "r1"), ("r1", "c1"), ("r1", "l1"), ("r1", "s1"),
+               ("c1", "c2"), ("c1", "c3"), ("c2", "c3"), ("l1", "l2"), ("l1", "l3"), ("l2", "l3"), ("s1", "s2"), ("s1", "s3"), ("s2", "s3")]
+
+
+async def react_layout():
+    """Several clusters inside one components/ folder must not all be called components-service."""
+    global FILES, EDGES
+    FILES, EDGES = REACT_FILES, REACT_EDGES
+    for strategy in ("conservative", "aggressive"):
+        services = await build(strategy)
+        names = [s["name"] for s in services]
+        assert len(set(names)) == len(names), names
+        assert not any(n.startswith("components-service") for n in names), names     # named by what is in them
+        assert not any("chatverse-main" in n for n in names), names                  # not by the zip wrapper folder
+        assert not any(n.endswith(("-2", "-3", "-4")) for n in names), names         # no numeric de-dup suffixes needed
+        print(f"react layout / {strategy:12s} -> {names}")
+    domain = await build("domain")
+    assert any(s["name"] == "components-service" for s in domain), [s["name"] for s in domain]   # folder strategy keeps folder names
+
+
+async def run_all():
+    await main()
+    await react_layout()
+    print("decomposition naming: all assertions passed")
+
+
+asyncio.run(run_all())

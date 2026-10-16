@@ -34,6 +34,9 @@ logger = logging.getLogger(__name__)
 RESOLUTIONS = {"conservative": 0.5, "aggressive": 2.0}
 # Folder names that carry no domain meaning when naming/grouping services.
 GENERIC_DIRS = {"src", "app", "lib", "source", "main", "core", "pkg", "internal", "packages", "apps"}
+# Folders that group by *kind* of file rather than by business meaning. A cluster living in
+# `components/` is better named after its most connected file than after `components`.
+CONTAINER_DIRS = {"components", "component", "utils", "util", "helpers", "common", "shared", "hooks", "types", "assets", "styles"}
 SHARED_SERVICE_NAME = "shared-utilities"
 
 
@@ -135,18 +138,10 @@ class DecompositionEngine:
 
     def _cluster_by_directory(self) -> list[list[str]]:
         """Group files by their first meaningful directory below the repo root."""
-        dirs = {nid: posixpath.dirname(path).split("/") if posixpath.dirname(path) else [] for nid, path in self.file_paths.items()}
-
-        # Strip the folder prefix shared by every file (e.g. the `repo-main/` wrapper).
-        common = 0
-        if dirs:
-            shortest = min(len(d) for d in dirs.values())
-            while common < shortest and len({d[common] for d in dirs.values()}) == 1:
-                common += 1
-
+        common = self._common_depth()
         groups: dict[str, list[str]] = defaultdict(list)
-        for nid, parts in dirs.items():
-            meaningful = [p for p in parts[common:] if p.lower() not in GENERIC_DIRS]
+        for nid, path in self.file_paths.items():
+            meaningful = self._meaningful_dirs(path, common)
             groups[meaningful[0] if meaningful else SHARED_SERVICE_NAME].append(nid)
         return list(groups.values())
 
@@ -173,25 +168,51 @@ class DecompositionEngine:
     # ------------------------------------------------------------------
     # Service generation
     # ------------------------------------------------------------------
-    def _service_label(self, files: list[str]) -> str:
-        """Name a service after the most common meaningful folder (or file) in it."""
+    def _common_depth(self) -> int:
+        """Number of leading directories shared by every file (e.g. the `repo-main/` wrapper)."""
+        dirs = [posixpath.dirname(p).split("/") if posixpath.dirname(p) else [] for p in self.file_paths.values()]
+        if not dirs:
+            return 0
+        common, shortest = 0, min(len(d) for d in dirs)
+        while common < shortest and len({d[common] for d in dirs}) == 1:
+            common += 1
+        return common
+
+    def _meaningful_dirs(self, path: str, common: int) -> list[str]:
+        parts = posixpath.dirname(path).split("/") if posixpath.dirname(path) else []
+        return [p for p in parts[common:] if p and p.lower() not in GENERIC_DIRS]
+
+    def _service_label(self, files: list[str], common: int) -> str:
+        """
+        Name a service after what it is about. Prefer the dominant business folder; for
+        clusters that sit in a kind-of-file folder (components/, utils/) or in the repo root,
+        use the stem of their most connected file instead, so sibling clusters in the same
+        folder do not all end up called `components-service`.
+        """
         counts: Counter = Counter()
         for nid in files:
-            parts = [p for p in posixpath.dirname(self.file_paths[nid]).split("/") if p and p.lower() not in GENERIC_DIRS]
-            if parts:
-                counts[parts[-1]] += 1
-        if counts:
-            return _slug(counts.most_common(1)[0][0])
-        return _slug(posixpath.splitext(posixpath.basename(self.file_paths[files[0]]))[0])
+            dirs = self._meaningful_dirs(self.file_paths[nid], common)
+            if dirs:
+                counts[dirs[-1]] += 1
+        folder = counts.most_common(1)[0][0] if counts else None
+
+        if folder and (self.strategy_type == "domain" or folder.lower() not in CONTAINER_DIRS):
+            return _slug(folder)
+
+        # Hub file: most import connections, ties broken by path for determinism.
+        hub = max(files, key=lambda nid: (self.graph.degree(nid), self.file_paths[nid]))
+        stem = posixpath.splitext(posixpath.basename(self.file_paths[hub]))[0]
+        return _slug(stem)
 
     def _generate_proposed_services(self, clusters: list[list[str]]) -> list[dict]:
         shared = self._shared_group
 
         used_names: set[str] = set()
         services = []
-        for idx, files in enumerate(sorted(clusters, key=len, reverse=True)):
+        common = self._common_depth()
+        for idx, files in enumerate(sorted(clusters, key=lambda g: (-len(g), min(self.file_paths[n] for n in g)))):
             is_shared = bool(shared) and set(files) == shared
-            base = SHARED_SERVICE_NAME if is_shared else f"{self._service_label(files)}-service"
+            base = SHARED_SERVICE_NAME if is_shared else f"{self._service_label(files, common)}-service"
             name, n = base, 2
             while name in used_names:
                 name, n = f"{base}-{n}", n + 1
