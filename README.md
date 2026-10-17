@@ -133,9 +133,11 @@ Graph rendering uses `react-force-graph-2d`; icons come from `lucide-react`; smo
 
 <img src="https://img.shields.io/badge/OpenRouter%20(primary)-000000?style=for-the-badge" /> <img src="https://img.shields.io/badge/Google%20Gemini%20(fallback)-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" />
 
-**Infrastructure and deployment**
+**AWS and deployment**
 
-<img src="https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white" /> <img src="https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white" /> <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" /> <img src="https://img.shields.io/badge/CloudFront-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=white" /> <img src="https://img.shields.io/badge/ECS%20Fargate-FF9900?style=for-the-badge&logo=amazonecs&logoColor=white" /> <img src="https://img.shields.io/badge/ElastiCache-C925D1?style=for-the-badge&logo=amazonaws&logoColor=white" />
+<img src="https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/Amazon%20VPC-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/NAT%20Gateway-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/Security%20Groups-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/CloudFront-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/CloudFront%20Functions-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/Amazon%20S3-7AA116?style=for-the-badge&logo=amazons3&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/Application%20Load%20Balancer-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/ECS%20Fargate-FF9900?style=for-the-badge&logo=amazonecs&logoColor=232F3E" /> <img src="https://img.shields.io/badge/Amazon%20ECR-FF9900?style=for-the-badge&logo=amazonaws&logoColor=232F3E" /> <img src="https://img.shields.io/badge/ElastiCache%20Redis-C925D1?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/Cloud%20Map-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/SSM%20Parameter%20Store-E7157B?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/CloudWatch%20Logs-E7157B?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/IAM-DD344C?style=for-the-badge&logo=amazonaws&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=FFFFFF" /> <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=FFFFFF" />
+
+Terraform in [`deploy/terraform`](deploy/terraform) creates every AWS resource above in `ap-south-1`. GitHub Actions builds the images, rolls out the ECS services and uploads the frontend, signing in to AWS through OIDC so no access keys are stored.
 
 **Generated artifacts and tooling**
 
@@ -149,7 +151,7 @@ Graph rendering uses `react-force-graph-2d`; icons come from `lucide-react`; smo
 | AI service | FastAPI, Pydantic, NetworkX, python-louvain, asyncpg | Parsing, graph building, clustering, planning, blueprints, reports |
 | Datastores | Supabase Postgres, Neo4j Aura, Redis | Relational state, dependency graph, queues and pub/sub |
 | LLM | OpenRouter, Google Gemini | Findings and executive summaries, with automatic fallback |
-| Infrastructure | Terraform, AWS (VPC, ALB, CloudFront, S3, ECS Fargate, ElastiCache, ECR, SSM, CloudWatch), GitHub Actions | Repeatable cloud deployment in `ap-south-1`. Terraform owns every AWS resource; a manual workflow ships images and the frontend |
+| AWS and deployment | VPC, NAT Gateway, Security Groups, CloudFront (+ Functions), S3, Application Load Balancer, ECS Fargate, ECR, ElastiCache Redis, Cloud Map, SSM Parameter Store, CloudWatch Logs, IAM, Terraform, GitHub Actions | Runs the whole system in `ap-south-1`. Terraform owns every AWS resource; a manual workflow ships the images and the frontend |
 
 ---
 
