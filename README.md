@@ -370,7 +370,8 @@ stateDiagram-v2
 
 ## 6. The six intelligence agents
 
-![Agent flow](Images/agent_flow.png)
+<img width="632" height="387" alt="image" src="https://github.com/user-attachments/assets/1a26dffd-22d4-43a8-8b86-1e6db66a847b" />
+
 
 ```mermaid
 flowchart LR
