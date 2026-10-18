@@ -4,10 +4,11 @@
  *
  *   cd e2e && E2E_USER_EMAIL=you@example.com node ui-theme.js
  *
- * Checks that the landing and login pages never show the toggle and stay dark even when light
- * is chosen, that every app page shows exactly one toggle, that light mode renders a white page
- * with no large dark surfaces left over, that dark mode is unchanged, and that the choice
- * survives a reload. Read-only: it never starts a job or changes project data.
+ * Checks that every page follows the chosen theme (dark by default, light when chosen), that the
+ * toggle is on the login page and the app pages but never on the landing page, that light mode
+ * renders a white page with no large dark surfaces left over, that dark mode is unchanged, and that
+ * the choice survives a reload and carries across pages. Read-only: it never starts a job or
+ * changes project data, and it takes no screenshots.
  */
 const { chromium } = require('playwright');
 const S = require('./lib/session');
@@ -65,21 +66,63 @@ const toggles = (page) => page.getByTestId('theme-toggle').count();
 
   const browser = await chromium.launch();
 
-  // ---- Signed-out pages: landing and login stay dark, even if light was chosen earlier. -------------
+  // ---- Signed-out pages: landing and login follow the theme; only login has the toggle. -------------
   {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-    await ctx.addInitScript(() => { try { localStorage.setItem('monomelt-theme', 'light'); } catch { /* ignore */ } });
     const p = await ctx.newPage();
-    for (const [name, url] of [['Landing page', '/'], ['Login page', '/login']]) {
-      section = name;
-      console.log(`\n== ${name}  (light is the saved choice)`);
-      await p.goto(`${FRONTEND}${url}`, { waitUntil: 'domcontentloaded' });
-      await p.waitForTimeout(1200);
-      check('has no theme toggle', (await toggles(p)) === 0);
-      check('stays dark', (await theme(p)) === 'dark', `data-theme=${await theme(p)}`);
-      const bg = await pageBackground(p);
-      check('page background is the original near-black', luminance(parse(bg)) < 20, bg);
-    }
+
+    section = 'Landing page';
+    console.log(`\n== ${section}`);
+    await p.goto(`${FRONTEND}/`, { waitUntil: 'domcontentloaded' });
+    await p.evaluate(() => localStorage.removeItem('monomelt-theme'));
+    await p.reload({ waitUntil: 'domcontentloaded' });
+    await p.waitForTimeout(1200);
+    check('has no theme toggle', (await toggles(p)) === 0);
+    check('opens in dark by default', (await theme(p)) === 'dark', `data-theme=${await theme(p)}`);
+    const landingDark = await pageBackground(p);
+    check('dark background is unchanged (#0a0a0a)', landingDark === 'rgb(10, 10, 10)', landingDark);
+
+    section = 'Login page';
+    console.log(`\n== ${section}`);
+    await p.goto(`${FRONTEND}/login`, { waitUntil: 'domcontentloaded' });
+    await p.getByTestId('theme-toggle').first().waitFor({ timeout: 15000 }).catch(() => {});
+    await p.waitForTimeout(800);
+    check('shows exactly one theme toggle', (await toggles(p)) === 1, `${await toggles(p)} toggles`);
+    check('opens in dark by default', (await theme(p)) === 'dark', `data-theme=${await theme(p)}`);
+    const loginDark = await pageBackground(p);
+    check('dark background is unchanged (#0a0a0a)', loginDark === 'rgb(10, 10, 10)', loginDark);
+    await p.getByTestId('theme-toggle').click();
+    await p.waitForTimeout(600);
+    check('toggle switches to light', (await theme(p)) === 'light', `data-theme=${await theme(p)}`);
+    const loginLight = await pageBackground(p);
+    check('light background is white', loginLight === 'rgb(255, 255, 255)', loginLight);
+    const loginSurfaces = await darkSurfaces(p);
+    check('no large dark surfaces remain in light mode', loginSurfaces.length === 0, loginSurfaces.join(' | '));
+    const signIn = await p.getByRole('button', { name: /Sign in with GitHub/i }).evaluate((el) => getComputedStyle(el).backgroundColor);
+    check('the sign-in button stays readable (solid, not white on white)', signIn !== 'rgb(255, 255, 255)', signIn);
+    await p.reload({ waitUntil: 'domcontentloaded' });
+    await p.getByTestId('theme-toggle').first().waitFor({ timeout: 15000 }).catch(() => {});
+    check('the light choice survives a reload', (await theme(p)) === 'light', `data-theme=${await theme(p)}`);
+
+    // The choice made on login carries to the landing page, which still has no toggle.
+    section = 'Landing page (light)';
+    console.log(`\n== ${section}`);
+    await p.goto(`${FRONTEND}/`, { waitUntil: 'domcontentloaded' });
+    await p.waitForTimeout(1500);
+    check('follows the light choice made on the login page', (await theme(p)) === 'light', `data-theme=${await theme(p)}`);
+    check('still has no theme toggle', (await toggles(p)) === 0);
+    const landingLight = await pageBackground(p);
+    check('light background is white', landingLight === 'rgb(255, 255, 255)', landingLight);
+    const landingSurfaces = await darkSurfaces(p);
+    check('no large dark surfaces remain in light mode', landingSurfaces.length === 0, landingSurfaces.join(' | '));
+
+    // Back to dark on login.
+    await p.goto(`${FRONTEND}/login`, { waitUntil: 'domcontentloaded' });
+    await p.getByTestId('theme-toggle').first().waitFor({ timeout: 15000 });
+    await p.getByTestId('theme-toggle').click();
+    await p.waitForTimeout(500);
+    section = 'Login page';
+    check('toggle switches back to dark', (await theme(p)) === 'dark');
     await ctx.close();
   }
 
@@ -137,7 +180,7 @@ const toggles = (page) => page.getByTestId('theme-toggle').count();
     await p.evaluate(() => localStorage.removeItem('monomelt-theme'));
   }
 
-  // Light chosen on an app page must not leak onto the landing page.
+  // The choice made on an app page carries to the landing page and back.
   section = 'Navigation';
   console.log('\n== Navigation');
   await p.goto(`${FRONTEND}/dashboard`, { waitUntil: 'domcontentloaded' });
@@ -145,11 +188,11 @@ const toggles = (page) => page.getByTestId('theme-toggle').count();
   await p.getByTestId('theme-toggle').click();
   check('light is active on the dashboard', (await theme(p)) === 'light');
   await p.getByRole('link', { name: /^HOME$/ }).first().click();
-  await p.waitForTimeout(1200);
-  check('going Home from the dashboard shows the dark landing page', (await theme(p)) === 'dark' && (await toggles(p)) === 0, `data-theme=${await theme(p)}, toggles=${await toggles(p)}`);
+  await p.waitForTimeout(1500);
+  check('going Home keeps the light theme, with no toggle on the landing page', (await theme(p)) === 'light' && (await toggles(p)) === 0, `data-theme=${await theme(p)}, toggles=${await toggles(p)}`);
   await p.goBack();
   await p.waitForTimeout(1200);
-  check('coming back to the dashboard restores light', (await theme(p)) === 'light');
+  check('coming back to the dashboard keeps light', (await theme(p)) === 'light');
 
   await browser.close();
 
