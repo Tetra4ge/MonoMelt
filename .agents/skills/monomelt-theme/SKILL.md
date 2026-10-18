@@ -28,7 +28,7 @@ This is a hardcore, developer-focused aesthetic. It should look like an IDE.
 
 Dark is the default and is the MonoMELT look. A light theme exists for screenshots that go into papers and slides.
 
-- The toggle (`components/common/ThemeToggle`) is in the header of every app page. The landing and login pages never show it and are always dark (`stores/themeStore.ts` lists them in `DARK_ONLY_PATHS`).
+- Every page, including landing and login, follows the chosen theme. The toggle (`components/common/ThemeToggle`) is in the header of every app page and on the login page. The landing page has no toggle; it just follows the saved choice.
 - `components/common/ThemeSync` writes the choice to `<html data-theme>`. All light styles live at the end of `index.css`, scoped to `html[data-theme='light']`, so dark is untouched.
 - Palette classes (`text-white`, `bg-gray-200`, `text-blue-400`) follow Tailwind variables that the light theme remaps. Arbitrary-hex classes (`bg-[#111]`, `border-[#222]`) are literals, so a new one needs a matching rule in the light block.
 - Colours set in JavaScript (canvas, charts) must read `useThemeStore` and pick a light value. See `DependencyGraph.tsx` and `CostProjectionsChart.tsx`.
