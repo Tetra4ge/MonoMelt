@@ -5,6 +5,7 @@ import { UploadSource } from '../components/projects/UploadSource';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { supabase } from '../lib/supabase';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 const Dashboard: React.FC = () => {
   const { user, signOut } = useAuthStore();
@@ -135,6 +136,7 @@ const Dashboard: React.FC = () => {
               <span className="text-gray-400">user:</span>
               <span>{user?.user_metadata?.user_name || user?.email}</span>
             </div>
+            <ThemeToggle />
             <button 
               onClick={handleSignOut}
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors bg-[#111] hover:bg-[#222] px-4 py-2 rounded-sm border border-[#222] text-sm font-bold"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { GitBranch, Loader2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,9 @@ const Login: React.FC = () => {
         <ArrowLeft className="w-4 h-4" />
         BACK
       </Link>
+      <div className="absolute top-8 right-8">
+        <ThemeToggle />
+      </div>
       
       <div className="max-w-sm w-full bg-[#111] p-8 rounded-sm border border-[#222] text-center">
         

@@ -1,6 +1,11 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useThemeStore } from '../../stores/themeStore';
 
 export const CostProjectionsChart = ({ data }: { data: any }) => {
+  const isLight = useThemeStore((state) => state.theme) === 'light';
+  const axisLine = isLight ? '#a3a3a3' : '#555';
+  const axisText = isLight ? '#4d4d4d' : '#888';
+
   if (!data) return <div className="text-gray-500 text-xs p-8 text-center border border-dashed border-[#333]">Cost data unavailable.</div>;
 
   const chartData = [
@@ -15,11 +20,11 @@ export const CostProjectionsChart = ({ data }: { data: any }) => {
       <div className="flex-grow min-h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
-            <XAxis dataKey="name" stroke="#555" tick={{fill: '#888', fontSize: 12}} />
-            <YAxis stroke="#555" tick={{fill: '#888', fontSize: 12}} />
+            <XAxis dataKey="name" stroke={axisLine} tick={{fill: axisText, fontSize: 12}} />
+            <YAxis stroke={axisLine} tick={{fill: axisText, fontSize: 12}} />
             <Tooltip 
-              cursor={{fill: '#1a1a1a'}}
-              contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', color: '#fff', fontSize: '12px' }} 
+              cursor={{fill: isLight ? '#efefef' : '#1a1a1a'}}
+              contentStyle={{ backgroundColor: isLight ? '#ffffff' : '#0a0a0a', border: `1px solid ${isLight ? '#cfcfcf' : '#333'}`, color: isLight ? '#0a0a0a' : '#fff', fontSize: '12px' }} 
             />
             <Bar dataKey="cost" fill="#3b82f6" radius={[2, 2, 0, 0]} />
           </BarChart>

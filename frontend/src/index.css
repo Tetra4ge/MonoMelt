@@ -34,3 +34,120 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* ==========================================================================
+   Light theme
+   Applied with <html data-theme="light"> (see components/common/ThemeSync).
+   Dark is the default and is not touched: everything below only applies when
+   the attribute is "light".
+
+   Palette classes (text-white, bg-gray-200, text-blue-400 ...) read Tailwind
+   theme variables, so remapping the variables also covers their hover and
+   opacity variants. Arbitrary-hex classes (bg-[#111] ...) are literals, so
+   each one used in the app is remapped explicitly further down.
+   ========================================================================== */
+html[data-theme='light'] {
+  color-scheme: light;
+
+  /* Greyscale is inverted: white text becomes near-black, black becomes white. */
+  --color-white: #0a0a0a;
+  --color-black: #ffffff;
+  --color-gray-200: #262626;
+  --color-gray-300: #3a3a3a;
+  --color-gray-400: #4d4d4d;
+  --color-gray-500: #666666;
+  --color-gray-600: #7a7a7a;
+  --color-gray-700: #b0b0b0;
+  --color-gray-800: #e5e5e5;
+  --color-zinc-950: #ffffff;
+
+  /* Accent colours, darkened so they read on a white page. The 900/950 steps are
+     the dark tints used for badges and borders; they become light tints. */
+  --color-blue-300: #1e40af;
+  --color-blue-400: #1d4ed8;
+  --color-blue-500: #2563eb;
+  --color-blue-600: #1d4ed8;
+  --color-blue-900: #93c5fd;
+  --color-blue-950: #dbeafe;
+  --color-red-300: #991b1b;
+  --color-red-400: #b91c1c;
+  --color-red-500: #dc2626;
+  --color-red-900: #fca5a5;
+  --color-red-950: #fecaca;
+  --color-emerald-400: #047857;
+  --color-emerald-500: #059669;
+  --color-emerald-600: #047857;
+  --color-green-400: #15803d;
+  --color-green-500: #16a34a;
+  --color-green-900: #bbf7d0;
+  --color-green-950: #dcfce7;
+  --color-yellow-300: #a16207;
+  --color-yellow-500: #ca8a04;
+  --color-amber-400: #b45309;
+  --color-amber-900: #fcd34d;
+  --color-amber-950: #fef3c7;
+  --color-purple-400: #7e22ce;
+  --color-purple-900: #d8b4fe;
+  --color-purple-950: #f3e8ff;
+  --color-cyan-400: #0e7490;
+}
+
+html[data-theme='light'] body {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
+/* Solid accent buttons keep white text. */
+html[data-theme='light'] .bg-blue-500,
+html[data-theme='light'] .bg-blue-600,
+html[data-theme='light'] .bg-emerald-600 {
+  color: #ffffff;
+}
+
+/* Surfaces */
+html[data-theme='light'] .bg-\[\#0a0a0a\] { background-color: #ffffff; }
+html[data-theme='light'] .bg-\[\#050505\],
+html[data-theme='light'] .bg-\[\#0d0d0d\] { background-color: #fafafa; }
+html[data-theme='light'] .bg-\[\#111\] { background-color: #f5f5f5; }
+html[data-theme='light'] .bg-\[\#151515\],
+html[data-theme='light'] .bg-\[\#161616\] { background-color: #f2f2f2; }
+html[data-theme='light'] .bg-\[\#1a1a1a\] { background-color: #efefef; }
+html[data-theme='light'] .bg-\[\#222\] { background-color: #e4e4e4; }
+html[data-theme='light'] .bg-\[\#333\] { background-color: #d4d4d4; }
+
+/* Borders */
+html[data-theme='light'] .border-\[\#1a1a1a\] { border-color: #ececec; }
+html[data-theme='light'] .border-\[\#222\] { border-color: #e0e0e0; }
+html[data-theme='light'] .border-\[\#333\] { border-color: #cfcfcf; }
+html[data-theme='light'] .border-\[\#444\] { border-color: #b5b5b5; }
+html[data-theme='light'] .border-\[\#555\] { border-color: #9a9a9a; }
+
+/* File input button (UploadSource) */
+html[data-theme='light'] .file\:bg-\[\#222\]::file-selector-button { background-color: #e4e4e4; }
+
+@media (hover: hover) {
+  html[data-theme='light'] .hover\:bg-\[\#111\]:hover { background-color: #f5f5f5; }
+  html[data-theme='light'] .hover\:bg-\[\#151515\]:hover { background-color: #f2f2f2; }
+  html[data-theme='light'] .hover\:bg-\[\#222\]:hover { background-color: #e4e4e4; }
+  html[data-theme='light'] .hover\:bg-\[\#333\]:hover { background-color: #d4d4d4; }
+  html[data-theme='light'] .hover\:border-\[\#333\]:hover { border-color: #cfcfcf; }
+  html[data-theme='light'] .hover\:border-\[\#555\]:hover { border-color: #9a9a9a; }
+  html[data-theme='light'] .hover\:border-\[\#666\]:hover { border-color: #808080; }
+  html[data-theme='light'] .hover\:file\:bg-\[\#333\]:hover::file-selector-button,
+  html[data-theme='light'] .hover\:file\:bg-\[\#333\]::file-selector-button:hover { background-color: #d4d4d4; }
+}
+
+/* Scrollbar */
+html[data-theme='light'] ::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-left: 1px solid #e0e0e0;
+}
+
+html[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border: 1px solid #e0e0e0;
+}
+
+html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

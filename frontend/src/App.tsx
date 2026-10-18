@@ -11,6 +11,7 @@ import DeploymentPage from './pages/DeploymentPage';
 import ReportPage from './pages/ReportPage';
 import TwinPage from './pages/TwinPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ThemeSync from './components/common/ThemeSync';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ThemeSync />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />

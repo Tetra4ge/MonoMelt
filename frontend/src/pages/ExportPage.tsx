@@ -7,6 +7,7 @@ import api from '../lib/api';
 import { getErrorMessage } from '../lib/errors';
 import BlueprintPreview from '../components/export/BlueprintPreview';
 import GenerationStatus from '../components/export/GenerationStatus';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export default function ExportPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -123,13 +124,16 @@ export default function ExportPage() {
             <h1 className="mt-2 text-2xl font-bold text-white">&gt; infrastructure_export</h1>
             <p className="mt-2 text-xs text-gray-500">Generate and preview Terraform artifacts for your microservices.</p>
           </div>
-          <button 
-            type="button" 
-            onClick={() => navigate(`/dashboard/projects/${projectId}/planning`)} 
-            className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white"
-          >
-            Back to Planning
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button 
+              type="button" 
+              onClick={() => navigate(`/dashboard/projects/${projectId}/planning`)} 
+              className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white"
+            >
+              Back to Planning
+            </button>
+          </div>
         </header>
 
         {error && (
