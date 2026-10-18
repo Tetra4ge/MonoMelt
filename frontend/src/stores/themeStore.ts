@@ -4,11 +4,6 @@ export type Theme = 'dark' | 'light';
 
 const STORAGE_KEY = 'monomelt-theme';
 
-// Pages that always stay dark and never show the toggle.
-const DARK_ONLY_PATHS = ['/', '/login', '/auth/callback'];
-
-export const isDarkOnlyPath = (pathname: string) => DARK_ONLY_PATHS.includes(pathname);
-
 const readStoredTheme = (): Theme => {
   try {
     return localStorage.getItem(STORAGE_KEY) === 'light' ? 'light' : 'dark';
