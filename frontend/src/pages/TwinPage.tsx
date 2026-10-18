@@ -6,6 +6,7 @@ import { TwinHeader } from '../components/twin/TwinHeader';
 import { PipelineCanvas } from '../components/twin/PipelineCanvas';
 import { NodeDetailDrawer } from '../components/twin/NodeDetailDrawer';
 import { TwinLogStream } from '../components/twin/TwinLogStream';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export default function TwinPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -95,6 +96,7 @@ export default function TwinPage() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link
             to="/dashboard"
             className="flex items-center gap-1 text-xs border border-[#222] bg-[#111] px-3 py-1.5 text-gray-400 hover:border-white hover:text-white transition-colors"

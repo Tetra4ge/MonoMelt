@@ -11,6 +11,7 @@ import { Loader2, Terminal, LogOut, ExternalLink } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getErrorMessage } from '../lib/errors';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export default function ReportPage() {
   const { projectId } = useParams();
@@ -137,6 +138,7 @@ export default function ReportPage() {
             <Link to="/dashboard" className="text-gray-400 hover:text-white transition-colors text-sm font-bold hidden sm:block">
               DASHBOARD
             </Link>
+            <ThemeToggle />
             <button 
               onClick={signOut}
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors bg-[#111] hover:bg-[#222] px-4 py-2 rounded-sm border border-[#222] text-sm font-bold"

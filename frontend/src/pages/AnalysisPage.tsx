@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import api from '../lib/api';
 import { getErrorMessage } from '../lib/errors';
 import { AlertTriangle } from 'lucide-react';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export default function AnalysisPage() {
   const { projectId } = useParams();
@@ -325,6 +326,7 @@ export default function AnalysisPage() {
           <p className="text-gray-500 text-sm mt-1">Interactive AST visualization from Neo4j</p>
         </div>
         <div className="flex gap-4 items-center">
+          <ThemeToggle />
           {findings.length === 0 && (
             <button
               onClick={handleRunIntelligence}

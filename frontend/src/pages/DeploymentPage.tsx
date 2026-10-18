@@ -8,6 +8,7 @@ import { getErrorMessage } from '../lib/errors';
 import PipelineVisualizer from '../components/deployment/PipelineVisualizer';
 import LiveTerminal from '../components/deployment/LiveTerminal';
 import ServicesDashboard from '../components/deployment/ServicesDashboard';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export default function DeploymentPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -120,13 +121,16 @@ export default function DeploymentPage() {
             <h1 className="mt-2 text-2xl font-bold text-white">&gt; live_deployment</h1>
             <p className="mt-2 text-xs text-gray-500">Monitor CI/CD pipeline and microservice health.</p>
           </div>
-          <button 
-            type="button" 
-            onClick={() => navigate(`/dashboard/projects/${projectId}/export`)} 
-            className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white"
-          >
-            Back to Export
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button 
+              type="button" 
+              onClick={() => navigate(`/dashboard/projects/${projectId}/export`)} 
+              className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white"
+            >
+              Back to Export
+            </button>
+          </div>
         </header>
 
         {error && (

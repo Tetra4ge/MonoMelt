@@ -8,6 +8,7 @@ import TeamOwnershipPanel from '../components/planning/TeamOwnershipPanel';
 import PlanRevisionHistory from '../components/planning/PlanRevisionHistory';
 import { createPlan, getLatestReport, getPlan, listPlans, recalculatePlan } from '../features/planning/planning.api';
 import type { MigrationPlan, PlanAssumptions, PlanRevision } from '../features/planning/types';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 const defaultAssumptions: PlanAssumptions = { cloud_provider: 'aws', pricing_region: 'us-east-1', cost_multiplier: 1, team_count: 3, risk_tolerance: 'medium', migration_window_months: 6 };
 
@@ -71,6 +72,7 @@ export default function PlanningPage() {
         <header className="mb-6 flex flex-col gap-4 border-b border-[#222] pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="text-xs uppercase tracking-[0.2em] text-gray-600">monomelt / transformation_intelligence</p><h1 className="mt-2 text-2xl font-bold text-white">&gt; migration_planning</h1><p className="mt-2 text-xs text-gray-500">Convert a selected decomposition scenario into an evidence-backed execution plan.</p></div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button type="button" onClick={() => navigate(`/dashboard/projects/${projectId}/twin`)} className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white">Observatory</button>
             <button type="button" onClick={() => navigate(`/dashboard/projects/${projectId}/analysis`)} className="border border-[#222] bg-[#111] px-4 py-2 text-xs font-bold uppercase text-gray-400 hover:border-white hover:text-white">Back to analysis</button>
           </div>
