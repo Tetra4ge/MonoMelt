@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { useThemeStore } from '../../stores/themeStore';
 
 interface Node {
   id: string;
@@ -48,6 +49,7 @@ const SERVICE_COLORS = [
 
 export default function DependencyGraph({ nodes, edges, proposedServices }: DependencyGraphProps) {
   const fgRef = useRef<any>(null);
+  const isLight = useThemeStore((state) => state.theme) === 'light';
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -103,7 +105,7 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
     if (proposedServices && proposedServices.length > 0) {
       const serviceColor = nodeServiceMap.get(node.id);
       if (serviceColor) return serviceColor;
-      return '#333333'; // Unassigned or orphaned nodes
+      return isLight ? '#cfcfcf' : '#333333'; // Unassigned or orphaned nodes
     }
 
     // Default syntax coloring (symbols are tagged with their symbol_type by the API)
@@ -159,9 +161,9 @@ export default function DependencyGraph({ nodes, edges, proposedServices }: Depe
         nodeColor={getNodeColor}
         nodeRelSize={2}
         nodeVal={getNodeSize}
-        linkColor={() => '#333333'}
+        linkColor={() => (isLight ? '#b3b3b3' : '#333333')}
         linkWidth={1}
-        backgroundColor="#0a0a0a"
+        backgroundColor={isLight ? '#ffffff' : '#0a0a0a'}
         d3VelocityDecay={0.3} 
       />
     </div>
